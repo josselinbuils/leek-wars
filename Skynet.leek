@@ -1,11 +1,24 @@
 // TODO try to be sure that you can fire first before moving
 
+global hasBulb = false;
 global me = getLeek();
 global currentWeapon = null;
 global totalLife = getTotalLife();
 global hasFired;
 global enemy = getStrongestEnemy();
 global turn;
+
+function bulbAI() {
+    var summoner = getSummoner();
+	var mp = moveTowardCell(getCellToUseChip(CHIP_PROTEIN, summoner));
+	debug('move: ' + mp);
+
+	if (getLife(summoner) > 400) {
+		useChip(CHIP_PROTEIN, summoner);
+	}
+    useChip(CHIP_BANDAGE, summoner);
+    useChip(CHIP_BANDAGE, summoner);
+}
 
 function canFireWithChip(chip, target) {
 	var canUseOnMe = getTP() >= getChipCost(chip) and getCooldown(chip) === 0;
@@ -36,7 +49,7 @@ function ensureWearingWeapon(weapon) {
 function getStrongestEnemy() {
 	var enemies = getAliveEnemies();
 
-	return arrayFoldLeft(getAliveEnemies(), function (strongestEnemy, nextEnemy) {
+	return arrayFoldLeft(enemies, function (strongestEnemy, nextEnemy) {
 		return getLife(nextEnemy) > getLife(strongestEnemy) ? nextEnemy : strongestEnemy;
 	}, shift(enemies));
 }
@@ -83,6 +96,21 @@ if (isDead(enemy)) {
 	enemy = getStrongestEnemy();
 }
 
+if (!hasBulb) {
+	var cell = getCell();
+	var x = getCellX(cell);
+	var y = getCellY(cell);
+
+	var possibleCells = [getCellFromXY(x + 1, y), getCellFromXY(x - 1, y), getCellFromXY(x, y - 1), getCellFromXY(x, y + 1), getCellFromXY(x - 1, y - 1), getCellFromXY(x + 1, y + 1)];
+
+	var emptyCells = arrayFilter(possibleCells, function (c) {
+		return c !== null && isEmptyCell(c);
+	});
+
+	summon(CHIP_PUNY_BULB, emptyCells[0], bulbAI);
+	hasBulb = true;
+}
+
 if (currentWeapon === null) {
 	ensureWearingWeapon(WEAPON_LASER);
 	say("Canarticho !");
@@ -103,6 +131,9 @@ while (isAlive(enemy)) {
 	if (turn > 1 and canFireWithChip(CHIP_SHIELD, me)) {
 		chip = CHIP_SHIELD;
 		target = me;
+	} else if (canFireWithChip(CHIP_STALACTITE, enemy)) {
+		chip = CHIP_STALACTITE;
+		target = enemy;
 	} else if (canFireWithWeapon(WEAPON_LASER)) {
 		weapon = WEAPON_LASER;
 	} else if (canFireWithChip(CHIP_VENOM, enemy)) {
@@ -118,9 +149,6 @@ while (isAlive(enemy)) {
 		target = me;
 	} else if (canFireWithChip(CHIP_FLAME, enemy)) {
 		chip = CHIP_FLAME;
-		target = enemy;
-	} else if (canFireWithChip(CHIP_ICE, enemy)) {
-		chip = CHIP_ICE;
 		target = enemy;
 	} else if (life < totalLife and canFireWithChip(CHIP_BANDAGE, me)) {
 		chip = CHIP_BANDAGE;
@@ -140,11 +168,11 @@ while (isAlive(enemy)) {
 
 	if (weapon !== null) {
 		debug('use ' + getWeaponName(weapon));
-		ensureWearingWeapon(weapon);
 
 		var mp = moveTowardCell(getCellToUseWeapon(weapon, enemy));
 		debug('move: ' + mp);
 
+		ensureWearingWeapon(weapon);
 		result = useWeapon(enemy);
 		hasFired = true;
 	} else if (chip !== null) {
@@ -162,7 +190,10 @@ while (isAlive(enemy)) {
 	if (result !== null) {
 		showResult(result);
 
-		if (result !== USE_SUCCESS and result !== USE_FAILED and result !== USE_CRITICAL) {
+		if (result === USE_INVALID_POSITION && getMP() > 0) {
+			// Why the fuck this can happen ???
+			moveAwayFrom(enemy);
+		} else if (result !== USE_SUCCESS and result !== USE_FAILED and result !== USE_CRITICAL) {
 			break;
 		}
 	}
