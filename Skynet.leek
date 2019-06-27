@@ -10,15 +10,9 @@ global turn;
 function bulbAI() {
     var summoner = getSummoner();
 
-	if (getLife(summoner) > 400) {
-		moveTo(getCellToFireWithChip(CHIP_PROTEIN, summoner));
-		useChip(CHIP_PROTEIN, summoner);
-	} else {
-		moveTo(getCellToFireWithChip(CHIP_BANDAGE, summoner));
-	}
-
+	moveTo(getCellToFireWithChip(CHIP_BANDAGE, summoner));
 	useChip(CHIP_BANDAGE, summoner);
-    useChip(CHIP_BANDAGE, summoner);
+	useChip(CHIP_BANDAGE, summoner);
 }
 
 function canFireWithChip(chip, target) {
@@ -51,18 +45,38 @@ function getCellToFireWithChip(chip, target) {
 	var cells = getCellsToUseChip(chip, target);
 	var startCell = getCell();
 
-	return arrayFoldLeft(cells, function (closestCell, cell) {
-		return getPathLength(startCell, cell) < getPathLength(startCell, closestCell) ? cell : closestCell;
+	var cellToFire = arrayFoldLeft(cells, function (closestCell, cell) {
+		var cellPathLength = getPathLength(startCell, cell);
+		var closestCellPathLength = getPathLength(startCell, closestCell);
+
+		return cell === startCell or (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
 	}, shift(cells));
+
+	debug('startCell: ' + startCell);
+	debug('cells: ' + cells);
+	debug('cellToFire: ' + cellToFire);
+	debug('pathLength: ' + getPathLength(startCell, cellToFire));
+
+	return cellToFire;
 }
 
 function getCellToFireWithWeapon(weapon) {
 	var cells = getCellsToUseWeapon(weapon, enemy);
 	var startCell = getCell();
 
-	return arrayFoldLeft(cells, function (closestCell, cell) {
-		return getPathLength(startCell, cell) < getPathLength(startCell, closestCell) ? cell : closestCell;
+	var cellToFire = arrayFoldLeft(cells, function (closestCell, cell) {
+		var cellPathLength = getPathLength(startCell, cell);
+		var closestCellPathLength = getPathLength(startCell, closestCell);
+
+		return cell === startCell or (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
 	}, shift(cells));
+
+	debug('startCell: ' + startCell);
+	debug('cells: ' + cells);
+	debug('cellToFire: ' + cellToFire);
+	debug('pathLength: ' + getPathLength(startCell, cellToFire));
+
+	return cellToFire;
 }
 
 function getStrongestEnemy() {
