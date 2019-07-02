@@ -1,10 +1,8 @@
-// TODO try to be sure that you can fire first before moving
-
 global me = getLeek();
 global currentWeapon = null;
 global totalLife = getTotalLife();
 global hasFired;
-global enemy = getStrongestEnemy();
+global enemy = getNearestLeekEnemy();
 global turn;
 
 function bulbAI() {
@@ -16,10 +14,10 @@ function bulbAI() {
 }
 
 function canFireWithChip(chip, target) {
-	var canFire = getTP() >= getChipCost(chip) and getCooldown(chip) === 0;
+	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
 
 	if (target === enemy) {
-		canFire = canFire and getMP() >= getPathLength(getCell(), getCellToFireWithChip(chip, enemy));
+		canFire = canFire && getMP() >= getPathLength(getCell(), getCellToFireWithChip(chip, enemy));
 	}
 
 	debug('canFireWithChip(' + getChipName(chip) + ') => ' + canFire);
@@ -33,7 +31,7 @@ function canFireWithWeapon(weapon) {
 		cost = cost + 1;
 	}
 
-	var canFire = getTP() >= cost and getMP() >= getPathLength(getCell(), getCellToFireWithWeapon(weapon));
+	var canFire = getTP() >= cost && getMP() >= getPathLength(getCell(), getCellToFireWithWeapon(weapon));
 
 	debug('canFireWithWeapon(' + getWeaponName(weapon) + ') => ' + canFire);
 	return canFire;
@@ -54,7 +52,7 @@ function getCellToFireWithChip(chip, target) {
 		var cellPathLength = getPathLength(startCell, cell);
 		var closestCellPathLength = getPathLength(startCell, closestCell);
 
-		return cell === startCell or (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
+		return cell === startCell || (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
 	}, shift(cells));
 
 	debug('getCellToFireWithChip(' + getChipName(chip) + ', ' + getName(target) + ')');
@@ -74,7 +72,7 @@ function getCellToFireWithWeapon(weapon) {
 		var cellPathLength = getPathLength(startCell, cell);
 		var closestCellPathLength = getPathLength(startCell, closestCell);
 
-		return cell === startCell or (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
+		return cell === startCell || (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
 	}, shift(cells));
 
 	debug('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
@@ -86,11 +84,19 @@ function getCellToFireWithWeapon(weapon) {
 	return cellToFire;
 }
 
-function getStrongestEnemy() {
+function getNearestLeekEnemy() {
 	var enemies = getAliveEnemies();
+	var startCell = getCell();
 
-	return arrayFoldLeft(enemies, function (strongestEnemy, nextEnemy) {
-		return getLife(nextEnemy) > getLife(strongestEnemy) ? nextEnemy : strongestEnemy;
+	enemies = arrayFilter(enemies, function (e) {
+		return !isSummon(e);
+	});
+
+	return arrayFoldLeft(enemies, function (nearestEnemy, e) {
+		var enemyPathLength = getPathLength(startCell, getCell(e));
+		var nearestEnemyPathLength = getPathLength(startCell, getCell(nearestEnemy));
+
+		return enemyPathLength > 0 && enemyPathLength < nearestEnemyPathLength ? e : nearestEnemy;
 	}, shift(enemies));
 }
 
@@ -110,7 +116,7 @@ function summonBulb() {
 		return getDistance(enemyCell, a) < getDistance(enemyCell, b) ? -1 : 1;
 	});
 
-	while (getCooldown(CHIP_PUNY_BULB) === 0 and count(emptyCells) > 0) {
+	while (getCooldown(CHIP_PUNY_BULB) === 0 && count(emptyCells) > 0) {
 		summon(CHIP_PUNY_BULB, shift(emptyCells), bulbAI);
 	}
 }
@@ -156,10 +162,7 @@ function showResult(result) {
 
 hasFired = false;
 turn = getTurn();
-
-if (isDead(enemy)) {
-	enemy = getStrongestEnemy();
-}
+enemy = getNearestLeekEnemy();
 
 if (currentWeapon === null) {
 	ensureWearingWeapon(WEAPON_LASER);
@@ -178,7 +181,7 @@ while (isAlive(enemy)) {
 	debug('MP: ' + getMP());
 	debug('TP: ' + tp);
 
-	if (turn > 1 and canFireWithChip(CHIP_SHIELD, me)) {
+	if (turn > 1 && canFireWithChip(CHIP_SHIELD, me)) {
 		chip = CHIP_SHIELD;
 		target = me;
 	} else if (canFireWithChip(CHIP_STALACTITE, enemy)) {
@@ -186,26 +189,26 @@ while (isAlive(enemy)) {
 		target = enemy;
 	} else if (canFireWithWeapon(WEAPON_LASER)) {
 		weapon = WEAPON_LASER;
-	} else if (life > (totalLife / 4) and canFireWithChip(CHIP_TOXIN, enemy)) {
+	} else if (life > (totalLife / 4) && canFireWithChip(CHIP_TOXIN, enemy)) {
 		chip = CHIP_TOXIN;
 		target = enemy;
-	} else if (life > (totalLife / 4) and canFireWithChip(CHIP_VENOM, enemy)) {
+	} else if (life > (totalLife / 4) && canFireWithChip(CHIP_VENOM, enemy)) {
 		chip = CHIP_VENOM;
 		target = enemy;
 	} else if (canFireWithChip(CHIP_PUNY_BULB, me)) {
 		summonBulb();
-	} else if (life < (totalLife * 3 / 4) and canFireWithChip(CHIP_CURE, me)) {
+	} else if (life < (totalLife * 3 / 4) && canFireWithChip(CHIP_CURE, me)) {
 		chip = CHIP_CURE;
 		target = me;
 	} else if (canFireWithWeapon(WEAPON_MAGNUM)) {
 		weapon = WEAPON_MAGNUM;
-	} else if (turn > 1 and canFireWithChip(CHIP_HELMET, me)) {
+	} else if (turn > 1 && canFireWithChip(CHIP_HELMET, me)) {
 		chip = CHIP_HELMET;
 		target = me;
 	} else if (canFireWithChip(CHIP_FLAME, enemy)) {
 		chip = CHIP_FLAME;
 		target = enemy;
-	} else if (life < totalLife and canFireWithChip(CHIP_BANDAGE, me)) {	
+	} else if (life < totalLife && canFireWithChip(CHIP_BANDAGE, me)) {	
 		chip = CHIP_BANDAGE;	
 		target = me;	
 	} else {
@@ -249,7 +252,7 @@ while (isAlive(enemy)) {
 			if (moveToward(enemy) === 0) {
 				break;
 			}
-		} else if (result !== USE_SUCCESS and result !== USE_FAILED and result !== USE_CRITICAL) {
+		} else if (result !== USE_SUCCESS && result !== USE_FAILED && result !== USE_CRITICAL) {
 			break;
 		}
 	}
