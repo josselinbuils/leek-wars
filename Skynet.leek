@@ -16,12 +16,14 @@ function bulbAI() {
 }
 
 function canFireWithChip(chip, target) {
-	var canUseOnMe = getTP() >= getChipCost(chip) and getCooldown(chip) === 0;
+	var canFire = getTP() >= getChipCost(chip) and getCooldown(chip) === 0;
 
 	if (target === enemy) {
-		return canUseOnMe and getMP() >= getPathLength(getCell(), getCellToFireWithChip(chip, enemy));
+		canFire = canFire and getMP() >= getPathLength(getCell(), getCellToFireWithChip(chip, enemy));
 	}
-	return canUseOnMe;
+
+	debug('canFireWithChip(' + getChipName(chip) + ') => ' + canFire);
+	return canFire;
 }
 
 function canFireWithWeapon(weapon) {
@@ -31,7 +33,10 @@ function canFireWithWeapon(weapon) {
 		cost = cost + 1;
 	}
 
-	return getTP() >= cost and getMP() >= getPathLength(getCell(), getCellToFireWithWeapon(weapon));
+	var canFire = getTP() >= cost and getMP() >= getPathLength(getCell(), getCellToFireWithWeapon(weapon));
+
+	debug('canFireWithWeapon(' + getWeaponName(weapon) + ') => ' + canFire);
+	return canFire;
 }
 
 function ensureWearingWeapon(weapon) {
@@ -52,6 +57,7 @@ function getCellToFireWithChip(chip, target) {
 		return cell === startCell or (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
 	}, shift(cells));
 
+	debug('getCellToFireWithChip(' + getChipName(chip) + ', ' + getName(target) + ')');
 	debug('startCell: ' + startCell);
 	debug('cells: ' + cells);
 	debug('cellToFire: ' + cellToFire);
@@ -71,6 +77,7 @@ function getCellToFireWithWeapon(weapon) {
 		return cell === startCell or (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
 	}, shift(cells));
 
+	debug('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
 	debug('startCell: ' + startCell);
 	debug('cells: ' + cells);
 	debug('cellToFire: ' + cellToFire);
@@ -179,6 +186,9 @@ while (isAlive(enemy)) {
 		target = enemy;
 	} else if (canFireWithWeapon(WEAPON_LASER)) {
 		weapon = WEAPON_LASER;
+	} else if (life > (totalLife / 4) and canFireWithChip(CHIP_TOXIN, enemy)) {
+		chip = CHIP_TOXIN;
+		target = enemy;
 	} else if (life > (totalLife / 4) and canFireWithChip(CHIP_VENOM, enemy)) {
 		chip = CHIP_VENOM;
 		target = enemy;
@@ -189,9 +199,6 @@ while (isAlive(enemy)) {
 		target = me;
 	} else if (canFireWithWeapon(WEAPON_MAGNUM)) {
 		weapon = WEAPON_MAGNUM;
-	} else if (canFireWithChip(CHIP_VENOM, enemy)) {
-		chip = CHIP_VENOM;
-		target = enemy;
 	} else if (turn > 1 and canFireWithChip(CHIP_HELMET, me)) {
 		chip = CHIP_HELMET;
 		target = me;
@@ -207,8 +214,12 @@ while (isAlive(enemy)) {
 				say('Sauve qui peut !');
 			}
 			runAway();
+		} else if (getNearestEnemy() !== enemy) {
+			enemy = getNearestEnemy();
+			continue;
 		} else {
-			moveTo(getCellToFireWithWeapon(WEAPON_LASER));
+			var targetCell = getCooldown(CHIP_STALACTITE) === 0 ? getCellToFireWithChip(CHIP_STALACTITE,  enemy) : getCellToFireWithWeapon(WEAPON_LASER);
+			moveTo(targetCell);
 		}
 		break;
 	}
