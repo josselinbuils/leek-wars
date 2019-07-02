@@ -187,6 +187,9 @@ while (isAlive(enemy)) {
 	} else if (canFireWithChip(CHIP_STALACTITE, enemy)) {
 		chip = CHIP_STALACTITE;
 		target = enemy;
+	} else if (canFireWithChip(CHIP_ROCKFALL, enemy)) {
+		chip = CHIP_ROCKFALL;
+		target = enemy;
 	} else if (canFireWithWeapon(WEAPON_LASER)) {
 		weapon = WEAPON_LASER;
 	} else if (life > (totalLife / 4) && canFireWithChip(CHIP_TOXIN, enemy)) {
@@ -197,6 +200,9 @@ while (isAlive(enemy)) {
 		target = enemy;
 	} else if (canFireWithChip(CHIP_PUNY_BULB, me)) {
 		summonBulb();
+	} else if (life < totalLife && canFireWithChip(CHIP_VACCINE, me)) {	
+		chip = CHIP_VACCINE;	
+		target = me;	
 	} else if (life < (totalLife * 3 / 4) && canFireWithChip(CHIP_CURE, me)) {
 		chip = CHIP_CURE;
 		target = me;
@@ -205,12 +211,6 @@ while (isAlive(enemy)) {
 	} else if (turn > 1 && canFireWithChip(CHIP_HELMET, me)) {
 		chip = CHIP_HELMET;
 		target = me;
-	} else if (canFireWithChip(CHIP_FLAME, enemy)) {
-		chip = CHIP_FLAME;
-		target = enemy;
-	} else if (life < totalLife && canFireWithChip(CHIP_BANDAGE, me)) {	
-		chip = CHIP_BANDAGE;	
-		target = me;	
 	} else {
 		if (hasFired) {
 			if (tp > 0) {
@@ -221,7 +221,14 @@ while (isAlive(enemy)) {
 			enemy = getNearestEnemy();
 			continue;
 		} else {
-			var targetCell = getCooldown(CHIP_STALACTITE) === 0 ? getCellToFireWithChip(CHIP_STALACTITE,  enemy) : getCellToFireWithWeapon(WEAPON_LASER);
+			var targetCell = WEAPON_LASER;
+			
+			if (getCooldown(CHIP_STALACTITE) === 0) {
+				targetCell = getCellToFireWithChip(CHIP_STALACTITE,  enemy);
+			} else if (getCooldown(CHIP_ROCKFALL) === 0) {
+				targetCell = getCellToFireWithChip(CHIP_ROCKFALL,  enemy);
+			}
+
 			moveTo(targetCell);
 		}
 		break;
