@@ -187,24 +187,25 @@ hasFired = false;
 enemy = getNearestLeekEnemy();
 
 if (currentWeapon === null) {
-	ensureWearingWeapon(WEAPON_MACHINE_GUN);
+	ensureWearingWeapon(WEAPON_SHOTGUN);
 	say('Canarticho !');
 }
 
 while (isAlive(enemy)) {
 	var chip = null;
 	var life = getLife();
+	var mp = getMP();
 	var tp = getTP();
 	var result;
 	var target = null;
 	var weapon = null;
 
 	debug('life: ' + life);
-	debug('MP: ' + getMP());
+	debug('MP: ' + mp);
 	debug('TP: ' + tp);
 
-	if (canFireWithWeapon(WEAPON_MACHINE_GUN)) {
-		weapon = WEAPON_MACHINE_GUN;
+	if (canFireWithWeapon(WEAPON_SHOTGUN)) {
+		weapon = WEAPON_SHOTGUN;
 	} else if (canFireWithChip(CHIP_ROCK, enemy)) {
 		chip = CHIP_ROCK;
 		target = enemy;
@@ -224,12 +225,22 @@ while (isAlive(enemy)) {
 		target = me;	
 	} else {
 		if (hasFired) {
-			if (tp > 0) {
+			if (mp > 0 && tp > 0) {
 				say('Sauve qui peut !');
 			}
 			runAway();
 		} else {
-			moveTo(getCellToFireWithWeapon(WEAPON_MACHINE_GUN));
+			var targetCell = getCellToFireWithWeapon(WEAPON_SHOTGUN);
+			var enemyCell = getCell(enemy);
+			
+			if (getMP() > 0) {
+				// Avoid beeing blocked
+				moveTowardCell(targetCell, 1);
+			}
+
+ 			while (getMP() > 0 && getPathLength(getCell(), enemyCell) > 15) {
+				moveTowardCell(targetCell, 1);
+			}			
 		}
 		break;
 	}
