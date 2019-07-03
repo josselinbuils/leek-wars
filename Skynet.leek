@@ -223,18 +223,22 @@ if (currentWeapon === null) {
 while (isAlive(enemy)) {
 	var chip = null;
 	var life = getLife();
+	var mp = getMP();
 	var tp = getTP();
 	var result;
 	var target = null;
 	var weapon = null;
 
 	debug('life: ' + life);
-	debug('MP: ' + getMP());
+	debug('MP: ' + mp);
 	debug('TP: ' + tp);
 
 	if (canFireWithChip(CHIP_SHIELD, me)) {
 		chip = CHIP_SHIELD;
 		target = me;
+	} else if (canFireWithChip(CHIP_ICEBERG, enemy)) {
+		chip = CHIP_ICEBERG;
+		target = enemy;
 	} else if (canFireWithChip(CHIP_STALACTITE, enemy)) {
 		chip = CHIP_STALACTITE;
 		target = enemy;
@@ -257,12 +261,9 @@ while (isAlive(enemy)) {
 	} else if (life < (totalLife * 3 / 4) && canFireWithChip(CHIP_CURE, me)) {
 		chip = CHIP_CURE;
 		target = me;
-	} else if (canFireWithChip(CHIP_HELMET, me)) {
-		chip = CHIP_HELMET;
-		target = me;
 	} else {
 		if (hasFired) {
-			if (tp > 0) {
+			if (mp > 0 && tp > 0) {
 				say('Sauve qui peut !');
 			}
 			runAway();
@@ -271,14 +272,24 @@ while (isAlive(enemy)) {
 			continue;
 		} else {
 			var targetCell = WEAPON_FLAME_THROWER;
-			
-			if (getCooldown(CHIP_STALACTITE) === 0) {
+			var enemyCell = getCell(enemy);
+
+			if (getCooldown(CHIP_ICEBERG) === 0) {
+				targetCell = getCellToFireWithChip(CHIP_ICEBERG,  enemy);
+			} else if (getCooldown(CHIP_STALACTITE) === 0) {
 				targetCell = getCellToFireWithChip(CHIP_STALACTITE,  enemy);
 			} else if (getCooldown(CHIP_ROCKFALL) === 0) {
 				targetCell = getCellToFireWithChip(CHIP_ROCKFALL,  enemy);
 			}
 
-			moveTo(targetCell);
+			if (getMP() > 0) {
+				// Avoid beeing blocked
+				moveTowardCell(targetCell, 1);
+			}
+
+			while (getMP() > 0 && getPathLength(getCell(), enemyCell) > 15) {
+				moveTowardCell(targetCell, 1);
+			}
 		}
 		break;
 	}
