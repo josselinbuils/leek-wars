@@ -4,6 +4,18 @@ global totalLife = getTotalLife();
 global hasFired;
 global enemy = getNearestLeekEnemy();
 
+function areCellsColinear(a, b, c) {
+	var xa = getCellX(a);
+	var ya = getCellY(a);
+	var xb = getCellX(b);
+	var yb = getCellY(b);
+	var xc = getCellX(c);
+	var yc = getCellY(c);
+
+	// see http://mathworld.wolfram.com/Collinear.html
+	return xa * (yb - yc) + xb * (yc - ya) + xc * (ya - yb) === 0;
+}
+
 function bulbAI() {
     var summoner = getSummoner();
 
@@ -41,6 +53,35 @@ function ensureWearingWeapon(weapon) {
 		setWeapon(weapon); 
 		currentWeapon = weapon;
 	}
+}
+
+function getCellsAround(centerCell) {
+	var x = getCellX(centerCell);
+	var y = getCellY(centerCell);
+	var deltas = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
+
+	return arrayFilter(arrayMap(deltas, function (delta) {
+		return getCellFromXY(x + delta[0], y + delta[1]);
+	}), function (cell) {
+		return cell !== null;	
+	});
+}
+
+function getCellsAroundObstacles() {
+	var obstacles = getObstacles();
+	var enemyCell = getCell(enemy);
+	var cellsAroundObstacles = [];
+
+	arrayIter(obstacles, function (obstacle) {
+		var reachableCellsAroundObstacle = removeUnreachableCells(getCellsAround(obstacle));
+		var usefulCellsAroundObstacle = arrayFilter(reachableCellsAroundObstacle, function (cellAround) {
+			return areCellsColinear(obstacle, enemyCell, cellAround) && getDistance(cellAround, enemyCell) > getDistance(obstacle, enemyCell);
+		});
+		cellsAroundObstacles = arrayConcat(cellsAroundObstacles, usefulCellsAroundObstacle);
+	});
+
+	debug(cellsAroundObstacles);
+	return cellsAroundObstacles;
 }
 
 function getCellToFireWithChip(chip, target) {
@@ -123,15 +164,28 @@ function moveTo(cell) {
 	debug('move: ' + moveTowardCell(cell));
 }
 
+function removeUnreachableCells(cells) {
+	var currentCell = getCell();
+	var mp = getMP();
+
+	return arrayFilter(cells, function (cell) {
+		var pathLength = getPathLength(currentCell, cell);
+		return pathLength > 0 && pathLength <= mp;
+	});
+}
+
 function runAway() {
 	var cell = getCell();
 	var enemyCell = getCell(enemy);
+	var cellsAroundObstacles = getCellsAroundObstacles();
 
-	while (getMP() > 0) {
-		debug('move away from line');
-
-		if (moveAwayFromLine(cell, enemyCell) === 0) {
-			break;
+	if (getMP() > 0) {
+		if (count(cellsAroundObstacles) > 0) {
+			debug('move to obstacle');
+			moveTo(getClosestCell(cellsAroundObstacles));
+		} else {
+			debug('move away from line');
+			debug('move: ' + moveAwayFromLine(cell, enemyCell));
 		}
 	}
 }
