@@ -28,7 +28,7 @@ function canFireWithChip(chip, target) {
 	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
 
 	if (target === enemy) {
-		canFire = canFire && getCellToFireWithChip(chip, enemy) !== null;
+		canFire = canFire && getMP() >= getPathLength(getCell(), getCellToFireWithChip(chip, enemy));
 	}
 
 	debug('canFireWithChip(' + getChipName(chip) + ') => ' + canFire);
@@ -42,7 +42,7 @@ function canFireWithWeapon(weapon) {
 		cost = cost + 1;
 	}
 
-	var canFire = getTP() >= cost && getCellToFireWithWeapon(weapon) !== null;
+	var canFire = getTP() >= cost && getMP() >= getPathLength(getCell(), getCellToFireWithWeapon(weapon));
 
 	debug('canFireWithWeapon(' + getWeaponName(weapon) + ') => ' + canFire);
 	return canFire;
@@ -85,13 +85,12 @@ function getCellsAroundObstacles() {
 }
 
 function getCellToFireWithChip(chip, target) {
-	var cellToFire = null;
-	var cells = removeUnreachableCells(getCellsToUseChip(chip, target));
+	var currentCell = getCell();
+	var cells = arrayFilter(getCellsToUseChip(chip, target), function (cell) {
+		return getPathLength(currentCell, cell) > 0;
+	});
 	var startCell = getCell();
-
-	if (count(cells) > 0) {
-		cellToFire = getClosestCell(cells);
-	}
+	var cellToFire = getClosestCell(cells);
 
 	debug('getCellToFireWithChip(' + getChipName(chip) + ', ' + getName(target) + ')');
 	debug('startCell: ' + startCell);
@@ -103,13 +102,12 @@ function getCellToFireWithChip(chip, target) {
 }
 
 function getCellToFireWithWeapon(weapon) {
-	var cellToFire = null;
-	var cells = removeUnreachableCells(getCellsToUseWeapon(weapon, enemy));
+	var currentCell = getCell();
+	var cells = arrayFilter(getCellsToUseWeapon(weapon, enemy), function (cell) {
+		return getPathLength(currentCell, cell) > 0;
+	});
 	var startCell = getCell();
-
- 	if (count(cells) > 0) {
-		cellToFire = getClosestCell(cells);
-	}
+	var cellToFire = getClosestCell(cells);
 
 	debug('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
 	debug('startCell: ' + startCell);
