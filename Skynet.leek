@@ -47,13 +47,7 @@ function ensureWearingWeapon(weapon) {
 function getCellToFireWithChip(chip, target) {
 	var cells = getCellsToUseChip(chip, target);
 	var startCell = getCell();
-
-	var cellToFire = arrayFoldLeft(cells, function (closestCell, cell) {
-		var cellPathLength = getPathLength(startCell, cell);
-		var closestCellPathLength = getPathLength(startCell, closestCell);
-
-		return cell === startCell || (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
-	}, shift(cells));
+	var cellToFire = getClosestCell(cells);
 
 	debug('getCellToFireWithChip(' + getChipName(chip) + ', ' + getName(target) + ')');
 	debug('startCell: ' + startCell);
@@ -67,13 +61,7 @@ function getCellToFireWithChip(chip, target) {
 function getCellToFireWithWeapon(weapon) {
 	var cells = getCellsToUseWeapon(weapon, enemy);
 	var startCell = getCell();
-
-	var cellToFire = arrayFoldLeft(cells, function (closestCell, cell) {
-		var cellPathLength = getPathLength(startCell, cell);
-		var closestCellPathLength = getPathLength(startCell, closestCell);
-
-		return cell === startCell || (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
-	}, shift(cells));
+	var cellToFire = getClosestCell(cells);
 
 	debug('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
 	debug('startCell: ' + startCell);
@@ -82,6 +70,17 @@ function getCellToFireWithWeapon(weapon) {
 	debug('pathLength: ' + getPathLength(startCell, cellToFire));
 
 	return cellToFire;
+}
+
+function getClosestCell(cells) {
+	var startCell = getCell();
+
+	return arrayFoldLeft(cells, function (closestCell, cell) {
+		var cellPathLength = getPathLength(startCell, cell);
+		var closestCellPathLength = getPathLength(startCell, closestCell);
+
+		return cell === startCell || (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
+	}, shift(cells));
 }
 
 function getNearestLeekEnemy() {
@@ -165,7 +164,7 @@ turn = getTurn();
 enemy = getNearestLeekEnemy();
 
 if (currentWeapon === null) {
-	ensureWearingWeapon(WEAPON_LASER);
+	ensureWearingWeapon(WEAPON_FLAME_THROWER);
 	say('Canarticho !');
 }
 
@@ -190,8 +189,8 @@ while (isAlive(enemy)) {
 	} else if (canFireWithChip(CHIP_ROCKFALL, enemy)) {
 		chip = CHIP_ROCKFALL;
 		target = enemy;
-	} else if (canFireWithWeapon(WEAPON_LASER)) {
-		weapon = WEAPON_LASER;
+	} else if (canFireWithWeapon(WEAPON_FLAME_THROWER)) {
+		weapon = WEAPON_FLAME_THROWER;
 	} else if (life > (totalLife / 4) && canFireWithChip(CHIP_TOXIN, enemy)) {
 		chip = CHIP_TOXIN;
 		target = enemy;
@@ -206,8 +205,6 @@ while (isAlive(enemy)) {
 	} else if (life < (totalLife * 3 / 4) && canFireWithChip(CHIP_CURE, me)) {
 		chip = CHIP_CURE;
 		target = me;
-	} else if (canFireWithWeapon(WEAPON_MAGNUM)) {
-		weapon = WEAPON_MAGNUM;
 	} else if (turn > 1 && canFireWithChip(CHIP_HELMET, me)) {
 		chip = CHIP_HELMET;
 		target = me;
@@ -221,7 +218,7 @@ while (isAlive(enemy)) {
 			enemy = getNearestEnemy();
 			continue;
 		} else {
-			var targetCell = WEAPON_LASER;
+			var targetCell = WEAPON_FLAME_THROWER;
 			
 			if (getCooldown(CHIP_STALACTITE) === 0) {
 				targetCell = getCellToFireWithChip(CHIP_STALACTITE,  enemy);
