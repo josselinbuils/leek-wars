@@ -1,0 +1,213 @@
+global me = getLeek();
+global currentWeapon = null;
+global totalLife = getTotalLife();
+global hasFired;
+global enemy = getNearestLeekEnemy();
+
+function canFireWithChip(chip, target) {
+	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
+
+	if (target === enemy) {
+		canFire = canFire && getMP() >= getPathLength(getCell(), getCellToFireWithChip(chip, enemy));
+	}
+
+	debug('canFireWithChip(' + getChipName(chip) + ') => ' + canFire);
+	return canFire;
+}
+
+function canFireWithWeapon(weapon) {
+	var cost = getWeaponCost(weapon);
+
+	if (currentWeapon !== weapon) {
+		cost = cost + 1;
+	}
+
+	var canFire = getTP() >= cost && getMP() >= getPathLength(getCell(), getCellToFireWithWeapon(weapon));
+
+	debug('canFireWithWeapon(' + getWeaponName(weapon) + ') => ' + canFire);
+	return canFire;
+}
+
+function ensureWearingWeapon(weapon) {
+	if (currentWeapon !== weapon) {
+		setWeapon(weapon); 
+		currentWeapon = weapon;
+	}
+}
+
+function getCellToFireWithChip(chip, target) {
+	var cells = getCellsToUseChip(chip, target);
+	var startCell = getCell();
+	var cellToFire = getClosestCell(cells);
+
+	debug('getCellToFireWithChip(' + getChipName(chip) + ', ' + getName(target) + ')');
+	debug('startCell: ' + startCell);
+	debug('cells: ' + cells);
+	debug('cellToFire: ' + cellToFire);
+	debug('pathLength: ' + getPathLength(startCell, cellToFire));
+
+	return cellToFire;
+}
+
+function getCellToFireWithWeapon(weapon) {
+	var cells = getCellsToUseWeapon(weapon, enemy);
+	var startCell = getCell();
+	var cellToFire = getClosestCell(cells);
+
+	debug('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
+	debug('startCell: ' + startCell);
+	debug('cells: ' + cells);
+	debug('cellToFire: ' + cellToFire);
+	debug('pathLength: ' + getPathLength(startCell, cellToFire));
+
+	return cellToFire;
+}
+
+function getClosestCell(cells) {
+	var startCell = getCell();
+
+	return arrayFoldLeft(cells, function (closestCell, cell) {
+		var cellPathLength = getPathLength(startCell, cell);
+		var closestCellPathLength = getPathLength(startCell, closestCell);
+
+		return cell === startCell || (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
+	}, shift(cells));
+}
+
+function getNearestLeekEnemy() {
+	var enemies = getAliveEnemies();
+	var startCell = getCell();
+
+	enemies = arrayFilter(enemies, function (e) {
+		return !isSummon(e);
+	});
+
+	return arrayFoldLeft(enemies, function (nearestEnemy, e) {
+		var enemyPathLength = getPathLength(startCell, getCell(e));
+		var nearestEnemyPathLength = getPathLength(startCell, getCell(nearestEnemy));
+
+		return enemyPathLength > 0 && enemyPathLength < nearestEnemyPathLength ? e : nearestEnemy;
+	}, shift(enemies));
+}
+
+function moveTo(cell) {
+	debug('move: ' + moveTowardCell(cell));
+}
+
+function runAway() {
+	var cell = getCell();
+	var enemyCell = getCell(enemy);
+
+	while (getMP() > 0) {
+		debug('move away from line');
+
+		if (moveAwayFromLine(cell, enemyCell) === 0) {
+			break;
+		}
+	}
+}
+
+function showResult(result) {
+	var humanReadableResult = 'UNKNOWN';
+
+	if (result == USE_CRITICAL) {
+		humanReadableResult = 'CRITICAL';
+	} else if (result === USE_SUCCESS) {
+		humanReadableResult = 'SUCCESS';
+	} else if (result === USE_FAILED) {
+		humanReadableResult = 'FAILED';
+	} else if (result === USE_INVALID_TARGET) {
+		humanReadableResult = 'INVALID_TARGET';
+	} else if (result === USE_NOT_ENOUGH_TP) {
+		humanReadableResult = 'NOT_ENOUGH_TP';
+	} else if (result === USE_INVALID_POSITION) {
+		humanReadableResult = 'INVALID_POSITION,';
+	} else if (result === USE_INVALID_COOLDOWN) {
+		humanReadableResult = 'INVALID_COOLDOWN,';
+	}
+
+	debug('result: ' + humanReadableResult);
+}
+
+hasFired = false;
+enemy = getNearestLeekEnemy();
+
+if (currentWeapon === null) {
+	ensureWearingWeapon(WEAPON_MACHINE_GUN);
+	say('Canarticho !');
+}
+
+while (isAlive(enemy)) {
+	var chip = null;
+	var life = getLife();
+	var tp = getTP();
+	var result;
+	var target = null;
+	var weapon = null;
+
+	debug('life: ' + life);
+	debug('MP: ' + getMP());
+	debug('TP: ' + tp);
+
+	if (canFireWithWeapon(WEAPON_MACHINE_GUN)) {
+		weapon = WEAPON_MACHINE_GUN;
+	} else if (canFireWithWeapon(WEAPON_DOUBLE_GUN)) {
+		weapon = WEAPON_DOUBLE_GUN;
+	} else if (canFireWithChip(CHIP_HELMET, me)) {
+		chip = CHIP_HELMET;
+		target = me;
+	} else if (canFireWithChip(CHIP_ICE, enemy)) {
+		chip = CHIP_ICE;
+		target = enemy;
+	} else if (canFireWithChip(CHIP_SPARK, enemy)) {
+		chip = CHIP_SPARK;
+		target = enemy;
+	} else if (life < totalLife and canFireWithChip(CHIP_BANDAGE, me)) {	
+		chip = CHIP_BANDAGE;	
+		target = me;	
+	} else {
+		if (hasFired) {
+			if (tp > 0) {
+				say('Sauve qui peut !');
+			}
+			runAway();
+		} else {
+			moveTo(getCellToFireWithWeapon(WEAPON_MACHINE_GUN));
+		}
+		break;
+	}
+
+	if (weapon !== null) {
+		debug('use ' + getWeaponName(weapon));
+		moveTo(getCellToFireWithWeapon(weapon));
+		ensureWearingWeapon(weapon);
+		result = useWeapon(enemy);
+		hasFired = true;
+	} else if (chip !== null) {
+		debug('use ' + getChipName(chip));
+
+		if (target === enemy) {
+			moveTo(getCellToFireWithChip(chip, enemy));
+			hasFired = true;
+		}
+
+		result = useChip(chip, target);
+	}
+
+	if (result !== null) {
+		showResult(result);
+
+		if (result === USE_INVALID_POSITION && getMP() > 0) {
+			// Why the fuck this can happen ???
+			if (moveToward(enemy) === 0) {
+				break;
+			}
+		} else if (result !== USE_SUCCESS && result !== USE_FAILED && result !== USE_CRITICAL) {
+			break;
+		}
+	}
+
+	if (getAliveEnemiesCount() === 0) {
+		say("Encore une victoire de canard !");
+	}
+}
