@@ -206,13 +206,17 @@ function showResult(result) {
 	} else if (result === USE_FAILED) {
 		humanReadableResult = 'FAILED';
 	} else if (result === USE_INVALID_TARGET) {
+		debugE('INVALID_TARGET');
 		humanReadableResult = 'INVALID_TARGET';
 	} else if (result === USE_NOT_ENOUGH_TP) {
+		debugE('NOT_ENOUGH_TP');
 		humanReadableResult = 'NOT_ENOUGH_TP';
 	} else if (result === USE_INVALID_POSITION) {
-		humanReadableResult = 'INVALID_POSITION,';
+		debugE('INVALID_POSITION');
+		humanReadableResult = 'INVALID_POSITION';
 	} else if (result === USE_INVALID_COOLDOWN) {
-		humanReadableResult = 'INVALID_COOLDOWN,';
+		debugE('INVALID_COOLDOWN');
+		humanReadableResult = 'INVALID_COOLDOWN';
 	}
 
 	debug('result: ' + humanReadableResult);
@@ -239,8 +243,14 @@ while (isAlive(enemy)) {
 	debug('MP: ' + mp);
 	debug('TP: ' + tp);
 
-	if (canFireWithChip(CHIP_SHIELD, me)) {
+	if (canFireWithChip(CHIP_ARMOR, me)) {
+		chip = CHIP_ARMOR;
+		target = me;
+	} else if (canFireWithChip(CHIP_SHIELD, me)) {
 		chip = CHIP_SHIELD;
+		target = me;
+	} else if (canFireWithChip(CHIP_WALL, me)) {
+		chip = CHIP_WALL;
 		target = me;
 	} else if (canFireWithChip(CHIP_ICEBERG, enemy)) {
 		chip = CHIP_ICEBERG;
@@ -253,12 +263,6 @@ while (isAlive(enemy)) {
 		target = enemy;
 	} else if (canFireWithWeapon(WEAPON_FLAME_THROWER)) {
 		weapon = WEAPON_FLAME_THROWER;
-	} else if (life > (totalLife / 4) && canFireWithChip(CHIP_TOXIN, enemy)) {
-		chip = CHIP_TOXIN;
-		target = enemy;
-	} else if (life > (totalLife / 4) && canFireWithChip(CHIP_VENOM, enemy)) {
-		chip = CHIP_VENOM;
-		target = enemy;
 	} else if (canFireWithChip(CHIP_PUNY_BULB, me)) {
 		summonBulb();
 	} else if (life < totalLife && canFireWithChip(CHIP_VACCINE, me)) {	
