@@ -226,7 +226,7 @@ hasFired = false;
 enemy = getNearestLeekEnemy();
 
 if (currentWeapon === null) {
-	ensureWearingWeapon(WEAPON_FLAME_THROWER);
+	ensureWearingWeapon(WEAPON_LASER);
 	say('Canarticho !');
 }
 
@@ -261,13 +261,18 @@ while (isAlive(enemy)) {
 	} else if (canFireWithChip(CHIP_ROCKFALL, enemy)) {
 		chip = CHIP_ROCKFALL;
 		target = enemy;
-	} else if (canFireWithWeapon(WEAPON_FLAME_THROWER)) {
-		weapon = WEAPON_FLAME_THROWER;
-	} else if (canFireWithChip(CHIP_PUNY_BULB, me)) {
-		summonBulb();
+	} else if (canFireWithWeapon(WEAPON_LASER)) {
+		weapon = WEAPON_LASER;
+	} else if (canFireWithWeapon(WEAPON_GRENADE_LAUNCHER)) {
+		weapon = WEAPON_GRENADE_LAUNCHER;
+	} else if (canFireWithWeapon(WEAPON_BROADSWORD)) {
+		// In case the leek is blocked on a unique case
+		weapon = WEAPON_BROADSWORD;
 	} else if (life < totalLife && canFireWithChip(CHIP_VACCINE, me)) {	
 		chip = CHIP_VACCINE;	
 		target = me;	
+	} else if (canFireWithChip(CHIP_PUNY_BULB, me)) {
+		summonBulb();
 	} else if (life < (totalLife * 3 / 4) && canFireWithChip(CHIP_CURE, me)) {
 		chip = CHIP_CURE;
 		target = me;
@@ -281,7 +286,7 @@ while (isAlive(enemy)) {
 			enemy = getNearestEnemy();
 			continue;
 		} else {
-			var targetCell = WEAPON_FLAME_THROWER;
+			var targetCell = WEAPON_LASER;
 			var enemyCell = getCell(enemy);
 
 			if (getCooldown(CHIP_ICEBERG) === 0) {
