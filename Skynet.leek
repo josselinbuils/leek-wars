@@ -1,20 +1,9 @@
-global me = getLeek();
-global currentWeapon = null;
-global totalLife = getTotalLife();
+include('Common');
+
+global currentEnemy = getNearestLeekEnemy();
 global hasFired;
-global enemy = getNearestLeekEnemy();
-
-function areCellsColinear(a, b, c) {
-	var xa = getCellX(a);
-	var ya = getCellY(a);
-	var xb = getCellX(b);
-	var yb = getCellY(b);
-	var xc = getCellX(c);
-	var yc = getCellY(c);
-
-	// see http://mathworld.wolfram.com/Collinear.html
-	return xa * (yb - yc) + xb * (yc - ya) + xc * (ya - yb) === 0;
-}
+global me = getLeek();
+global totalLife = getTotalLife();
 
 function bulbAI() {
     var summoner = getSummoner();
@@ -24,135 +13,8 @@ function bulbAI() {
 	useChip(CHIP_BANDAGE, summoner);
 }
 
-function canFireWithChip(chip, target) {
-	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
-
-	if (canFire && target !== me) {
-		var cellToFire = getCellToFireWithChip(chip, target);
-		canFire = cellToFire !== null && getMP() >= getPathLength(getCell(), cellToFire);
-	}
-
-	debug('canFireWithChip(' + getChipName(chip) + ') => ' + canFire);
-	return canFire;
-}
-
-function canFireWithWeapon(weapon) {
-	var cost = getWeaponCost(weapon);
-	var canFire = false;
-
-	if (currentWeapon !== weapon) {
-		cost = cost + 1;
-	}
-
-	if (getTP() >= cost) {
-		var cellToFire = getCellToFireWithWeapon(weapon);
-		canFire = cellToFire !== null && getMP() >= getPathLength(getCell(), cellToFire);
-	}
-
-	debug('canFireWithWeapon(' + getWeaponName(weapon) + ') => ' + canFire);
-	return canFire;
-}
-
-function ensureWearingWeapon(weapon) {
-	if (currentWeapon !== weapon) {
-		setWeapon(weapon); 
-		currentWeapon = weapon;
-	}
-}
-
-function getCellsAround(centerCell) {
-	var x = getCellX(centerCell);
-	var y = getCellY(centerCell);
-	var deltas = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
-
-	return arrayFilter(arrayMap(deltas, function (delta) {
-		return getCellFromXY(x + delta[0], y + delta[1]);
-	}), function (cell) {
-		return cell !== null;	
-	});
-}
-
-function getCellsAroundObstacles() {
-	var obstacles = getObstacles();
-	var enemyCell = getCell(enemy);
-	var cellsAroundObstacles = [];
-
-	arrayIter(obstacles, function (obstacle) {
-		var reachableCellsAroundObstacle = removeUnreachableCells(getCellsAround(obstacle));
-		var usefulCellsAroundObstacle = arrayFilter(reachableCellsAroundObstacle, function (cellAround) {
-			return areCellsColinear(obstacle, enemyCell, cellAround) && getDistance(cellAround, enemyCell) > getDistance(obstacle, enemyCell);
-		});
-		cellsAroundObstacles = arrayConcat(cellsAroundObstacles, usefulCellsAroundObstacle);
-	});
-
-	debug(cellsAroundObstacles);
-	return cellsAroundObstacles;
-}
-
-function getCellToFireWithChip(chip, target) {
-	var currentCell = getCell();
-	var cells = arrayFilter(getCellsToUseChip(chip, target), function (cell) {
-		return getPathLength(currentCell, cell) > 0;
-	});
-	
-	var startCell = getCell();
-	var cellToFire = getClosestCell(cells);
-
-	debug('getCellToFireWithChip(' + getChipName(chip) + ', ' + getName(target) + ')');
-	debug('startCell: ' + startCell);
-	debug('cells: ' + cells);
-	debug('cellToFire: ' + cellToFire);
-	debug('pathLength: ' + getPathLength(startCell, cellToFire));
-
-	return cellToFire;
-}
-
-function getCellToFireWithWeapon(weapon) {
-	var currentCell = getCell();
-	var cells = arrayFilter(getCellsToUseWeapon(weapon, enemy), function (cell) {
-		return getPathLength(currentCell, cell) > 0;
-	});
-	var startCell = getCell();
-	var cellToFire = getClosestCell(cells);
-
-	debug('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
-	debug('startCell: ' + startCell);
-	debug('cells: ' + cells);
-	debug('cellToFire: ' + cellToFire);
-	debug('pathLength: ' + getPathLength(startCell, cellToFire));
-
-	return cellToFire;
-}
-
-function getClosestCell(cells) {
-	var startCell = getCell();
-
-	return arrayFoldLeft(cells, function (closestCell, cell) {
-		var cellPathLength = getPathLength(startCell, cell);
-		var closestCellPathLength = getPathLength(startCell, closestCell);
-
-		return cell === startCell || (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
-	}, shift(cells));
-}
-
-function getNearestLeekEnemy() {
-	var enemies = getAliveEnemies();
-	var startCell = getCell();
-
-	enemies = arrayFilter(enemies, function (e) {
-		return !isSummon(e);
-	});
-
-	return arrayFoldLeft(enemies, function (nearestEnemy, e) {
-		var enemyPathLength = getPathLength(startCell, getCell(e));
-		var nearestEnemyPathLength = getPathLength(startCell, getCell(nearestEnemy));
-
-		return enemyPathLength > 0 && enemyPathLength < nearestEnemyPathLength ? e : nearestEnemy;
-	}, shift(enemies));
-}
-
 function summonBulb() {
-	var enemyCell = getCell(enemy);
+	var enemyCell = getCell(currentEnemy);
 	var cell = getCell();
 	var x = getCellX(cell);
 	var y = getCellY(cell);
@@ -176,67 +38,15 @@ function moveTo(cell) {
 	debug('move: ' + moveTowardCell(cell));
 }
 
-function removeUnreachableCells(cells) {
-	var currentCell = getCell();
-	var mp = getMP();
-
-	return arrayFilter(cells, function (cell) {
-		var pathLength = getPathLength(currentCell, cell);
-		return pathLength > 0 && pathLength <= mp;
-	});
-}
-
-function runAway() {
-	var cell = getCell();
-	var enemyCell = getCell(enemy);
-	var cellsAroundObstacles = getCellsAroundObstacles();
-
-	if (getMP() > 0) {
-		if (count(cellsAroundObstacles) > 0) {
-			debug('move to obstacle');
-			moveTo(getClosestCell(cellsAroundObstacles));
-		} else {
-			debug('move away from line');
-			debug('move: ' + moveAwayFromLine(cell, enemyCell));
-		}
-	}
-}
-
-function showResult(result) {
-	var humanReadableResult = 'UNKNOWN';
-
-	if (result == USE_CRITICAL) {
-		humanReadableResult = 'CRITICAL';
-	} else if (result === USE_SUCCESS) {
-		humanReadableResult = 'SUCCESS';
-	} else if (result === USE_FAILED) {
-		humanReadableResult = 'FAILED';
-	} else if (result === USE_INVALID_TARGET) {
-		debugE('INVALID_TARGET');
-		humanReadableResult = 'INVALID_TARGET';
-	} else if (result === USE_NOT_ENOUGH_TP) {
-		debugE('NOT_ENOUGH_TP');
-		humanReadableResult = 'NOT_ENOUGH_TP';
-	} else if (result === USE_INVALID_POSITION) {
-		debugE('INVALID_POSITION');
-		humanReadableResult = 'INVALID_POSITION';
-	} else if (result === USE_INVALID_COOLDOWN) {
-		debugE('INVALID_COOLDOWN');
-		humanReadableResult = 'INVALID_COOLDOWN';
-	}
-
-	debug('result: ' + humanReadableResult);
-}
-
 hasFired = false;
-enemy = getNearestLeekEnemy();
+currentEnemy = getNearestLeekEnemy();
 
-if (currentWeapon === null) {
+if (getWeapon() === null) {
 	ensureWearingWeapon(WEAPON_FLAME_THROWER);
 	say('Canarticho !');
 }
 
-while (isAlive(enemy)) {
+while (isAlive(currentEnemy)) {
 	var chip = null;
 	var life = getLife();
 	var mp = getMP();
@@ -258,21 +68,21 @@ while (isAlive(enemy)) {
 	} else if (canFireWithChip(CHIP_WALL, me)) {
 		chip = CHIP_WALL;
 		target = me;
-	} else if (canFireWithChip(CHIP_ICEBERG, enemy)) {
+	} else if (canFireWithChip(CHIP_ICEBERG, currentEnemy)) {
 		chip = CHIP_ICEBERG;
-		target = enemy;
-	} else if (canFireWithWeapon(WEAPON_FLAME_THROWER)) {
+		target = currentEnemy;
+	} else if (canFireWithWeapon(WEAPON_FLAME_THROWER, currentEnemy)) {
 		weapon = WEAPON_FLAME_THROWER;
-	} else if (canFireWithChip(CHIP_VENOM, enemy)) {	
+	} else if (canFireWithChip(CHIP_VENOM, currentEnemy)) {	
 		chip = CHIP_VENOM;
-		target = enemy;
-	} else if (canFireWithChip(CHIP_STALACTITE, enemy)) {
+		target = currentEnemy;
+	} else if (canFireWithChip(CHIP_STALACTITE, currentEnemy)) {
 		chip = CHIP_STALACTITE;
-		target = enemy;
-	} else if (canFireWithChip(CHIP_ROCKFALL, enemy)) {
+		target = currentEnemy;
+	} else if (canFireWithChip(CHIP_ROCKFALL, currentEnemy)) {
 		chip = CHIP_ROCKFALL;
-		target = enemy;
-	} else if (canFireWithWeapon(WEAPON_BROADSWORD)) {
+		target = currentEnemy;
+	} else if (canFireWithWeapon(WEAPON_BROADSWORD, currentEnemy)) {
 		// In case the leek is blocked on a unique case
 		weapon = WEAPON_BROADSWORD;
 	} else if (life < totalLife && canFireWithChip(CHIP_VACCINE, me)) {	
@@ -288,16 +98,16 @@ while (isAlive(enemy)) {
 			if (mp > 0 && tp > 0) {
 				say('Sauve qui peut !');
 			}
-			runAway();
-		} else if (getNearestEnemy() !== enemy) {
-			enemy = getNearestEnemy();
+			runAway(currentEnemy);
+		} else if (getNearestEnemy() !== currentEnemy) {
+			currentEnemy = getNearestEnemy();
 			continue;
 		} else {
 			var targetCell = WEAPON_FLAME_THROWER;
-			var enemyCell = getCell(enemy);
+			var enemyCell = getCell(currentEnemy);
 
 			if (getCooldown(CHIP_ICEBERG) === 0) {
-				targetCell = getCellToFireWithChip(CHIP_ICEBERG,  enemy);
+				targetCell = getCellToFireWithChip(CHIP_ICEBERG,  currentEnemy);
 			}
 
 			if (getMP() > 0) {
@@ -314,15 +124,15 @@ while (isAlive(enemy)) {
 
 	if (weapon !== null) {
 		debug('use ' + getWeaponName(weapon));
-		moveTo(getCellToFireWithWeapon(weapon));
+		moveTo(getCellToFireWithWeapon(weapon, currentEnemy));
 		ensureWearingWeapon(weapon);
-		result = useWeapon(enemy);
+		result = useWeapon(currentEnemy);
 		hasFired = true;
 	} else if (chip !== null) {
 		debug('use ' + getChipName(chip));
 
-		if (target === enemy) {
-			moveTo(getCellToFireWithChip(chip, enemy));
+		if (target !== me) {
+			moveTo(getCellToFireWithChip(chip, target));
 			hasFired = true;
 		}
 
@@ -334,7 +144,7 @@ while (isAlive(enemy)) {
 
 		if (result === USE_INVALID_POSITION && getMP() > 0) {
 			// Why the fuck this can happen ???
-			if (moveToward(enemy) === 0) {
+			if (moveToward(currentEnemy) === 0) {
 				break;
 			}
 		} else if (result !== USE_SUCCESS && result !== USE_FAILED && result !== USE_CRITICAL) {
