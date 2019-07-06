@@ -226,7 +226,7 @@ hasFired = false;
 enemy = getNearestLeekEnemy();
 
 if (currentWeapon === null) {
-	ensureWearingWeapon(WEAPON_LASER);
+	ensureWearingWeapon(WEAPON_FLAME_THROWER);
 	say('Canarticho !');
 }
 
@@ -255,27 +255,28 @@ while (isAlive(enemy)) {
 	} else if (canFireWithChip(CHIP_ICEBERG, enemy)) {
 		chip = CHIP_ICEBERG;
 		target = enemy;
+	} else if (canFireWithWeapon(WEAPON_FLAME_THROWER)) {
+		weapon = WEAPON_FLAME_THROWER;
+	} else if (canFireWithChip(CHIP_VENOM, enemy)) {	
+		chip = CHIP_VENOM;
+		target = enemy;
 	} else if (canFireWithChip(CHIP_STALACTITE, enemy)) {
 		chip = CHIP_STALACTITE;
 		target = enemy;
 	} else if (canFireWithChip(CHIP_ROCKFALL, enemy)) {
 		chip = CHIP_ROCKFALL;
 		target = enemy;
-	} else if (canFireWithWeapon(WEAPON_LASER)) {
-		weapon = WEAPON_LASER;
-	} else if (canFireWithWeapon(WEAPON_GRENADE_LAUNCHER)) {
-		weapon = WEAPON_GRENADE_LAUNCHER;
 	} else if (canFireWithWeapon(WEAPON_BROADSWORD)) {
 		// In case the leek is blocked on a unique case
 		weapon = WEAPON_BROADSWORD;
 	} else if (life < totalLife && canFireWithChip(CHIP_VACCINE, me)) {	
 		chip = CHIP_VACCINE;	
 		target = me;	
-	} else if (canFireWithChip(CHIP_PUNY_BULB, me)) {
-		summonBulb();
 	} else if (life < (totalLife * 3 / 4) && canFireWithChip(CHIP_CURE, me)) {
 		chip = CHIP_CURE;
 		target = me;
+	} else if (canFireWithChip(CHIP_PUNY_BULB, me)) {
+		summonBulb();
 	} else {
 		if (hasFired) {
 			if (mp > 0 && tp > 0) {
@@ -286,15 +287,11 @@ while (isAlive(enemy)) {
 			enemy = getNearestEnemy();
 			continue;
 		} else {
-			var targetCell = WEAPON_LASER;
+			var targetCell = WEAPON_FLAME_THROWER;
 			var enemyCell = getCell(enemy);
 
 			if (getCooldown(CHIP_ICEBERG) === 0) {
 				targetCell = getCellToFireWithChip(CHIP_ICEBERG,  enemy);
-			} else if (getCooldown(CHIP_STALACTITE) === 0) {
-				targetCell = getCellToFireWithChip(CHIP_STALACTITE,  enemy);
-			} else if (getCooldown(CHIP_ROCKFALL) === 0) {
-				targetCell = getCellToFireWithChip(CHIP_ROCKFALL,  enemy);
 			}
 
 			if (getMP() > 0) {
