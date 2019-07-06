@@ -27,8 +27,9 @@ function bulbAI() {
 function canFireWithChip(chip, target) {
 	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
 
-	if (target === enemy) {
-		canFire = canFire && getMP() >= getPathLength(getCell(), getCellToFireWithChip(chip, enemy));
+	if (canFire && target !== me) {
+		var cellToFire = getCellToFireWithChip(chip, target);
+		canFire = cellToFire !== null && getMP() >= getPathLength(getCell(), cellToFire);
 	}
 
 	debug('canFireWithChip(' + getChipName(chip) + ') => ' + canFire);
@@ -37,12 +38,16 @@ function canFireWithChip(chip, target) {
 
 function canFireWithWeapon(weapon) {
 	var cost = getWeaponCost(weapon);
+	var canFire = false;
 
 	if (currentWeapon !== weapon) {
 		cost = cost + 1;
 	}
 
-	var canFire = getTP() >= cost && getMP() >= getPathLength(getCell(), getCellToFireWithWeapon(weapon));
+	if (getTP() >= cost) {
+		var cellToFire = getCellToFireWithWeapon(weapon);
+		canFire = cellToFire !== null && getMP() >= getPathLength(getCell(), cellToFire);
+	}
 
 	debug('canFireWithWeapon(' + getWeaponName(weapon) + ') => ' + canFire);
 	return canFire;
@@ -89,6 +94,7 @@ function getCellToFireWithChip(chip, target) {
 	var cells = arrayFilter(getCellsToUseChip(chip, target), function (cell) {
 		return getPathLength(currentCell, cell) > 0;
 	});
+	
 	var startCell = getCell();
 	var cellToFire = getClosestCell(cells);
 
