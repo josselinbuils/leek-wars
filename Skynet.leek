@@ -1,20 +1,15 @@
 include('Common');
 
-global currentEnemy = getNearestLeekEnemy();
-global hasFired;
-global me = getLeek();
-global totalLife = getTotalLife();
-
 function bulbAI() {
     var summoner = getSummoner();
 
-	moveTo(getCellToFireWithChip(CHIP_BANDAGE, summoner));
+	debug('move: ' + moveTowardCell(getCellToFireWithChip(CHIP_BANDAGE, summoner)));
 	useChip(CHIP_BANDAGE, summoner);
 	useChip(CHIP_BANDAGE, summoner);
 }
 
-function summonBulb() {
-	var enemyCell = getCell(currentEnemy);
+function summonBulb(enemy) {
+	var enemyCell = getCell(enemy);
 	var cell = getCell();
 	var x = getCellX(cell);
 	var y = getCellY(cell);
@@ -34,125 +29,127 @@ function summonBulb() {
 	}
 }
 
-function moveTo(cell) {
-	debug('move: ' + moveTowardCell(cell));
-}
+function Skynet() {
+	var hasFired = false;
+	var enemy = getNearestLeekEnemy();
+	var me = getLeek();
+	var totalLife = getTotalLife();
 
-hasFired = false;
-currentEnemy = getNearestLeekEnemy();
+	if (getWeapon() === null) {
+		ensureWearingWeapon(WEAPON_FLAME_THROWER);
+		say('Canarticho !');
+	}
 
-if (getWeapon() === null) {
-	ensureWearingWeapon(WEAPON_FLAME_THROWER);
-	say('Canarticho !');
-}
+	while (isAlive(enemy)) {
+		var chip = null;
+		var life = getLife();
+		var mp = getMP();
+		var tp = getTP();
+		var result;
+		var target = null;
+		var weapon = null;
 
-while (isAlive(currentEnemy)) {
-	var chip = null;
-	var life = getLife();
-	var mp = getMP();
-	var tp = getTP();
-	var result;
-	var target = null;
-	var weapon = null;
+		debug('life: ' + life);
+		debug('MP: ' + mp);
+		debug('TP: ' + tp);
 
-	debug('life: ' + life);
-	debug('MP: ' + mp);
-	debug('TP: ' + tp);
-
-	if (canFireWithChip(CHIP_ARMOR, me)) {
-		chip = CHIP_ARMOR;
-		target = me;
-	} else if (canFireWithChip(CHIP_SHIELD, me)) {
-		chip = CHIP_SHIELD;
-		target = me;
-	} else if (canFireWithChip(CHIP_WALL, me)) {
-		chip = CHIP_WALL;
-		target = me;
-	} else if (canFireWithChip(CHIP_ICEBERG, currentEnemy)) {
-		chip = CHIP_ICEBERG;
-		target = currentEnemy;
-	} else if (canFireWithWeapon(WEAPON_FLAME_THROWER, currentEnemy)) {
-		weapon = WEAPON_FLAME_THROWER;
-	} else if (canFireWithChip(CHIP_VENOM, currentEnemy)) {	
-		chip = CHIP_VENOM;
-		target = currentEnemy;
-	} else if (canFireWithChip(CHIP_STALACTITE, currentEnemy)) {
-		chip = CHIP_STALACTITE;
-		target = currentEnemy;
-	} else if (canFireWithChip(CHIP_ROCKFALL, currentEnemy)) {
-		chip = CHIP_ROCKFALL;
-		target = currentEnemy;
-	} else if (canFireWithWeapon(WEAPON_BROADSWORD, currentEnemy)) {
-		// In case the leek is blocked on a unique case
-		weapon = WEAPON_BROADSWORD;
-	} else if (life < totalLife && canFireWithChip(CHIP_VACCINE, me)) {	
-		chip = CHIP_VACCINE;	
-		target = me;	
-	} else if (life < (totalLife * 3 / 4) && canFireWithChip(CHIP_CURE, me)) {
-		chip = CHIP_CURE;
-		target = me;
-	} else if (canFireWithChip(CHIP_PUNY_BULB, me)) {
-		summonBulb();
-	} else {
-		if (hasFired) {
-			if (mp > 0 && tp > 0) {
-				say('Sauve qui peut !');
-			}
-			runAway(currentEnemy);
-		} else if (getNearestEnemy() !== currentEnemy) {
-			currentEnemy = getNearestEnemy();
-			continue;
+		if (canFireWithChip(CHIP_ARMOR, me)) {
+			chip = CHIP_ARMOR;
+			target = me;
+		} else if (canFireWithChip(CHIP_SHIELD, me)) {
+			chip = CHIP_SHIELD;
+			target = me;
+		} else if (canFireWithChip(CHIP_WALL, me)) {
+			chip = CHIP_WALL;
+			target = me;
+		} else if (canFireWithChip(CHIP_ICEBERG, enemy)) {
+			chip = CHIP_ICEBERG;
+			target = enemy;
+		} else if (canFireWithWeapon(WEAPON_FLAME_THROWER, enemy)) {
+			weapon = WEAPON_FLAME_THROWER;
+		} else if (canFireWithChip(CHIP_VENOM, enemy)) {	
+			chip = CHIP_VENOM;
+			target = enemy;
+		} else if (canFireWithChip(CHIP_STALACTITE, enemy)) {
+			chip = CHIP_STALACTITE;
+			target = enemy;
+		} else if (canFireWithChip(CHIP_ROCKFALL, enemy)) {
+			chip = CHIP_ROCKFALL;
+			target = enemy;
+		} else if (canFireWithWeapon(WEAPON_BROADSWORD, enemy)) {
+			// In case the leek is blocked on a unique case
+			weapon = WEAPON_BROADSWORD;
+		} else if (life < totalLife && canFireWithChip(CHIP_VACCINE, me)) {	
+			chip = CHIP_VACCINE;	
+			target = me;	
+		} else if (life < (totalLife * 3 / 4) && canFireWithChip(CHIP_CURE, me)) {
+			chip = CHIP_CURE;
+			target = me;
+		} else if (canFireWithChip(CHIP_PUNY_BULB, me)) {
+			summonBulb(enemy);
 		} else {
-			var targetCell = WEAPON_FLAME_THROWER;
-			var enemyCell = getCell(currentEnemy);
+			if (hasFired) {
+				if (mp > 0 && tp > 0) {
+					say('Sauve qui peut !');
+				}
+				runAway(enemy);
+			} else if (getNearestEnemy() !== enemy) {
+				enemy = getNearestEnemy();
+				continue;
+			} else {
+				var targetCell = WEAPON_FLAME_THROWER;
+				var enemyCell = getCell(enemy);
 
-			if (getCooldown(CHIP_ICEBERG) === 0) {
-				targetCell = getCellToFireWithChip(CHIP_ICEBERG,  currentEnemy);
+				if (getCooldown(CHIP_ICEBERG) === 0) {
+					targetCell = getCellToFireWithChip(CHIP_ICEBERG,  enemy);
+				}
+
+				if (getMP() > 0) {
+					// Avoid beeing blocked
+					moveTowardCell(targetCell, 1);
+				}
+
+				while (getMP() > 0 && getPathLength(getCell(), enemyCell) > 15) {
+					moveTowardCell(targetCell, 1);
+				}
 			}
-
-			if (getMP() > 0) {
-				// Avoid beeing blocked
-				moveTowardCell(targetCell, 1);
-			}
-
-			while (getMP() > 0 && getPathLength(getCell(), enemyCell) > 15) {
-				moveTowardCell(targetCell, 1);
-			}
-		}
-		break;
-	}
-
-	if (weapon !== null) {
-		debug('use ' + getWeaponName(weapon));
-		moveTo(getCellToFireWithWeapon(weapon, currentEnemy));
-		ensureWearingWeapon(weapon);
-		result = useWeapon(currentEnemy);
-		hasFired = true;
-	} else if (chip !== null) {
-		debug('use ' + getChipName(chip));
-
-		if (target !== me) {
-			moveTo(getCellToFireWithChip(chip, target));
-			hasFired = true;
-		}
-
-		result = useChip(chip, target);
-	}
-
-	if (result !== null) {
-		showResult(result);
-
-		if (result === USE_INVALID_POSITION && getMP() > 0) {
-			// Why the fuck this can happen ???
-			if (moveToward(currentEnemy) === 0) {
-				break;
-			}
-		} else if (result !== USE_SUCCESS && result !== USE_FAILED && result !== USE_CRITICAL) {
 			break;
 		}
-	}
 
-	if (getAliveEnemiesCount() === 0) {
-		say("Encore une victoire de canard !");
+		if (weapon !== null) {
+			debug('use ' + getWeaponName(weapon));
+			debug('move: ' + moveTowardCell(getCellToFireWithWeapon(weapon, enemy)));
+			ensureWearingWeapon(weapon);
+			result = useWeapon(enemy);
+			hasFired = true;
+		} else if (chip !== null) {
+			debug('use ' + getChipName(chip));
+
+			if (target !== me) {
+				debug('move: ' + moveTowardCell(getCellToFireWithChip(chip, target)));
+				hasFired = true;
+			}
+
+			result = useChip(chip, target);
+		}
+
+		if (result !== null) {
+			showResult(result);
+
+			if (result === USE_INVALID_POSITION && getMP() > 0) {
+				// Why the fuck this can happen ???
+				if (moveToward(enemy) === 0) {
+					break;
+				}
+			} else if (result !== USE_SUCCESS && result !== USE_FAILED && result !== USE_CRITICAL) {
+				break;
+			}
+		}
+
+		if (getAliveEnemiesCount() === 0) {
+			say("Encore une victoire de canard !");
+		}
 	}
 }
+
+Skynet();
