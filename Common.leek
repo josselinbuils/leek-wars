@@ -77,9 +77,8 @@ function getCellsAroundObstacles(enemy) {
 function getCellToFireWithChip(chip, target) {
 	var currentCell = getCell();
 	var cells = arrayFilter(getCellsToUseChip(chip, target), function (cell) {
-		return getPathLength(currentCell, cell) > 0;
+		return getPathLength(currentCell, cell) !== null;
 	});
-	
 	var startCell = getCell();
 	var cellToFire = getClosestCell(cells);
 
@@ -95,7 +94,7 @@ function getCellToFireWithChip(chip, target) {
 function getCellToFireWithWeapon(weapon, enemy) {
 	var currentCell = getCell();
 	var cells = arrayFilter(getCellsToUseWeapon(weapon, enemy), function (cell) {
-		return getPathLength(currentCell, cell) > 0;
+		return getPathLength(currentCell, cell) !== null;
 	});
 	var startCell = getCell();
 	var cellToFire = getClosestCell(cells);
