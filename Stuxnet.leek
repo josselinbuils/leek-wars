@@ -13,18 +13,18 @@ function Stuxnet() {
 
 	while (isAlive(enemy)) {
 		var chip = null;
-		var life = getLife();
-		var mp = getMP();
-		var tp = getTP();
 		var result;
 		var target = null;
 		var weapon = null;
 
-		debug('life: ' + life);
-		debug('MP: ' + mp);
-		debug('TP: ' + tp);
+		debug('life: ' + getLife());
+		debug('MP: ' + getMP());
+		debug('TP: ' + getTP());
 
-		if (canFireWithChip(CHIP_HELMET, me)) {
+		if (canFireWithChip(CHIP_SHIELD, me)) {
+			chip = CHIP_SHIELD;
+			target = me;
+		} else if (canFireWithChip(CHIP_HELMET, me)) {
 			chip = CHIP_HELMET;
 			target = me;
 		} else if (canFireWithWeapon(WEAPON_SHOTGUN, enemy)) {
@@ -32,38 +32,28 @@ function Stuxnet() {
 		} else if (canFireWithChip(CHIP_ROCK, enemy)) {
 			chip = CHIP_ROCK;
 			target = enemy;
-		}  else if (canFireWithWeapon(WEAPON_DOUBLE_GUN, enemy)) {
-			weapon = WEAPON_DOUBLE_GUN;
+		}  else if (canFireWithWeapon(WEAPON_MAGNUM, enemy)) {
+			weapon = WEAPON_MAGNUM;
 		} else if (canFireWithChip(CHIP_ICE, enemy)) {
 			chip = CHIP_ICE;
 			target = enemy;
 		} else if (canFireWithChip(CHIP_SPARK, enemy)) {
 			chip = CHIP_SPARK;
 			target = enemy;
-		} else if (life < (totalLife - 50) and canFireWithChip(CHIP_CURE, me)) {	
+		} else if (getLife() < (totalLife - 50) and canFireWithChip(CHIP_CURE, me)) {	
 			chip = CHIP_CURE;	
 			target = me;	
-		} else if (life < totalLife and canFireWithChip(CHIP_BANDAGE, me)) {	
+		} else if (getLife() < totalLife and canFireWithChip(CHIP_BANDAGE, me)) {	
 			chip = CHIP_BANDAGE;	
 			target = me;	
 		} else {
 			if (hasFired) {
-				if (mp > 0 && tp > 0) {
+				if (getTP() > 0) {
 					say('Sauve qui peut !');
 				}
 				runAway(enemy);
-			} else {
-				var targetCell = getCellToFireWithWeapon(WEAPON_SHOTGUN, enemy);
-				var enemyCell = getCell(enemy);
-
-				if (getMP() > 0) {
-					// Avoid beeing blocked
-					moveTowardCell(targetCell, 1);
-				}
-
-				while (getMP() > 0 && getPathLength(getCell(), enemyCell) > 15) {
-					moveTowardCell(targetCell, 1);
-				}			
+			} else if (getMP() > 0) {
+				moveTowardCell(getCellToFireWithWeapon(WEAPON_SHOTGUN, enemy));
 			}
 			break;
 		}
