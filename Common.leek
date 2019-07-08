@@ -147,11 +147,11 @@ function removeUnreachableCells(cells) {
 }
 
 function runAway(enemy) {
-	var cell = getCell();
-	var enemyCell = getCell(enemy);
-	var cellsAroundObstacles = getCellsAroundObstacles(enemy);
-
 	if (getMP() > 0) {
+		var cell = getCell();
+		var enemyCell = getCell(enemy);
+		var cellsAroundObstacles = getCellsAroundObstacles(enemy);
+
 		if (count(cellsAroundObstacles) > 0) {
 			debug('move to obstacle');
 			debug('move: ' + moveTowardCell(getClosestCell(cellsAroundObstacles)));
