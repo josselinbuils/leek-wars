@@ -41,7 +41,7 @@ function canFireWithWeapon(weapon, enemy) {
 
 function ensureWearingWeapon(weapon) {
 	if (getWeapon() !== weapon) {
-		setWeapon(weapon); 
+		setWeapon(weapon);
 	}
 }
 
@@ -53,7 +53,7 @@ function getCellsAround(centerCell) {
 	return arrayFilter(arrayMap(deltas, function (delta) {
 		return getCellFromXY(x + delta[0], y + delta[1]);
 	}), function (cell) {
-		return cell !== null;	
+		return cell !== null;
 	});
 }
 
@@ -150,6 +150,10 @@ function runAway(enemy) {
 		var cell = getCell();
 		var enemyCell = getCell(enemy);
 		var cellsAroundObstacles = getCellsAroundObstacles(enemy);
+
+		if (getTP() > 0) {
+			say('Sauve qui peut !');
+		}
 
 		if (count(cellsAroundObstacles) > 0) {
 			debug('move to obstacle');

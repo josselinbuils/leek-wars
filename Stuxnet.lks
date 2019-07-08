@@ -40,17 +40,14 @@ function Stuxnet() {
 		} else if (canFireWithChip(CHIP_SPARK, enemy)) {
 			chip = CHIP_SPARK;
 			target = enemy;
-		} else if (getLife() < (totalLife - 50) and canFireWithChip(CHIP_CURE, me)) {	
-			chip = CHIP_CURE;	
-			target = me;	
-		} else if (getLife() < totalLife and canFireWithChip(CHIP_BANDAGE, me)) {	
-			chip = CHIP_BANDAGE;	
-			target = me;	
+		} else if (getLife() < (totalLife - 50) and canFireWithChip(CHIP_CURE, me)) {
+			chip = CHIP_CURE;
+			target = me;
+		} else if (getLife() < totalLife and canFireWithChip(CHIP_BANDAGE, me)) {
+			chip = CHIP_BANDAGE;
+			target = me;
 		} else {
 			if (hasFired) {
-				if (getTP() > 0) {
-					say('Sauve qui peut !');
-				}
 				runAway(enemy);
 			} else if (getMP() > 0) {
 				moveTowardCell(getCellToFireWithWeapon(WEAPON_SHOTGUN, enemy));

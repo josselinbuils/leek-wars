@@ -1,7 +1,7 @@
 include('Common');
 
 function punyBulbAI() {
-    var summoner = getSummoner();
+	var summoner = getSummoner();
 
 	debug('move: ' + moveTowardCell(getCellToFireWithChip(CHIP_BANDAGE, summoner)));
 	useChip(CHIP_BANDAGE, summoner);
@@ -9,7 +9,7 @@ function punyBulbAI() {
 }
 
 function rockyBulbAI() {
-    var hasFired = false;
+	var hasFired = false;
 	var enemy = getNearestLeekEnemy();
 	var me = getLeek();
 
@@ -23,13 +23,13 @@ function rockyBulbAI() {
 		if (canFireWithChip(CHIP_HELMET, me)) {
 			chip = CHIP_HELMET;
 			target = me;
-		} else if (canFireWithChip(CHIP_ROCKFALL, enemy)) {	
+		} else if (canFireWithChip(CHIP_ROCKFALL, enemy)) {
 			chip = CHIP_ROCKFALL;
 			target = enemy;
-		} else if (canFireWithChip(CHIP_ROCK, enemy)) {	
+		} else if (canFireWithChip(CHIP_ROCK, enemy)) {
 			chip = CHIP_ROCK;
 			target = enemy;
-		} else if (canFireWithChip(CHIP_PEBBLE, enemy)) {	
+		} else if (canFireWithChip(CHIP_PEBBLE, enemy)) {
 			chip = CHIP_PEBBLE;
 			target = enemy;
 		} else {
@@ -130,23 +130,23 @@ function Skynet() {
 		} else if (canFireWithChip(CHIP_WALL, me)) {
 			chip = CHIP_WALL;
 			target = me;
-		} else if (canFireWithChip(CHIP_TOXIN, enemy)) {	
+		} else if (canFireWithChip(CHIP_TOXIN, enemy)) {
 			chip = CHIP_TOXIN;
 			target = enemy;
 		} else if (canFireWithWeapon(WEAPON_FLAME_THROWER, enemy)) {
 			weapon = WEAPON_FLAME_THROWER;
-		} else if (canFireWithChip(CHIP_VENOM, enemy)) {	
+		} else if (canFireWithChip(CHIP_VENOM, enemy)) {
 			chip = CHIP_VENOM;
 			target = enemy;
-		} else if (canFireWithChip(CHIP_TRANQUILIZER, enemy)) {	
+		} else if (canFireWithChip(CHIP_TRANQUILIZER, enemy)) {
 			chip = CHIP_TRANQUILIZER;
 			target = enemy;
 		} else if (canFireWithWeapon(WEAPON_BROADSWORD, enemy)) {
 			// In case the leek is blocked on a unique case
 			weapon = WEAPON_BROADSWORD;
-		} else if (canFireWithChip(CHIP_VACCINE, me)) {	
-			chip = CHIP_VACCINE;	
-			target = me;	
+		} else if (canFireWithChip(CHIP_VACCINE, me)) {
+			chip = CHIP_VACCINE;
+			target = me;
 		} else if (getLife() < (totalLife * 3 / 4) && canFireWithChip(CHIP_CURE, me)) {
 			chip = CHIP_CURE;
 			target = me;
@@ -157,16 +157,13 @@ function Skynet() {
 			summonBulb(CHIP_PUNY_BULB, punyBulbAI, enemy);
 		} else {
 			if (hasFired) {
-				if (getTP() > 0) {
-					say('Sauve qui peut !');
-				}
 				runAway(enemy);
 			} else if (getNearestEnemy() !== enemy) {
 				enemy = getNearestEnemy();
 				continue;
 			} else if (getTurn() > 1 && getMP() > 0) {
 				var targetCell = getCellToFireWithWeapon(WEAPON_FLAME_THROWER, enemy);
-				
+
 				if (getCooldown(CHIP_TOXIN) === 0) {
 					targetCell =  getCellToFireWithChip(CHIP_TOXIN, enemy);
 				}
