@@ -29,18 +29,18 @@ function Stuxnet() {
 			target = me;
 		} else if (canFireWithWeapon(WEAPON_SHOTGUN, enemy)) {
 			weapon = WEAPON_SHOTGUN;
+		}  else if (canFireWithWeapon(WEAPON_MAGNUM, enemy)) {
+			weapon = WEAPON_MAGNUM;
 		} else if (canFireWithChip(CHIP_ROCK, enemy)) {
 			chip = CHIP_ROCK;
 			target = enemy;
-		}  else if (canFireWithWeapon(WEAPON_MAGNUM, enemy)) {
-			weapon = WEAPON_MAGNUM;
-		} else if (canFireWithChip(CHIP_ICE, enemy)) {
-			chip = CHIP_ICE;
+		} else if (canFireWithChip(CHIP_FLAME, enemy)) {
+			chip = CHIP_FLAME;
 			target = enemy;
 		} else if (canFireWithChip(CHIP_SPARK, enemy)) {
 			chip = CHIP_SPARK;
 			target = enemy;
-		} else if (getLife() < (totalLife - 50) and canFireWithChip(CHIP_CURE, me)) {
+		} else if (getLife() < totalLife and canFireWithChip(CHIP_CURE, me)) {
 			chip = CHIP_CURE;
 			target = me;
 		} else if (getLife() < totalLife and canFireWithChip(CHIP_BANDAGE, me)) {
