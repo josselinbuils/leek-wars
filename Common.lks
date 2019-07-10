@@ -83,10 +83,9 @@ function getCellToFireWithChip(chip, target) {
 	var cellToFire = getClosestCell(cells);
 
 	debug('getCellToFireWithChip(' + getChipName(chip) + ', ' + getName(target) + ')');
-	debug('startCell: ' + startCell);
-	debug('cells: ' + cells);
-	debug('cellToFire: ' + cellToFire);
-	debug('pathLength: ' + getPathLength(startCell, cellToFire));
+	debug(' ↳ startCell: ' + startCell);
+	debug(' ↳ cellToFire: ' + cellToFire);
+	debug(' ↳ pathLength: ' + getPathLength(startCell, cellToFire));
 
 	return cellToFire;
 }
@@ -100,10 +99,9 @@ function getCellToFireWithWeapon(weapon, enemy) {
 	var cellToFire = getClosestCell(cells);
 
 	debug('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
-	debug('startCell: ' + startCell);
-	debug('cells: ' + cells);
-	debug('cellToFire: ' + cellToFire);
-	debug('pathLength: ' + getPathLength(startCell, cellToFire));
+	debug(' ↳ startCell: ' + startCell);
+	debug(' ↳ cellToFire: ' + cellToFire);
+	debug(' ↳ pathLength: ' + getPathLength(startCell, cellToFire));
 
 	return cellToFire;
 }
