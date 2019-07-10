@@ -28,7 +28,7 @@ function rockyBulbAI() {
 	var initialEnemy = enemy;
 	var me = getLeek();
 
-	while (isAlive(enemy)) {
+	while (getAliveEnemiesCount() > 0) {
 		var chip = null;
 		var mp = getMP();
 		var tp = getTP();
@@ -47,13 +47,13 @@ function rockyBulbAI() {
 		} else if (canFireWithChip(CHIP_PEBBLE, enemy)) {
 			chip = CHIP_PEBBLE;
 			target = enemy;
+		}  else if (!hasFired && getNearestEnemy() !== enemy) {
+			debug('change target');
+			enemy = getNearestEnemy();
+			continue;
 		} else {
 			if (hasFired && enemy === initialEnemy) {
 				runAway(enemy);
-			} else if (getNearestEnemy() !== enemy) {
-				debug('change target');
-				enemy = getNearestEnemy();
-				continue;
 			} else if (mp > 0) {
 				moveTowardCell(getCellToFireWithChip(CHIP_ROCKFALL, initialEnemy));
 			}
@@ -82,6 +82,11 @@ function rockyBulbAI() {
 			} else if (result !== USE_SUCCESS && result !== USE_FAILED && result !== USE_CRITICAL) {
 				break;
 			}
+		}
+
+		if (!isAlive(enemy)) {
+			enemy = getNearestLeekEnemy();
+			initialEnemy = enemy;
 		}
 	}
 }
@@ -133,7 +138,7 @@ function Skynet() {
 		stopSlowDown();
 	}
 
-	while (isAlive(enemy)) {
+	while (getAliveEnemiesCount() > 0) {
 		var chip = null;
 		var result;
 		var target = null;
@@ -166,6 +171,9 @@ function Skynet() {
 		} else if (canFireWithWeapon(WEAPON_BROADSWORD, enemy)) {
 			// In case the leek is blocked on a unique case
 			weapon = WEAPON_BROADSWORD;
+		} else if (!hasFired && getNearestEnemy() !== enemy) {
+			enemy = getNearestEnemy();
+			continue;
 		} else if (canFireWithChip(CHIP_TRANQUILIZER, enemy)) {
 			chip = CHIP_TRANQUILIZER;
 			target = enemy;
@@ -183,14 +191,11 @@ function Skynet() {
 		} else {
 			if (hasFired && enemy === initialEnemy) {
 				runAway(enemy);
-			} else if (getNearestEnemy() !== enemy) {
-				enemy = getNearestEnemy();
-				continue;
 			} else if (getTurn() > 1 && getMP() > 0) {
-				var targetCell = getCellToFireWithWeapon(WEAPON_FLAME_THROWER, enemy);
+				var targetCell = getCellToFireWithWeapon(WEAPON_FLAME_THROWER, initialEnemy);
 
 				if (getCooldown(CHIP_TOXIN) === 0) {
-					targetCell =  getCellToFireWithChip(CHIP_TOXIN, enemy);
+					targetCell =  getCellToFireWithChip(CHIP_TOXIN, initialEnemy);
 				}
 
 				if (slowDown) {
@@ -234,6 +239,11 @@ function Skynet() {
 			} else if (result !== USE_SUCCESS && result !== USE_FAILED && result !== USE_CRITICAL) {
 				break;
 			}
+		}
+
+		if (!isAlive(enemy)) {
+			enemy = getNearestLeekEnemy();
+			initialEnemy = enemy;
 		}
 
 		if (getAliveEnemiesCount() === 0) {
