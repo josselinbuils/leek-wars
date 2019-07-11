@@ -1,16 +1,5 @@
 include('Common');
 
-global slowDown = true;
-
-function hasBeenNegativelyAffected() {
-	for (var effect in getEffects()) {
-		if (isEnemy(effect[2])) {
-			return true;
-		}
-	}
-	return false;
-}
-
 function isBadlyPoisoned() {
 	var poisonEffects = 0;
 
@@ -112,11 +101,6 @@ function summonBulb(bulb, ai, enemy) {
 	}
 }
 
-function stopSlowDown() {
-	debug('time to fight!');
-	slowDown = false;
-}
-
 function Skynet() {
 	var hasFired = false;
 	var hasTriedToSummon = false;
@@ -128,14 +112,6 @@ function Skynet() {
 	if (getWeapon() === null) {
 		ensureWearingWeapon(WEAPON_FLAME_THROWER);
 		say('Canarticho !');
-	}
-
-	if (getTurn() === 1) {
-		summonBulb(CHIP_ROCKY_BULB, rockyBulbAI,  enemy);
-	}
-
-	if (slowDown && hasBeenNegativelyAffected()) {
-		stopSlowDown();
 	}
 
 	while (getAliveEnemiesCount() > 0) {
@@ -191,26 +167,19 @@ function Skynet() {
 		} else {
 			if (hasFired && enemy === initialEnemy) {
 				runAway(enemy);
-			} else if (getTurn() > 1 && getMP() > 0) {
+			} else if (getMP() > 0) {
 				var targetCell = getCellToFireWithWeapon(WEAPON_FLAME_THROWER, initialEnemy);
 
 				if (getCooldown(CHIP_TOXIN) === 0) {
 					targetCell =  getCellToFireWithChip(CHIP_TOXIN, initialEnemy);
 				}
 
-				if (slowDown) {
-					moveTowardCell(targetCell, 2);
-				} else {
-					moveTowardCell(targetCell);
-				}
+				sneak(enemy, targetCell);
 			}
 			break;
 		}
 
 		if (weapon !== null) {
-			if (slowDown) {
-				stopSlowDown();
-			}
 			debug('move: ' + moveTowardCell(getCellToFireWithWeapon(weapon, enemy)));
 			debug('use ' + getWeaponName(weapon));
 			ensureWearingWeapon(weapon);
@@ -218,9 +187,6 @@ function Skynet() {
 			hasFired = true;
 		} else if (chip !== null) {
 			if (target !== me) {
-				if (slowDown) {
-					stopSlowDown();
-				}
 				debug('move: ' + moveTowardCell(getCellToFireWithChip(chip, target)));
 				hasFired = true;
 			}
