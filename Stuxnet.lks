@@ -8,7 +8,7 @@ function Stuxnet() {
 
 	if (getWeapon() === null) {
 		ensureWearingWeapon(WEAPON_SHOTGUN);
-		say('Canarticho !');
+		say('Hello :)');
 	}
 
 	while (isAlive(enemy)) {
@@ -50,7 +50,7 @@ function Stuxnet() {
 			if (hasFired) {
 				runAway(enemy);
 			} else if (getMP() > 0) {
-				moveTowardCell(getCellToFireWithWeapon(WEAPON_SHOTGUN, enemy));
+				sneak(enemy, getCellToFireWithWeapon(WEAPON_SHOTGUN, enemy));
 			}
 			break;
 		}
@@ -86,7 +86,7 @@ function Stuxnet() {
 		}
 
 		if (getAliveEnemiesCount() === 0) {
-			say("Encore une victoire de canard !");
+			say("Oups ^^");
 		}
 	}
 }
