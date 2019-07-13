@@ -64,15 +64,16 @@ function getCellsAroundObstacles(enemy) {
 
 	arrayIter(obstacles, function (obstacle) {
 		var reachableCellsAroundObstacle = removeUnreachableCells(getCellsAround(obstacle));
+
 		var usefulCellsAroundObstacle = arrayFilter(reachableCellsAroundObstacle, function (cellAround) {
 			var v1 = createVector(cellAround, obstacle);
 			var v2 = createVector(enemyCell, obstacle);
-			return angle(v1, v2) > toRadians(150) && getDistance(cellAround, enemyCell) > getDistance(obstacle, enemyCell);
+			return angle(v1, v2) > toRadians(150);
 		});
 		cellsAroundObstacles = arrayConcat(cellsAroundObstacles, usefulCellsAroundObstacle);
 	});
 
-	debug('cellsAroundObstacles ' + cellsAroundObstacles);
+	debug('cellsAroundObstacles: ' + cellsAroundObstacles);
 	return cellsAroundObstacles;
 }
 
@@ -150,6 +151,14 @@ function norm(v) {
 
 function removeUnreachableCells(cells) {
 	var currentCell = getCell();
+
+	return arrayFilter(cells, function (cell) {
+		return getPathLength(currentCell, cell) > 0;
+	});
+}
+
+function removeUnreachableCellsOnTurn(cells) {
+	var currentCell = getCell();
 	var mp = getMP();
 
 	return arrayFilter(cells, function (cell) {
@@ -166,14 +175,16 @@ function runAway(enemy) {
 		var farterCells = arrayFilter(cellsAroundObstacles, function (cell) {
 			return getPathLength(cell, enemyCell) > getPathLength(startCell, enemyCell);
 		});
+		var cellsReachableOnTurn = removeUnreachableCellsOnTurn(farterCells);
+		debug('cellsReachableOnTurn: ' + arrayConcat([], cellsReachableOnTurn));
 
 		if (getTP() > 0) {
 			say('Sauve qui peut !');
 		}
 
-		if (count(farterCells) > 0) {
-			debug('run away to obstacle');
-			debug('move: ' + moveTowardCell(getFarestCellFrom(farterCells, enemyCell)));
+		if (count(cellsReachableOnTurn) > 0) {
+			debug('run away up to obstacle');
+			debug('move: ' + moveTowardCell(getFarestCellFrom(cellsReachableOnTurn, enemyCell)));
 		} else {
 			debug('run away from line');
 			debug('move: ' + moveAwayFromLine(startCell, enemyCell));
@@ -215,13 +226,14 @@ function sneak(enemy, targetCell) {
 		var closerCells = arrayFilter(cellsAroundObstacles, function (cell) {
 			return getPathLength(cell, enemyCell) < getPathLength(startCell, enemyCell);
 		});
+		debug('closerCells: ' + arrayConcat([], closerCells));
 
 		if (count(closerCells) > 0) {
 			debug('sneak to obstacle');
-			debug('move: ' + moveTowardCell(getFarestCellFrom(closerCells, startCell)));
+			debug('move: ' + moveTowardCell(getClosestCell(closerCells), 1));
 		} else {
 			debug('move to fire cell');
-			debug('move: ' + moveTowardCell(targetCell, 2));
+			debug('move: ' + moveTowardCell(targetCell, 1));
 		}
 	}
 }
