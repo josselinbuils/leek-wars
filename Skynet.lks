@@ -103,6 +103,7 @@ function rockyBulbAI() {
 
 function Skynet() {
 	var hasFired = false;
+	var hasTriedToSummon = false;
 	var enemy = getNearestLeekEnemy();
 	var initialEnemy = enemy;
 	var me = getLeek();
@@ -115,7 +116,6 @@ function Skynet() {
 
 	while (getAliveEnemiesCount() > 0) {
 		var chip = null;
-		var hasTriedToSummon = false;
 		var result;
 		var target = null;
 		var weapon = null;
@@ -171,7 +171,12 @@ function Skynet() {
 			if (hasFired && enemy === initialEnemy) {
 				runAway(enemy);
 			} else if (getMP() > 0) {
-				sneak(enemy, getCellToFireWithWeapon(WEAPON_FLAME_THROWER, initialEnemy));
+				var targetCell = getCellToFireWithWeapon(WEAPON_FLAME_THROWER, initialEnemy);
+
+				if (getCooldown(CHIP_TOXIN) === 0) {
+					targetCell =  getCellToFireWithChip(CHIP_TOXIN, initialEnemy);
+				}
+				sneak(enemy, targetCell);
 			}
 			break;
 		}
