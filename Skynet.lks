@@ -11,6 +11,96 @@ function isBadlyPoisoned() {
 	return poisonEffects >= 2;
 }
 
+function rockyBulbAI() {	
+	var hasFired = false;	
+	var enemy = getNearestLeekEnemy();	
+	var initialEnemy = enemy;	
+	var me = getLeek();	
+
+ 	while (getAliveEnemiesCount() > 0) {	
+		var chip = null;	
+		var mp = getMP();	
+		var tp = getTP();	
+		var result;	
+		var target = null;	
+
+ 		if (canFireWithChip(CHIP_HELMET, me)) {	
+			chip = CHIP_HELMET;	
+			target = me;	
+		} else if (canFireWithChip(CHIP_ROCKFALL, enemy)) {	
+			chip = CHIP_ROCKFALL;	
+			target = enemy;	
+		} else if (canFireWithChip(CHIP_ROCK, enemy)) {	
+			chip = CHIP_ROCK;	
+			target = enemy;	
+		} else if (canFireWithChip(CHIP_PEBBLE, enemy)) {	
+			chip = CHIP_PEBBLE;	
+			target = enemy;	
+		}  else if (!hasFired && getNearestEnemy() !== enemy) {	
+			debug('change target');	
+			enemy = getNearestEnemy();	
+			continue;	
+		} else {	
+			if (hasFired && enemy === initialEnemy) {	
+				runAway(enemy);	
+			} else if (mp > 0) {	
+				moveTowardCell(getCellToFireWithChip(CHIP_ROCKFALL, initialEnemy));	
+			}	
+			break;	
+		}	
+
+ 		if (chip !== null) {	
+			debug('use ' + getChipName(chip));	
+
+ 			if (target !== me) {	
+				debug('move: ' + moveTowardCell(getCellToFireWithChip(chip, target)));	
+				hasFired = true;	
+			}	
+
+ 			result = useChip(chip, target);	
+		}	
+
+ 		if (result !== null) {	
+			showResult(result);	
+
+ 			if (result === USE_INVALID_POSITION && getMP() > 0) {	
+				// Why the fuck this can happen ???	
+				if (moveToward(enemy) === 0) {	
+					break;	
+				}	
+			} else if (result !== USE_SUCCESS && result !== USE_FAILED && result !== USE_CRITICAL) {	
+				break;	
+			}	
+		}	
+
+ 		if (!isAlive(enemy)) {	
+			enemy = getNearestLeekEnemy();	
+			initialEnemy = enemy;	
+		}	
+	}	
+}	
+
+ function summonBulb(bulb, ai, enemy) {	
+	var enemyCell = getCell(enemy);	
+	var cell = getCell();	
+	var x = getCellX(cell);	
+	var y = getCellY(cell);	
+
+ 	var possibleCells = [getCellFromXY(x - 1, y + 2), getCellFromXY(x, y + 2), getCellFromXY(x + 1, y + 2), getCellFromXY(x - 2, y + 1), getCellFromXY(x + 2, y + 1), getCellFromXY(x - 2, y), getCellFromXY(x + 2, y), getCellFromXY(x - 2, y - 1), getCellFromXY(x + 2, y - 1), getCellFromXY(x - 1, y - 2), getCellFromXY(x, y - 2), getCellFromXY(x + 1, y - 2)];	
+
+ 	var emptyCells = arrayFilter(possibleCells, function (c) {	
+		return c !== null && isEmptyCell(c);	
+	});	
+
+ 	emptyCells = arraySort(emptyCells, function (a, b) {	
+		return getDistance(enemyCell, a) < getDistance(enemyCell, b) ? -1 : 1;	
+	});	
+
+ 	if (count(emptyCells) > 0) {	
+		summon(bulb, shift(emptyCells), ai);	
+	}	
+}
+
 function Skynet() {
 	var hasFired = false;
 	var enemy = getNearestLeekEnemy();
@@ -25,6 +115,7 @@ function Skynet() {
 
 	while (getAliveEnemiesCount() > 0) {
 		var chip = null;
+		var hasTriedToSummon = false;
 		var result;
 		var target = null;
 		var weapon = null;
@@ -33,7 +124,7 @@ function Skynet() {
 		debug('MP: ' + getMP());
 		debug('TP: ' + getTP());
 
-		if (getLife() <= 300 && canFireWithChip(CHIP_REGENERATION, me)) {
+		if (getLife() <= 250 && canFireWithChip(CHIP_REGENERATION, me)) {
 			chip = CHIP_REGENERATION;
 			target = me;
 		} else if (isBadlyPoisoned() && canFireWithChip(CHIP_ANTIDOTE, me)) {
@@ -71,17 +162,16 @@ function Skynet() {
 		} else if (getLife() < totalLife && canFireWithChip(CHIP_CURE, me)) {
 			chip = CHIP_CURE;
 			target = me;
+		} else if (!hasTriedToSummon && canFireWithChip(CHIP_ROCKY_BULB, me)) {	
+			// Checks if it has already tried to summon to avoid infinite loops	
+			// when no empty cell is available	
+			hasTriedToSummon = true;	
+			summonBulb(CHIP_ROCKY_BULB, rockyBulbAI, enemy);	
 		} else {
 			if (hasFired && enemy === initialEnemy) {
 				runAway(enemy);
 			} else if (getMP() > 0) {
-				var targetCell = getCellToFireWithWeapon(WEAPON_FLAME_THROWER, initialEnemy);
-
-				if (getCooldown(CHIP_TOXIN) === 0) {
-					targetCell =  getCellToFireWithChip(CHIP_TOXIN, initialEnemy);
-				}
-
-				sneak(enemy, targetCell);
+				sneak(enemy, getCellToFireWithWeapon(WEAPON_FLAME_THROWER, initialEnemy));
 			}
 			break;
 		}
