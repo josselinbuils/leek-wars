@@ -29,18 +29,18 @@ function Stuxnet() {
 		} else if (!isEnemyPoisoner && canFireWithChip(CHIP_HELMET, me)) {
 			chip = CHIP_HELMET;
 			target = me;
+		} else if (canFireWithChip(CHIP_VENOM, enemy)) {
+			chip = CHIP_VENOM;
+			target = enemy;
+		} else if (canFireWithChip(CHIP_SPARK, enemy)) {
+			chip = CHIP_SPARK;
+			target = enemy;
 		} else if (canFireWithWeapon(WEAPON_LASER, enemy)) {
 			weapon = WEAPON_LASER;
 		} else if (canFireWithWeapon(WEAPON_MAGNUM, enemy)) {
 			weapon = WEAPON_MAGNUM;
-		} else if (canFireWithChip(CHIP_ROCK, enemy)) {
-			chip = CHIP_ROCK;
-			target = enemy;
 		} else if (canFireWithChip(CHIP_FLAME, enemy)) {
 			chip = CHIP_FLAME;
-			target = enemy;
-		} else if (canFireWithChip(CHIP_SPARK, enemy)) {
-			chip = CHIP_SPARK;
 			target = enemy;
 		} else if (getLife() < totalLife and canFireWithChip(CHIP_CURE, me)) {
 			chip = CHIP_CURE;
@@ -55,7 +55,7 @@ function Stuxnet() {
 			if (hasFired && enemy === initialEnemy) {
 				runAway(enemy);
 			} else if (getMP() > 0) {
-				sneak(initialEnemy, getCellToFireWithWeapon(WEAPON_LASER, initialEnemy));
+				sneak(initialEnemy, getCellToFireWithChip(CHIP_VENOM, initialEnemy));
 			}
 			break;
 		}
