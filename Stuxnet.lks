@@ -3,6 +3,8 @@ include('Common');
 function Stuxnet() {
 	var enemy = getNearestLeekEnemy();
 	var hasFired = false;
+	var initialEnemy = enemy;
+	var isEnemyPoisoner = getMagic(enemy) > getStrength(enemy);
 	var me = getLeek();
 	var totalLife = getTotalLife();
 
@@ -11,7 +13,7 @@ function Stuxnet() {
 		say('Hello :)');
 	}
 
-	while (isAlive(enemy)) {
+	while (isAlive(initialEnemy)) {
 		var chip = null;
 		var result;
 		var target = null;
@@ -21,15 +23,15 @@ function Stuxnet() {
 		debug('MP: ' + getMP());
 		debug('TP: ' + getTP());
 
-		if (canFireWithChip(CHIP_SHIELD, me)) {
+		if (!isEnemyPoisoner && canFireWithChip(CHIP_SHIELD, me)) {
 			chip = CHIP_SHIELD;
 			target = me;
-		} else if (canFireWithChip(CHIP_HELMET, me)) {
+		} else if (!isEnemyPoisoner && canFireWithChip(CHIP_HELMET, me)) {
 			chip = CHIP_HELMET;
 			target = me;
-		} else if (canFireWithWeapon(WEAPON_SHOTGUN, enemy)) {
-			weapon = WEAPON_SHOTGUN;
-		}  else if (canFireWithWeapon(WEAPON_MAGNUM, enemy)) {
+		} else if (canFireWithWeapon(WEAPON_LASER, enemy)) {
+			weapon = WEAPON_LASER;
+		} else if (canFireWithWeapon(WEAPON_MAGNUM, enemy)) {
 			weapon = WEAPON_MAGNUM;
 		} else if (canFireWithChip(CHIP_ROCK, enemy)) {
 			chip = CHIP_ROCK;
@@ -46,11 +48,14 @@ function Stuxnet() {
 		} else if (getLife() < totalLife and canFireWithChip(CHIP_BANDAGE, me)) {
 			chip = CHIP_BANDAGE;
 			target = me;
+		} else if (!hasFired && getNearestEnemy() !== enemy) {
+			enemy = getNearestEnemy();
+			continue;
 		} else {
-			if (hasFired) {
+			if (hasFired && enemy === initialEnemy) {
 				runAway(enemy);
 			} else if (getMP() > 0) {
-				sneak(enemy, getCellToFireWithWeapon(WEAPON_SHOTGUN, enemy));
+				sneak(initialEnemy, getCellToFireWithWeapon(WEAPON_LASER, initialEnemy));
 			}
 			break;
 		}
@@ -75,18 +80,18 @@ function Stuxnet() {
 		if (result !== null) {
 			showResult(result);
 
-			if (result === USE_INVALID_POSITION && getMP() > 0) {
-				// Why the fuck this can happen ???
-				if (moveToward(enemy) === 0) {
-					break;
-				}
-			} else if (result !== USE_SUCCESS && result !== USE_FAILED && result !== USE_CRITICAL) {
+			if (result !== USE_SUCCESS && result !== USE_FAILED && result !== USE_CRITICAL) {
 				break;
 			}
 		}
 
-		if (getAliveEnemiesCount() === 0) {
-			say("Oups ^^");
+		if (!isAlive(initialEnemy)) {
+			if (getAliveEnemiesCount() === 0) {
+				say("Oups ^^");
+			} else {
+				enemy = getNearestLeekEnemy();
+				initialEnemy = enemy;
+			}
 		}
 	}
 }
