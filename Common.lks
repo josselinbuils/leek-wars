@@ -48,11 +48,20 @@ function ensureWearingWeapon(weapon) {
 function getCellsAround(centerCell) {
 	var x = getCellX(centerCell);
 	var y = getCellY(centerCell);
-	var deltas = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
+	var deltas = [
+		[0, 1],
+		[1, 1],
+		[1, 0],
+		[1, -1],
+		[0, -1],
+		[-1, -1],
+		[-1, 0],
+		[-1, 1]
+	];
 
-	return arrayFilter(arrayMap(deltas, function (delta) {
+	return arrayFilter(arrayMap(deltas, function(delta) {
 		return getCellFromXY(x + delta[0], y + delta[1]);
-	}), function (cell) {
+	}), function(cell) {
 		return cell !== null;
 	});
 }
@@ -62,10 +71,10 @@ function getCellsAroundObstacles(enemy) {
 	var enemyCell = getCell(enemy);
 	var cellsAroundObstacles = [];
 
-	arrayIter(obstacles, function (obstacle) {
+	arrayIter(obstacles, function(obstacle) {
 		var reachableCellsAroundObstacle = removeUnreachableCells(getCellsAround(obstacle));
 
-		var usefulCellsAroundObstacle = arrayFilter(reachableCellsAroundObstacle, function (cellAround) {
+		var usefulCellsAroundObstacle = arrayFilter(reachableCellsAroundObstacle, function(cellAround) {
 			var v1 = createVector(cellAround, obstacle);
 			var v2 = createVector(enemyCell, obstacle);
 			return angle(v1, v2) > toRadians(150);
@@ -78,12 +87,15 @@ function getCellsAroundObstacles(enemy) {
 }
 
 function getCellToFireWithChip(chip, target) {
-	var currentCell = getCell();
-	var cells = arrayFilter(getCellsToUseChip(chip, target), function (cell) {
-		return getPathLength(currentCell, cell) !== null;
-	});
 	var startCell = getCell();
-	var cellToFire = getClosestCell(cells);
+	var cells = arrayFilter(getCellsToUseChip(chip, target), function(cell) {
+		return getPathLength(startCell, cell) !== null;
+	});
+	var minPathLength = getPathLength(startCell, getClosestCell(cells));
+	var cellsWithMinPath = arrayFilter(cells, function(cell) {
+		return getPathLength(startCell, cell) <= minPathLength;
+	});
+	var cellToFire = getFarestCellFrom(cellsWithMinPath, getCell(target));
 
 	debug('getCellToFireWithChip(' + getChipName(chip) + ', ' + getName(target) + ')');
 	debug(' ↳ startCell: ' + startCell);
@@ -94,12 +106,15 @@ function getCellToFireWithChip(chip, target) {
 }
 
 function getCellToFireWithWeapon(weapon, enemy) {
-	var currentCell = getCell();
-	var cells = arrayFilter(getCellsToUseWeapon(weapon, enemy), function (cell) {
-		return getPathLength(currentCell, cell) !== null;
-	});
 	var startCell = getCell();
-	var cellToFire = getClosestCell(cells);
+	var cells = arrayFilter(getCellsToUseWeapon(weapon, enemy), function(cell) {
+		return getPathLength(startCell, cell) !== null;
+	});
+	var minPathLength = getPathLength(startCell, getClosestCell(cells));
+	var cellsWithMinPath = arrayFilter(cells, function(cell) {
+		return getPathLength(startCell, cell) <= minPathLength;
+	});
+	var cellToFire = getFarestCellFrom(cellsWithMinPath, getCell(enemy));
 
 	debug('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
 	debug(' ↳ startCell: ' + startCell);
@@ -110,18 +125,20 @@ function getCellToFireWithWeapon(weapon, enemy) {
 }
 
 function getClosestCell(cells) {
-	var startCell = getCell();
+	return getClosestCellFrom(cells, getCell());
+}
 
-	return arrayFoldLeft(cells, function (closestCell, cell) {
-		var cellPathLength = getPathLength(startCell, cell);
-		var closestCellPathLength = getPathLength(startCell, closestCell);
+function getClosestCellFrom(cells, refCell) {
+	return arrayFoldLeft(cells, function(closestCell, cell) {
+		var cellPathLength = getPathLength(refCell, cell);
+		var closestCellPathLength = getPathLength(refCell, closestCell);
 
-		return cell === startCell || (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
+		return (cellPathLength > 0 && cellPathLength < closestCellPathLength) ? cell : closestCell;
 	}, shift(cells));
 }
 
 function getFarestCellFrom(cells, refCell) {
-	return arrayFoldLeft(cells, function (farestCell, cell) {
+	return arrayFoldLeft(cells, function(farestCell, cell) {
 		var cellPathLength = getPathLength(refCell, cell);
 		var farestCellPathLength = getPathLength(refCell, farestCell);
 
@@ -133,11 +150,11 @@ function getNearestLeekEnemy() {
 	var enemies = getAliveEnemies();
 	var startCell = getCell();
 
-	enemies = arrayFilter(enemies, function (e) {
+	enemies = arrayFilter(enemies, function(e) {
 		return !isSummon(e);
 	});
 
-	return arrayFoldLeft(enemies, function (nearestEnemy, e) {
+	return arrayFoldLeft(enemies, function(nearestEnemy, e) {
 		var enemyPathLength = getPathLength(startCell, getCell(e));
 		var nearestEnemyPathLength = getPathLength(startCell, getCell(nearestEnemy));
 
@@ -152,7 +169,7 @@ function norm(v) {
 function removeUnreachableCells(cells) {
 	var currentCell = getCell();
 
-	return arrayFilter(cells, function (cell) {
+	return arrayFilter(cells, function(cell) {
 		return getPathLength(currentCell, cell) > 0;
 	});
 }
@@ -161,18 +178,19 @@ function removeUnreachableCellsOnTurn(cells) {
 	var currentCell = getCell();
 	var mp = getMP();
 
-	return arrayFilter(cells, function (cell) {
+	return arrayFilter(cells, function(cell) {
 		var pathLength = getPathLength(currentCell, cell);
 		return pathLength > 0 && pathLength <= mp;
 	});
 }
 
+// TODO faire en sorte que l'enemie est à bouger beaucoup pour pouvoir tirer en ligne
 function runAway(enemy) {
 	if (getMP() > 0) {
 		var startCell = getCell();
 		var enemyCell = getCell(enemy);
 		var cellsAroundObstacles = getCellsAroundObstacles(enemy);
-		var farterCells = arrayFilter(cellsAroundObstacles, function (cell) {
+		var farterCells = arrayFilter(cellsAroundObstacles, function(cell) {
 			return getPathLength(cell, enemyCell) > getPathLength(startCell, enemyCell);
 		});
 		var cellsReachableOnTurn = removeUnreachableCellsOnTurn(farterCells);
@@ -223,17 +241,18 @@ function sneak(enemy, targetCell) {
 		var startCell = getCell();
 		var enemyCell = getCell(enemy);
 		var cellsAroundObstacles = getCellsAroundObstacles(enemy);
-		var closerCells = arrayFilter(cellsAroundObstacles, function (cell) {
+		var closerCells = arrayFilter(cellsAroundObstacles, function(cell) {
 			return getPathLength(cell, enemyCell) < getPathLength(startCell, enemyCell);
 		});
-		debug('closerCells: ' + arrayConcat([], closerCells));
+		var cellsReachableOnTurn = removeUnreachableCellsOnTurn(closerCells);
+		debug('cellsReachableOnTurn: ' + arrayConcat([], cellsReachableOnTurn));
 
-		if (count(closerCells) > 0) {
-			debug('sneak to obstacle');
-			debug('move: ' + moveTowardCell(getClosestCell(closerCells), 1));
+		if (count(cellsReachableOnTurn) > 0) {
+			debug('sneak up to obstacle');
+			debug('move: ' + moveTowardCell(getClosestCellFrom(cellsReachableOnTurn, enemyCell)));
 		} else {
 			debug('move to fire cell');
-			debug('move: ' + moveTowardCell(targetCell, 1));
+			debug('move: ' + moveTowardCell(targetCell));
 		}
 	}
 }
