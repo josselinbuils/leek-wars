@@ -18,6 +18,7 @@ function icedBulbAI() {
 	var enemy = getNearestLeekEnemy();
 	var initialEnemy = enemy;
 	var me = getLeek();
+	var optimizer = Optimizer();
 	var summoner = getSummoner();
 	var totalTP = getTotalTP();
 
@@ -26,24 +27,25 @@ function icedBulbAI() {
 		var mp = getMP();
 		var tp = getTP();
 		var result;
+		var shouldTry = optimizer();
 		var target = null;
 
-		if (canFireWithChip(CHIP_ICEBERG, enemy)) {
+		if (shouldTry() && canFireWithChip(CHIP_ICEBERG, enemy)) {
 			chip = CHIP_ICEBERG;
 			target = enemy;
-		} else if (canFireWithChip(CHIP_STALACTITE, enemy)) {
+		} else if (shouldTry() && canFireWithChip(CHIP_STALACTITE, enemy)) {
 			chip = CHIP_STALACTITE;
 			target = enemy;
-		} else if (canFireWithChip(CHIP_ICE, enemy)) {
+		} else if (shouldTry() && canFireWithChip(CHIP_ICE, enemy)) {
 			chip = CHIP_ICE;
 			target = enemy;
-		} else if (canFireWithChip(CHIP_REFLEXES, summoner)) {
+		} else if (shouldTry() && canFireWithChip(CHIP_REFLEXES, summoner)) {
 			chip = CHIP_REFLEXES;
 			target = summoner;
-		} else if (canFireWithChip(CHIP_REFLEXES, me)) {
+		} else if (shouldTry() && canFireWithChip(CHIP_REFLEXES, me)) {
 			chip = CHIP_REFLEXES;
 			target = me;
-		} else if (!hasFired && getNearestEnemy() !== enemy) {
+		} else if (shouldTry() && !hasFired && getNearestEnemy() !== enemy) {
 			debug('change target');
 			enemy = getNearestEnemy();
 			continue;
@@ -134,12 +136,14 @@ function Skynet() {
 	var initialEnemy = enemy;
 	var isEnemyPoisoner = getMagic(enemy) > getStrength(enemy);
 	var me = getLeek();
+	var optimizer = Optimizer();
 	var poisoned = isBadlyPoisoned();
 	var totalLife = getTotalLife();
 
 	while (getAliveEnemiesCount() > 0) {
 		var chip = null;
 		var isInitialEnemy = enemy === initialEnemy;
+		var shouldTry = optimizer();
 		var result;
 		var target = null;
 		var weapon = null;
@@ -148,53 +152,53 @@ function Skynet() {
 		debug('MP: ' + getMP());
 		debug('TP: ' + getTP());
 
-		if (poisoned && canFireWithChip(CHIP_ANTIDOTE, me)) {
+		if (shouldTry() && poisoned && canFireWithChip(CHIP_ANTIDOTE, me)) {
 			chip = CHIP_ANTIDOTE;
 			target = me;
 			hasUsedAntidote = true;
-		} else if (poisoned && !hasUsedAntidote && canFireWithChip(CHIP_LIBERATION, me)) {
+		} else if (shouldTry() && poisoned && !hasUsedAntidote && canFireWithChip(CHIP_LIBERATION, me)) {
 			chip = CHIP_LIBERATION;
 			target = me;
 			hasUsedAntidote = true;
-		} else if (getLife() <= 350 && canFireWithChip(CHIP_REGENERATION, me)) {
+		} else if (shouldTry() && getLife() <= 350 && canFireWithChip(CHIP_REGENERATION, me)) {
 			chip = CHIP_REGENERATION;
 			target = me;
-		} else if (!isEnemyPoisoner && canFireWithChip(CHIP_ARMOR, me)) {
+		} else if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_ARMOR, me)) {
 			chip = CHIP_ARMOR;
 			target = me;
-		} else if (!isEnemyPoisoner && canFireWithChip(CHIP_SHIELD, me)) {
+		} else if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_SHIELD, me)) {
 			chip = CHIP_SHIELD;
 			target = me;
-		} else if (isInitialEnemy && canFireWithChip(CHIP_TOXIN, enemy)) {
+		} else if (shouldTry() && isInitialEnemy && canFireWithChip(CHIP_TOXIN, enemy)) {
 			chip = CHIP_TOXIN;
 			target = enemy;
-		} else if (canFireWithWeapon(WEAPON_FLAME_THROWER, enemy)) {
+		} else if (shouldTry() && canFireWithWeapon(WEAPON_FLAME_THROWER, enemy)) {
 			weapon = WEAPON_FLAME_THROWER;
-		} else if (isInitialEnemy && canFireWithChip(CHIP_VENOM, enemy)) {
+		} else if (shouldTry() && isInitialEnemy && canFireWithChip(CHIP_VENOM, enemy)) {
 			chip = CHIP_VENOM;
 			target = enemy;
-		} else if (canFireWithWeapon(WEAPON_DESTROYER, enemy)) {
+		} else if (shouldTry() && canFireWithWeapon(WEAPON_DESTROYER, enemy)) {
 			weapon = WEAPON_DESTROYER;
-		} else if (isInitialEnemy && canFireWithChip(CHIP_SLOW_DOWN, enemy)) {
+		} else if (shouldTry() && isInitialEnemy && canFireWithChip(CHIP_SLOW_DOWN, enemy)) {
 			chip = CHIP_SLOW_DOWN;
 			target = enemy;
-		} else if ((hasFiredOnce || getLife() < totalLife) && canFireWithChip(CHIP_VACCINE, me)) {
+		} else if (shouldTry() && (hasFiredOnce || getLife() < totalLife) && canFireWithChip(CHIP_VACCINE, me)) {
 			chip = CHIP_VACCINE;
 			target = me;
-		} else if (getLife() < totalLife && canFireWithChip(CHIP_CURE, me)) {
+		} else if (shouldTry() && getLife() < totalLife && canFireWithChip(CHIP_CURE, me)) {
 			chip = CHIP_CURE;
 			target = me;
-		} else if (!hasTriedToSummon && canFireWithChip(CHIP_ICED_BULB, me)) {
+		} else if (shouldTry() && !hasTriedToSummon && canFireWithChip(CHIP_ICED_BULB, me)) {
 			// Checks if it has already tried to summon to avoid infinite loops	
 			// when no empty cell is available	
 			hasTriedToSummon = true;
 			summonBulb(CHIP_ICED_BULB, icedBulbAI, initialEnemy);
-		} else if (!hasFired && getNearestEnemy() !== enemy) {
+		} else if (shouldTry() && !hasFired && getNearestEnemy() !== enemy) {
 			enemy = getNearestEnemy();
 			continue;
-		} else if (getWeapon() === null && getTP() > 0) {
+		} else if (shouldTry() && getWeapon() === null && getTP() > 0) {
 			ensureWearingWeapon(WEAPON_FLAME_THROWER);
-		} else if (getTP() > 0) {
+		} else if (shouldTry() && getTP() > 0) {
 			say('Canarticho !');
 		} else {
 			if (hasFired && enemy === initialEnemy) {
