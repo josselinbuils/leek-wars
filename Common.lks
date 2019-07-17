@@ -166,6 +166,25 @@ function norm(v) {
 	return sqrt(v[0] * v[0] + v[1] * v[1]);
 }
 
+function Optimizer() {
+	var startIndex = 0;
+	var currentIndex;
+
+	return @(function() {
+		currentIndex = -1;
+
+		return @(function() {
+			currentIndex++;
+
+			if (currentIndex >= startIndex) {
+				startIndex = currentIndex;
+				return true;
+			}
+			return false;
+		});
+	});
+}
+
 function removeUnreachableCells(cells) {
 	var currentCell = getCell();
 
