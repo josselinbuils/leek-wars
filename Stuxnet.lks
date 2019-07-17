@@ -6,6 +6,7 @@ function Stuxnet() {
 	var initialEnemy = enemy;
 	var isEnemyPoisoner = getMagic(enemy) > getStrength(enemy);
 	var me = getLeek();
+	var optimizer = Optimizer();
 	var totalLife = getTotalLife();
 
 	if (getWeapon() === null) {
@@ -16,6 +17,7 @@ function Stuxnet() {
 	while (isAlive(initialEnemy)) {
 		var chip = null;
 		var result;
+		var shouldTry = optimizer();
 		var target = null;
 		var weapon = null;
 
@@ -23,32 +25,32 @@ function Stuxnet() {
 		debug('MP: ' + getMP());
 		debug('TP: ' + getTP());
 
-		if (!isEnemyPoisoner && canFireWithChip(CHIP_SHIELD, me)) {
+		if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_SHIELD, me)) {
 			chip = CHIP_SHIELD;
 			target = me;
-		} else if (!isEnemyPoisoner && canFireWithChip(CHIP_HELMET, me)) {
+		} else if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_HELMET, me)) {
 			chip = CHIP_HELMET;
 			target = me;
-		} else if (canFireWithChip(CHIP_VENOM, enemy)) {
+		} else if (shouldTry() && canFireWithChip(CHIP_VENOM, enemy)) {
 			chip = CHIP_VENOM;
 			target = enemy;
-		} else if (canFireWithChip(CHIP_SPARK, enemy)) {
+		} else if (shouldTry() && canFireWithChip(CHIP_SPARK, enemy)) {
 			chip = CHIP_SPARK;
 			target = enemy;
-		} else if (canFireWithWeapon(WEAPON_LASER, enemy)) {
+		} else if (shouldTry() && canFireWithWeapon(WEAPON_LASER, enemy)) {
 			weapon = WEAPON_LASER;
-		} else if (canFireWithWeapon(WEAPON_MAGNUM, enemy)) {
+		} else if (shouldTry() && canFireWithWeapon(WEAPON_MAGNUM, enemy)) {
 			weapon = WEAPON_MAGNUM;
-		} else if (canFireWithChip(CHIP_FLAME, enemy)) {
+		} else if (shouldTry() && canFireWithChip(CHIP_FLAME, enemy)) {
 			chip = CHIP_FLAME;
 			target = enemy;
-		} else if (getLife() < totalLife and canFireWithChip(CHIP_CURE, me)) {
+		} else if (shouldTry() && getLife() < totalLife and canFireWithChip(CHIP_CURE, me)) {
 			chip = CHIP_CURE;
 			target = me;
-		} else if (getLife() < totalLife and canFireWithChip(CHIP_BANDAGE, me)) {
+		} else if (shouldTry() && getLife() < totalLife and canFireWithChip(CHIP_BANDAGE, me)) {
 			chip = CHIP_BANDAGE;
 			target = me;
-		} else if (!hasFired && getNearestEnemy() !== enemy) {
+		} else if (shouldTry() && !hasFired && getNearestEnemy() !== enemy) {
 			enemy = getNearestEnemy();
 			continue;
 		} else {
