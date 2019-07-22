@@ -1,4 +1,4 @@
-include('Common');
+include('common/fight');
 
 function punyBulbAI() {
 	var summoner = getSummoner();

@@ -1,10 +1,6 @@
-global ENEMY_RANGE = 7;
-global SNEAK_MODE = 'SNEAK';
-global ESCAPE_MODE = 'ESCAPE';
+include('map');
 
-function angle(v1, v2) {
-	return acos(dot(v1, v2) / (norm(v1) * norm(v2)));
-}
+global ENEMY_RANGE = 7;
 
 function canFireWithChip(chip, target) {
 	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
@@ -49,41 +45,10 @@ function canFireWithWeapon(weapon, enemy) {
 	return canFire;
 }
 
-function createVector(arrowCell, tailCell) {
-	return [getCellX(arrowCell) - getCellX(tailCell), getCellY(arrowCell) - getCellY(tailCell)];
-}
-
-function dot(v1, v2) {
-	return v1[0] * v2[0] + v1[1] * v2[2];
-}
-
 function ensureWearingWeapon(weapon) {
 	if (getWeapon() !== weapon) {
 		setWeapon(weapon);
 	}
-}
-
-function getCellsAround(centerCell) {
-	var x = getCellX(centerCell);
-	var y = getCellY(centerCell);
-	var deltas = [
-		[0, 1],
-		[1, 1],
-		[1, 0],
-		[1, -1],
-		[0, -1],
-		[-1, -1],
-		[-1, 0],
-		[-1, 1]
-	];
-
-	var cells = arrayMap(deltas, function(delta) {
-		return getCellFromXY(x + delta[0], y + delta[1]);
-	});
-	var emptyCells = arrayFilter(cells, function(cell) {
-		return cell !== null && isEmptyCell(cell);
-	});
-	return removeUnreachableCells(emptyCells);
 }
 
 function getCellToFireWithChip(chip, target) {
@@ -122,97 +87,6 @@ function getCellToFireWithWeapon(weapon, enemy) {
 	return cellToFire;
 }
 
-function getClosestCell(cells) {
-	return getClosestCellTo(cells, getCell());
-}
-
-function getClosestCellTo(cells, refCell) {
-	return arrayFoldLeft(cells, function(closestCell, cell) {
-		var cellPathLength = getPathLength(refCell, cell);
-		var closestCellPathLength = getPathLength(refCell, closestCell);
-
-		return (cellPathLength !== null && cellPathLength < closestCellPathLength) ? cell : closestCell;
-	}, shift(cells));
-}
-
-function getCoveredCells(enemy) {
-	var obstacles = getObstacles();
-	var enemyCell = getCell(enemy);
-	var coveredCells = [];
-
-	arrayIter(obstacles, function(obstacle) {
-		var obstacleCoveredCells = arrayFilter(getCellsAround(obstacle), function(cell) {
-			var v1 = createVector(cell, obstacle);
-			var v2 = createVector(enemyCell, obstacle);
-			return angle(v1, v2) >= toRadians(150);
-		});
-		coveredCells = arrayConcat(coveredCells, obstacleCoveredCells);
-	});
-
-	coveredCells = removeUnreachableCellsOnTurn(coveredCells);
-
-	debug('coveredCells: ' + coveredCells);
-	return coveredCells;
-}
-
-function getHiddenCells(cells, enemy) {
-	var enemyCell = getCell(enemy);
-
-	return arrayFilter(cells, function(cell) {
-		return !lineOfSight(cell, enemyCell);
-	});
-}
-
-function getHighlyCoveredCells(enemy) {
-	var obstacles = getObstacles();
-	var enemyCell = getCell(enemy);
-	var enemyX = getCellX(enemyCell);
-	var enemyY = getCellY(enemyCell);
-	var highlyCoveredCells = [];
-
-	arrayIter(obstacles, function(obstacle) {
-		var obstacleCoveredCells = arrayFilter(getCellsAround(obstacle), function(cell) {
-			var v1 = createVector(cell, obstacle);
-			var v2 = createVector(enemyCell, obstacle);
-
-			if (angle(v1, v2) < toRadians(150)) {
-				return false;
-			}
-
-			for (var i = 0; i <= 10; i++) {
-				var cells = arrayFilter([
-					getCellFromXY(enemyX - i, enemyY),
-					getCellFromXY(enemyX + i, enemyY),
-					getCellFromXY(enemyX, enemyY - i),
-					getCellFromXY(enemyX, enemyY + i),
-				], function(c) {
-					return c !== null && isEmptyCell(c) && isOnSameLine(c, obstacle) && isOnSameLine(c, cell);
-				});
-
-				if (count(cells) > 0) {
-					return true;
-				}
-			}
-			return false;
-		});
-		highlyCoveredCells = arrayConcat(highlyCoveredCells, obstacleCoveredCells);
-	});
-
-	highlyCoveredCells = removeUnreachableCellsOnTurn(highlyCoveredCells);
-
-	debug('highlyCoveredCells: ' + highlyCoveredCells);
-	return highlyCoveredCells;
-}
-
-function getFarthestCellFrom(cells, refCell) {
-	return arrayFoldLeft(cells, function(farestCell, cell) {
-		var cellPathLength = getPathLength(refCell, cell);
-		var farestCellPathLength = getPathLength(refCell, farestCell);
-
-		return (cellPathLength !== null && cellPathLength > farestCellPathLength) ? cell : farestCell;
-	}, shift(cells));
-}
-
 function getMinDistance(enemy) {
 	return getTotalMP(enemy) + ENEMY_RANGE + 1;
 }
@@ -240,10 +114,6 @@ function getNearestLeekEnemy() {
 
 		return enemyPathLength !== null && enemyPathLength < nearestEnemyPathLength ? e : nearestEnemy;
 	}, shift(enemies));
-}
-
-function norm(v) {
-	return sqrt(v[0] * v[0] + v[1] * v[1]);
 }
 
 function Once() {
@@ -292,27 +162,6 @@ function Optimizer() {
 			}
 			return false;
 		});
-	});
-}
-
-function removeUnreachableCells(cells) {
-	var currentCell = getCell();
-
-	return arrayFilter(cells, function(cell) {
-		return cell !== null && getPathLength(currentCell, cell) !== null;
-	});
-}
-
-function removeUnreachableCellsOnTurn(cells) {
-	var currentCell = getCell();
-	var mp = getMP();
-
-	return arrayFilter(cells, function(cell) {
-		if (cell === null) {
-			return false;
-		}
-		var pathLength = getPathLength(currentCell, cell);
-		return pathLength !== null && pathLength <= mp;
 	});
 }
 
