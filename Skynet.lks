@@ -170,8 +170,8 @@ function Skynet() {
 			summonBulb(CHIP_ICED_BULB, icedBulbAI, initialEnemy);
 		} else if (shouldTry() && getWeapon() === null && getTP() > 0) {
 			ensureWearingWeapon(WEAPON_FLAME_THROWER);
-		} else if (shouldTry() && canFireWithChip(CHIP_SLOW_DOWN, initialEnemy)) {
-			chip = CHIP_SLOW_DOWN;
+		} else if (shouldTry() && canFireWithChip(CHIP_BALL_AND_CHAIN, initialEnemy)) {
+			chip = CHIP_BALL_AND_CHAIN;
 			target = initialEnemy;
 		} else if (doOnce(shouldTry() && getTP() > 0)) {
 			say('Canarticho !');
