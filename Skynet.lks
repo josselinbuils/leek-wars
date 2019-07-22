@@ -49,9 +49,10 @@ function icedBulbAI() {
 		} else if (shouldTry() && canFireWithChip(CHIP_REFLEXES, me)) {
 			chip = CHIP_REFLEXES;
 			target = me;
-		} else if (shouldTry() && !hasFired && getNearestEnemy() !== enemy) {
+		} else if (shouldTry() && getNearestEnemy() !== enemy) {
 			debug('change target');
 			enemy = getNearestEnemy();
+			optimizer = Optimizer();
 			continue;
 		} else {
 			if (hasFired && enemy === initialEnemy) {
@@ -65,7 +66,8 @@ function icedBulbAI() {
 					preferredChip = CHIP_STALACTITE;
 				}
 
-				sneak(initialEnemy, getCellToFireWithChip(preferredChip, initialEnemy));
+				debug('move to fire cell');
+				debug('move: ' + moveTowardCell(getCellToFireWithChip(preferredChip, initialEnemy)));
 			}
 			break;
 		}
@@ -96,56 +98,21 @@ function icedBulbAI() {
 	}
 }
 
-function summonBulb(bulb, ai, enemy) {
-	var enemyCell = getCell(enemy);
-	var cell = getCell();
-	var x = getCellX(cell);
-	var y = getCellY(cell);
-
-	var possibleCells = [
-		getCellFromXY(x, y - 2),
-		getCellFromXY(x, y - 1),
-		getCellFromXY(x, y + 1),
-		getCellFromXY(x, y + 2),
-		getCellFromXY(x - 2, y),
-		getCellFromXY(x - 1, y),
-		getCellFromXY(x + 1, y),
-		getCellFromXY(x + 2, y),
-		getCellFromXY(x - 1, y - 1),
-		getCellFromXY(x - 1, y + 1),
-		getCellFromXY(x + 1, y - 1),
-		getCellFromXY(x + 1, y + 1),
-	];
-
-	var emptyCells = arrayFilter(possibleCells, function(c) {
-		return c !== null && isEmptyCell(c);
-	});
-
-	emptyCells = arraySort(emptyCells, function(a, b) {
-		return getDistance(enemyCell, a) < getDistance(enemyCell, b) ? -1 : 1;
-	});
-
-	if (count(emptyCells) > 0) {
-		showResult(summon(bulb, shift(emptyCells), ai));
-	} else {
-		debug('No cell available for summon');
-	}
-}
-
 function Skynet() {
 	var hasFired = false;
-	var hasTriedToSummon = false;
 	var hasUsedAntidote = false;
 	var enemy = getNearestLeekEnemy();
 	var initialEnemy = enemy;
 	var isEnemyPoisoner = getMagic(enemy) > getStrength(enemy);
 	var me = getLeek();
+	var once = Once();
 	var optimizer = Optimizer();
 	var poisoned = isBadlyPoisoned();
 	var totalLife = getTotalLife();
 
 	while (getAliveEnemiesCount() > 0) {
 		var chip = null;
+		var doOnce = once();
 		var isInitialEnemy = enemy === initialEnemy;
 		var shouldTry = optimizer();
 		var result;
@@ -164,14 +131,11 @@ function Skynet() {
 			chip = CHIP_LIBERATION;
 			target = me;
 			hasUsedAntidote = true;
-		} else if (shouldTry() && getLife() <= 350 && canFireWithChip(CHIP_REGENERATION, me)) {
+		} else if (shouldTry() && getLife() <= 400 && canFireWithChip(CHIP_REGENERATION, me)) {
 			chip = CHIP_REGENERATION;
 			target = me;
 		} else if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_ARMOR, me)) {
 			chip = CHIP_ARMOR;
-			target = me;
-		} else if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_SHIELD, me)) {
-			chip = CHIP_SHIELD;
 			target = me;
 		} else if (shouldTry() && isInitialEnemy && canFireWithChip(CHIP_TOXIN, enemy)) {
 			chip = CHIP_TOXIN;
@@ -183,6 +147,9 @@ function Skynet() {
 			target = enemy;
 		} else if (shouldTry() && canFireWithWeapon(WEAPON_DESTROYER, enemy)) {
 			weapon = WEAPON_DESTROYER;
+		} else if (shouldTry() && isInitialEnemy && canFireWithChip(CHIP_SOPORIFIC, enemy)) {
+			chip = CHIP_SOPORIFIC;
+			target = enemy;
 		} else if (shouldTry() && isInitialEnemy && canFireWithChip(CHIP_SLOW_DOWN, enemy)) {
 			chip = CHIP_SLOW_DOWN;
 			target = enemy;
@@ -192,17 +159,19 @@ function Skynet() {
 		} else if (shouldTry() && getLife() < totalLife && canFireWithChip(CHIP_CURE, me)) {
 			chip = CHIP_CURE;
 			target = me;
-		} else if (shouldTry() && !hasTriedToSummon && canFireWithChip(CHIP_ICED_BULB, me)) {
-			// Checks if it has already tried to summon to avoid infinite loops	
-			// when no empty cell is available	
-			hasTriedToSummon = true;
+		} else if (shouldTry() && canFireWithChip(CHIP_ARMORING, me)) {
+			chip = CHIP_ARMORING;
+			target = me;
+		} else if (doOnce(shouldTry() && canFireWithChip(CHIP_ICED_BULB, me))) {
 			summonBulb(CHIP_ICED_BULB, icedBulbAI, initialEnemy);
-		} else if (shouldTry() && !hasFired && getNearestEnemy() !== enemy) {
+		} else if (shouldTry() && getNearestEnemy() !== enemy) {
+			debug('change target');
 			enemy = getNearestEnemy();
+			optimizer = Optimizer();
 			continue;
 		} else if (shouldTry() && getWeapon() === null && getTP() > 0) {
 			ensureWearingWeapon(WEAPON_FLAME_THROWER);
-		} else if (shouldTry() && getTP() > 0) {
+		} else if (doOnce(shouldTry() && getTP() > 0)) {
 			say('Canarticho !');
 		} else {
 			if (hasFired && enemy === initialEnemy) {
