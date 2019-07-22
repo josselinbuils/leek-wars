@@ -1,21 +1,31 @@
 include('Common');
 
+function punyBulbAI() {
+	var summoner = getSummoner();
+
+	debug('move: ' + moveTowardCell(getCellToFireWithChip(CHIP_BANDAGE, summoner)));
+	useChip(CHIP_BANDAGE, summoner);
+	useChip(CHIP_BANDAGE, summoner);
+}
+
 function Stuxnet() {
 	var enemy = getNearestLeekEnemy();
 	var hasFired = false;
 	var initialEnemy = enemy;
 	var isEnemyPoisoner = getMagic(enemy) > getStrength(enemy);
 	var me = getLeek();
+	var once = Once();
 	var optimizer = Optimizer();
 	var totalLife = getTotalLife();
 
 	if (getWeapon() === null) {
-		ensureWearingWeapon(WEAPON_SHOTGUN);
+		ensureWearingWeapon(WEAPON_LASER);
 		say('Hello :)');
 	}
 
 	while (isAlive(initialEnemy)) {
 		var chip = null;
+		var doOnce = once();
 		var result;
 		var shouldTry = optimizer();
 		var target = null;
@@ -25,24 +35,24 @@ function Stuxnet() {
 		debug('MP: ' + getMP());
 		debug('TP: ' + getTP());
 
-		if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_SHIELD, me)) {
+		if (shouldTry() && canFireWithChip(CHIP_SHIELD, me)) {
 			chip = CHIP_SHIELD;
 			target = me;
-		} else if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_HELMET, me)) {
+		} else if (shouldTry() && canFireWithChip(CHIP_HELMET, me)) {
 			chip = CHIP_HELMET;
 			target = me;
 		} else if (shouldTry() && canFireWithChip(CHIP_VENOM, enemy)) {
 			chip = CHIP_VENOM;
 			target = enemy;
-		} else if (shouldTry() && canFireWithChip(CHIP_SPARK, enemy)) {
-			chip = CHIP_SPARK;
+		} else if (shouldTry() && canFireWithChip(CHIP_STALACTITE, enemy)) {
+			chip = CHIP_STALACTITE;
 			target = enemy;
 		} else if (shouldTry() && canFireWithWeapon(WEAPON_LASER, enemy)) {
 			weapon = WEAPON_LASER;
 		} else if (shouldTry() && canFireWithWeapon(WEAPON_MAGNUM, enemy)) {
 			weapon = WEAPON_MAGNUM;
-		} else if (shouldTry() && canFireWithChip(CHIP_FLAME, enemy)) {
-			chip = CHIP_FLAME;
+		} else if (shouldTry() && canFireWithChip(CHIP_SPARK, enemy)) {
+			chip = CHIP_SPARK;
 			target = enemy;
 		} else if (shouldTry() && getLife() < totalLife and canFireWithChip(CHIP_CURE, me)) {
 			chip = CHIP_CURE;
@@ -50,8 +60,11 @@ function Stuxnet() {
 		} else if (shouldTry() && getLife() < totalLife and canFireWithChip(CHIP_BANDAGE, me)) {
 			chip = CHIP_BANDAGE;
 			target = me;
-		} else if (shouldTry() && !hasFired && getNearestEnemy() !== enemy) {
+		} else if (doOnce(shouldTry() && canFireWithChip(CHIP_PUNY_BULB, me))) {
+			summonBulb(CHIP_PUNY_BULB, punyBulbAI, initialEnemy);
+		} else if (shouldTry() && getNearestEnemy() !== enemy) {
 			enemy = getNearestEnemy();
+			optimizer = Optimizer();
 			continue;
 		} else {
 			if (hasFired && enemy === initialEnemy) {
