@@ -18,7 +18,7 @@ function canFireWithChip(chip, target) {
 			var minDistance = getMinDistance(target);
 			var theoricDistanceAfter = getDistance(enemyCell, cellToFire) + getMP() - pathlength;
 
-			canFire = pathlength <= 1 || getDistance(enemyCell, cellToFire) >= getDistance(enemyCell, getCell()) || theoricDistanceAfter >= minDistance || ((chip === CHIP_TOXIN || chip === CHIP_VENOM) && getDistance(enemyCell, cellToFire) >= 5);
+			canFire = pathlength <= 1 || getDistance(enemyCell, cellToFire) >= getDistance(enemyCell, getCell()) || theoricDistanceAfter >= minDistance || ((chip === CHIP_TOXIN || chip === CHIP_VENOM) && !isPoisoned(target));
 		}
 	}
 
@@ -56,12 +56,16 @@ function ensureWearingWeapon(weapon) {
 function getCellToFireWithChip(chip, target) {
 	var startCell = getCell();
 	var cells = getCellsToUseChip(chip, target);
-	var reachableCells = removeUnreachableCells(cells);
-	var minPathLength = getPathLength(startCell, getClosestCell(reachableCells));
-	var cellsWithMinPath = arrayFilter(reachableCells, function(cell) {
-		return getPathLength(startCell, cell) <= minPathLength;
-	});
-	var cellToFire = getFarthestCellFrom(cellsWithMinPath, getCell(target));
+	var cellToFire = null;
+
+	if (cells !== null) {
+		var reachableCells = removeUnreachableCells(cells);
+		var minPathLength = getPathLength(startCell, getClosestCell(reachableCells));
+		var cellsWithMinPath = arrayFilter(reachableCells, function(cell) {
+			return getPathLength(startCell, cell) <= minPathLength;
+		});
+		cellToFire = getFarthestCellFrom(cellsWithMinPath, getCell(target));
+	}
 
 	debug('getCellToFireWithChip(' + getChipName(chip) + ', ' + getName(target) + ')');
 	debug(' ↳ startCell: ' + startCell);
@@ -74,12 +78,16 @@ function getCellToFireWithChip(chip, target) {
 function getCellToFireWithWeapon(weapon, enemy) {
 	var startCell = getCell();
 	var cells = getCellsToUseWeapon(weapon, enemy);
-	var reachableCells = removeUnreachableCells(cells);
-	var minPathLength = getPathLength(startCell, getClosestCell(reachableCells));
-	var cellsWithMinPath = arrayFilter(reachableCells, function(cell) {
-		return getPathLength(startCell, cell) <= minPathLength;
-	});
-	var cellToFire = getFarthestCellFrom(cellsWithMinPath, getCell(enemy));
+	var cellToFire = null;
+
+	if (cells !== null) {
+		var reachableCells = removeUnreachableCells(cells);
+		var minPathLength = getPathLength(startCell, getClosestCell(reachableCells));
+		var cellsWithMinPath = arrayFilter(reachableCells, function(cell) {
+			return getPathLength(startCell, cell) <= minPathLength;
+		});
+		cellToFire = getFarthestCellFrom(cellsWithMinPath, getCell(enemy));
+	}
 
 	debug('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
 	debug(' ↳ startCell: ' + startCell);
@@ -131,6 +139,15 @@ function getReachableCellsOnTurn(enemy) {
 	}
 
 	return removeUnreachableCellsOnTurn(cells);
+}
+
+function isPoisoned(leek) {
+	for (var effect in getEffects()) {
+		if (effect[0] === EFFECT_POISON) {
+			return true;
+		}
+	}
+	return false;
 }
 
 function move(enemy, mode) {
