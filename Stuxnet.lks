@@ -12,7 +12,6 @@ function Stuxnet() {
 	var enemy = getNearestLeekEnemy();
 	var hasFired = false;
 	var initialEnemy = enemy;
-	var isEnemyPoisoner = getMagic(enemy) > getStrength(enemy);
 	var me = getLeek();
 	var once = Once();
 	var optimizer = Optimizer();
@@ -54,10 +53,10 @@ function Stuxnet() {
 		} else if (shouldTry() && canFireWithChip(CHIP_SPARK, enemy)) {
 			chip = CHIP_SPARK;
 			target = enemy;
-		} else if (shouldTry() && getLife() < totalLife and canFireWithChip(CHIP_CURE, me)) {
+		} else if (shouldTry() && getLife() < totalLife && canFireWithChip(CHIP_CURE, me)) {
 			chip = CHIP_CURE;
 			target = me;
-		} else if (shouldTry() && getLife() < totalLife and canFireWithChip(CHIP_BANDAGE, me)) {
+		} else if (shouldTry() && getLife() < totalLife && canFireWithChip(CHIP_BANDAGE, me)) {
 			chip = CHIP_BANDAGE;
 			target = me;
 		} else if (doOnce(shouldTry() && canFireWithChip(CHIP_PUNY_BULB, me))) {
