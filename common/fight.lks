@@ -1,6 +1,6 @@
 include('map');
 
-global ENEMY_RANGE = 7;
+global ENEMY_RANGE = 8;
 global ESCAPE_MODE = 'ESCAPE';
 global SNEAK_MODE = 'SNEAK';
 
@@ -18,7 +18,7 @@ function canFireWithChip(chip, target) {
 			var minDistance = getMinDistance(target);
 			var theoricDistanceAfter = getDistance(enemyCell, cellToFire) + getMP() - pathlength;
 
-			canFire = getPathLength(enemyCell, cellToFire) >= getPathLength(enemyCell, getCell()) || theoricDistanceAfter >= minDistance || chip === CHIP_TOXIN || chip === CHIP_VENOM;
+			canFire = pathlength <= 1 || getDistance(enemyCell, cellToFire) >= getDistance(enemyCell, getCell()) || theoricDistanceAfter >= minDistance || ((chip === CHIP_TOXIN || chip === CHIP_VENOM) && getDistance(enemyCell, cellToFire) >= 5);
 		}
 	}
 
@@ -40,7 +40,7 @@ function canFireWithWeapon(weapon, enemy) {
 		var enemyCell = getCell(enemy);
 		var minDistance = getMinDistance(enemy);
 
-		canFire = cellToFire !== null && getMP() >= pathlength && (getPathLength(enemyCell, cellToFire) >= getPathLength(enemyCell, getCell()) || (getDistance(enemyCell, cellToFire) + getMP() - pathlength) >= minDistance);
+		canFire = cellToFire !== null && getMP() >= pathlength && (pathlength <= 1 || getDistance(enemyCell, cellToFire) >= getDistance(enemyCell, getCell()) || (getDistance(enemyCell, cellToFire) + getMP() - pathlength) >= minDistance);
 	}
 
 	debug('canFireWithWeapon(' + getWeaponName(weapon) + ') => ' + canFire);
@@ -55,7 +55,7 @@ function ensureWearingWeapon(weapon) {
 
 function getCellToFireWithChip(chip, target) {
 	var startCell = getCell();
-	var cells = removeUnreachableCells(getCellsToUseChip(chip, target));
+	var cells = getCellsToUseChip(chip, target);
 	var reachableCells = removeUnreachableCells(cells);
 	var minPathLength = getPathLength(startCell, getClosestCell(reachableCells));
 	var cellsWithMinPath = arrayFilter(reachableCells, function(cell) {
