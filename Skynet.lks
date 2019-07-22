@@ -56,7 +56,7 @@ function icedBulbAI() {
 			continue;
 		} else {
 			if (hasFired && enemy === initialEnemy) {
-				runAway(initialEnemy);
+				move(initialEnemy, ESCAPE_MODE);
 			} else if (mp > 0) {
 				var preferredChip = CHIP_ICE;
 
@@ -134,7 +134,7 @@ function Skynet() {
 		} else if (shouldTry() && getLife() <= 400 && canFireWithChip(CHIP_REGENERATION, me)) {
 			chip = CHIP_REGENERATION;
 			target = me;
-		} else if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_ARMOR, me)) {
+		} else if (shouldTry() && canFireWithChip(CHIP_ARMOR, me)) {
 			chip = CHIP_ARMOR;
 			target = me;
 		} else if (shouldTry() && isInitialEnemy && canFireWithChip(CHIP_TOXIN, enemy)) {
@@ -175,14 +175,14 @@ function Skynet() {
 			say('Canarticho !');
 		} else {
 			if (hasFired && enemy === initialEnemy) {
-				runAway(initialEnemy);
+				move(initialEnemy, ESCAPE_MODE);
 			} else if (getMP() > 0) {
 				var targetCell = getCellToFireWithWeapon(WEAPON_FLAME_THROWER, initialEnemy);
 
 				if (getCooldown(CHIP_TOXIN) === 0) {
 					targetCell = getCellToFireWithChip(CHIP_TOXIN, initialEnemy);
 				}
-				sneak(initialEnemy, targetCell);
+				move(initialEnemy, SNEAK_MODE);
 			}
 			break;
 		}

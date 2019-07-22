@@ -68,9 +68,9 @@ function Stuxnet() {
 			continue;
 		} else {
 			if (hasFired && enemy === initialEnemy) {
-				runAway(enemy);
+				move(initialEnemy, ESCAPE_MODE);
 			} else if (getMP() > 0) {
-				sneak(initialEnemy, getCellToFireWithChip(CHIP_VENOM, initialEnemy));
+				move(initialEnemy, SNEAK_MODE);
 			}
 			break;
 		}

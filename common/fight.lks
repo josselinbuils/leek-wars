@@ -1,6 +1,8 @@
 include('map');
 
 global ENEMY_RANGE = 7;
+global ESCAPE_MODE = 'ESCAPE';
+global SNEAK_MODE = 'SNEAK';
 
 function canFireWithChip(chip, target) {
 	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
@@ -111,9 +113,109 @@ function getNearestLeekEnemy() {
 	return arrayFoldLeft(enemies, function(nearestEnemy, e) {
 		var enemyPathLength = getPathLength(startCell, getCell(e));
 		var nearestEnemyPathLength = getPathLength(startCell, getCell(nearestEnemy));
-
-		return enemyPathLength !== null && enemyPathLength < nearestEnemyPathLength ? e : nearestEnemy;
+		var isNearest = enemyPathLength !== null && enemyPathLength < nearestEnemyPathLength;
+		return isNearest ? e : nearestEnemy;
 	}, shift(enemies));
+}
+
+function getReachableCellsOnTurn(enemy) {
+	var startCell = getCell();
+	var x = getCellX(startCell);
+	var y = getCellY(startCell);
+	var cells = [];
+
+	for (var j = y - 10; j <= y + 10; j++) {
+		for (var i = x - 10; i <= x + 10; i++) {
+			push(cells, getCellFromXY(i, j));
+		}
+	}
+
+	return removeUnreachableCellsOnTurn(cells);
+}
+
+function move(enemy, mode) {
+	debug('move(' + mode + ')');
+
+	if (getMP() > 0) {
+		var startCell = getCell();
+		var enemyCell = getCell(enemy);
+		var minDistance = getMinDistance(enemy);
+
+		if (getTP() > 0) {
+			if (mode === SNEAK_MODE) {
+				say('Avançons prudemment...');
+			} else if (mode === ESCAPE_MODE) {
+				say('Sauve qui peut !');
+			}
+		}
+
+		var highlyCoveredCells = getHighlyCoveredCells(enemy);
+		var filteredHighlyCoveredCells = getMinDistanceCells(highlyCoveredCells, enemy);
+
+		if (mode === SNEAK_MODE) {
+			filteredHighlyCoveredCells = getCloserCellsTo(filteredHighlyCoveredCells, enemyCell);
+		}
+
+		debug('filteredHighlyCoveredCells: ' + arrayConcat([], filteredHighlyCoveredCells));
+
+		if (count(filteredHighlyCoveredCells) > 0) {
+			mark(filteredHighlyCoveredCells);
+			debug('move to highly covered cell');
+			debug('move: ' + moveTowardCell(getClosestCellTo(filteredHighlyCoveredCells, enemyCell)));
+		} else {
+			var coveredCells = getCoveredCells(enemy);
+			var filteredCoveredCells = getMinDistanceCells(coveredCells, enemy);
+
+			if (mode === SNEAK_MODE) {
+				filteredCoveredCells = getCloserCellsTo(filteredCoveredCells, enemyCell);
+			}
+
+			debug('filteredCoveredCells: ' + arrayConcat([], filteredCoveredCells));
+
+			if (count(filteredCoveredCells) > 0) {
+				mark(filteredCoveredCells);
+				debug('move to covered cell');
+				debug('move: ' + moveTowardCell(getClosestCellTo(filteredCoveredCells, enemyCell)));
+			} else {
+				var distance = getDistance(startCell, enemyCell);
+				var reachableCells = getReachableCellsOnTurn(enemy);
+
+				if (count(reachableCells) == 0) {
+					debug('no reachable cell found :(');
+					return;
+				}
+
+				var minDistanceCells = getMinDistanceCells(reachableCells, enemy);
+				var hiddenCells = getHiddenCells(reachableCells, enemy);
+				var targetCells = count(hiddenCells) > 0 ? hiddenCells : minDistanceCells;
+
+				if (mode === ESCAPE_MODE) {
+					if (distance < minDistance) {
+						var targetCell = count(minDistanceCells) > 0 ?
+							getClosestCellTo(minDistanceCells, enemyCell) :
+							getFarthestCellFrom(targetCells, enemyCell);
+
+						debug('run away');
+						debug('move: ' + moveTowardCell(targetCell));
+					}
+				} else if (mode === SNEAK_MODE) {
+					if (distance > minDistance) {
+						debug('sneak to enemy');
+
+						if (count(minDistanceCells) > 0) {
+							debug('move: ' + moveTowardCell(getClosestCellTo(targetCells, enemyCell)));
+						} else {
+							debug('no cell found with min distance');
+						}
+					} else if (distance < minDistance) {
+						move(enemy, ESCAPE_MODE);
+					}
+				} else {
+					debugE('Unknown move mode');
+				}
+			}
+		}
+	}
 }
 
 function Once() {
@@ -165,78 +267,6 @@ function Optimizer() {
 	});
 }
 
-function runAway(enemy) {
-	if (getMP() > 0) {
-		var startCell = getCell();
-		var enemyCell = getCell(enemy);
-		var minDistance = getMinDistance(enemy);
-		var highlyCoveredCells = getHighlyCoveredCells(enemy);
-		var farterHighlyCoveredCells = getMinDistanceCells(highlyCoveredCells, enemy);
-
-		debug('farterHighlyCoveredCells: ' + arrayConcat([], farterHighlyCoveredCells));
-
-		if (getTP() > 0) {
-			say('Sauve qui peut !');
-		}
-
-		if (count(farterHighlyCoveredCells) > 0) {
-			mark(farterHighlyCoveredCells);
-			debug('run away to highly covered cell');
-			debug('move: ' + moveTowardCell(getFarthestCellFrom(farterHighlyCoveredCells, enemyCell)));
-		} else {
-			var coveredCells = getCoveredCells(enemy);
-			var farterCoveredCells = getMinDistanceCells(coveredCells, enemy);
-
-			debug('farterCoveredCells: ' + arrayConcat([], farterCoveredCells));
-
-			if (count(farterCoveredCells) > 0) {
-				mark(farterCoveredCells);
-				debug('run away to covered cell');
-				debug('move: ' + moveTowardCell(getFarthestCellFrom(farterCoveredCells, enemyCell)));
-			} else {
-				if (getDistance(startCell, enemyCell) < minDistance) {
-					var x = getCellX(startCell);
-					var y = getCellY(startCell);
-					var cells = [];
-
-					for (var j = y - 10; j <= y + 10; j++) {
-						for (var i = x - 10; i <= x + 10; i++) {
-							push(cells, getCellFromXY(i, j));
-						}
-					}
-
-					var reachableCells = removeUnreachableCellsOnTurn(cells);
-
-					if (count(reachableCells) > 0) {
-						debug('run away from enemy');
-
-						var minDistanceCells = getMinDistanceCells(reachableCells, enemy);
-
-						if (count(minDistanceCells) > 0) {
-							var targetCell = arrayFoldLeft(reachableCells, function(currentCell, cell) {
-								return abs(getDistance(cell, enemyCell) - minDistance) < abs(getDistance(currentCell, enemyCell) - minDistance) ?
-									cell :
-									currentCell;
-							}, shift(reachableCells));
-
-							debug('move: ' + moveTowardCell(targetCell));
-						} else {
-							var hiddenCells = getHiddenCells(reachableCells, enemy);
-							var targetCells = count(hiddenCells) > 0 ? hiddenCells : reachableCells;
-
-							debug('move: ' + moveTowardCell(getFarthestCellFrom(targetCells, enemyCell)));
-						}
-					} else {
-						debug('no reachable cell found :(');
-					}
-				} else {
-					debug('distance ok, do not move');
-				}
-			}
-		}
-	}
-}
-
 function showResult(result) {
 	var humanReadableResult = 'UNKNOWN';
 
@@ -261,66 +291,6 @@ function showResult(result) {
 	}
 
 	debug('result: ' + humanReadableResult);
-}
-
-function sneak(enemy, targetCell) {
-	if (getMP() > 0) {
-		var startCell = getCell();
-		var enemyCell = getCell(enemy);
-		var minDistance = getMinDistance(enemy);
-		var highlyCoveredCells = getHighlyCoveredCells(enemy);
-		var closerHighlyCoveredCells = arrayFilter(getMinDistanceCells(highlyCoveredCells, enemy), function(cell) {
-			return getPathLength(cell, enemyCell) < getPathLength(startCell, enemyCell);
-		});
-		debug('closerHighlyCoveredCells: ' + arrayConcat([], closerHighlyCoveredCells));
-		mark(closerHighlyCoveredCells);
-
-		if (count(closerHighlyCoveredCells) > 0) {
-			debug('sneak to highly covered cell');
-			debug('move: ' + moveTowardCell(getClosestCellTo(closerHighlyCoveredCells, enemyCell)));
-		} else {
-			var coveredCells = getCoveredCells(enemy);
-			var closerCoveredCells = arrayFilter(getMinDistanceCells(coveredCells, enemy), function(cell) {
-				return getPathLength(cell, enemyCell) < getPathLength(startCell, enemyCell);
-			});
-			debug('closerCoveredCells: ' + arrayConcat([], closerCoveredCells));
-
-			if (count(closerCoveredCells) > 0) {
-				debug('sneak to covered cell');
-				debug('move: ' + moveTowardCell(getClosestCellTo(closerCoveredCells, enemyCell)));
-			} else if (getDistance(startCell, enemyCell) > minDistance) {
-				var x = getCellX(startCell);
-				var y = getCellY(startCell);
-				var cells = [];
-
-				for (var j = y - 10; j <= y + 10; j++) {
-					for (var i = x - 10; i <= x + 10; i++) {
-						push(cells, getCellFromXY(i, j));
-					}
-				}
-
-				var reachableCells = removeUnreachableCellsOnTurn(cells);
-
-				if (count(reachableCells) > 0) {
-					var minDistanceCells = getMinDistanceCells(reachableCells, enemy);
-
-					if (count(minDistanceCells) > 0) {
-						var hiddenCells = getHiddenCells(minDistanceCells, enemy);
-						var targetCells = count(hiddenCells) > 0 ? hiddenCells : minDistanceCells;
-
-						debug('sneak to enemy');
-						debug('move: ' + moveTowardCell(getClosestCellTo(targetCells, enemyCell)));
-					} else {
-						debug('no cell found with minimal distance');
-					}
-				} else {
-					debug('no reachable cell found :(');
-				}
-			} else {
-				runAway(enemy);
-			}
-		}
-	}
 }
 
 function summonBulb(bulb, ai, enemy) {
