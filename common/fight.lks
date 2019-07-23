@@ -4,6 +4,17 @@ global ENEMY_RANGE = 8;
 global ESCAPE_MODE = 'ESCAPE';
 global SNEAK_MODE = 'SNEAK';
 
+function shouldFire(enemy, cellToFire, pathlength) {
+	var enemyCell = getCell(enemy);
+	var minDistance = getMinDistance(enemy);
+	var enemyFireCellDistance = getDistance(enemyCell, cellToFire);
+	var theoricDistanceAfter = enemyFireCellDistance + getMP() - pathlength;
+
+	return pathlength <= 2 ||
+		getDistance(enemyCell, cellToFire) >= getDistance(enemyCell, getCell()) ||
+		theoricDistanceAfter >= minDistance;
+}
+
 function canFireWithChip(chip, target) {
 	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
 
@@ -14,11 +25,8 @@ function canFireWithChip(chip, target) {
 		canFire = cellToFire !== null && getMP() >= pathlength;
 
 		if (canFire && isEnemy(target)) {
-			var enemyCell = getCell(target);
-			var minDistance = getMinDistance(target);
-			var theoricDistanceAfter = getDistance(enemyCell, cellToFire) + getMP() - pathlength;
-
-			canFire = pathlength <= 1 || getDistance(enemyCell, cellToFire) >= getDistance(enemyCell, getCell()) || theoricDistanceAfter >= minDistance || ((chip === CHIP_TOXIN || chip === CHIP_VENOM) && !isPoisoned(target));
+			canFire = shouldFire(target, cellToFire, pathlength) ||
+				(chip === CHIP_VENOM && !isPoisoned(target));
 		}
 	}
 
@@ -40,7 +48,9 @@ function canFireWithWeapon(weapon, enemy) {
 		var enemyCell = getCell(enemy);
 		var minDistance = getMinDistance(enemy);
 
-		canFire = cellToFire !== null && getMP() >= pathlength && (pathlength <= 1 || getDistance(enemyCell, cellToFire) >= getDistance(enemyCell, getCell()) || (getDistance(enemyCell, cellToFire) + getMP() - pathlength) >= minDistance);
+		canFire = cellToFire !== null &&
+			getMP() >= pathlength &&
+			shouldFire(enemy, cellToFire, pathlength);
 	}
 
 	debug('canFireWithWeapon(' + getWeaponName(weapon) + ') => ' + canFire);
@@ -59,15 +69,12 @@ function getCellToFireWithChip(chip, target) {
 	var cellToFire = null;
 
 	if (cells !== null) {
-		var reachableCells = removeUnreachableCells(cells);
-		var minPathLength = getPathLength(startCell, getClosestCell(reachableCells));
-		var cellsWithMinPath = arrayFilter(reachableCells, function(cell) {
-			return getPathLength(startCell, cell) <= minPathLength;
-		});
-		cellToFire = getFarthestCellFrom(cellsWithMinPath, getCell(target));
+		var minPathCells = getMinPathCells(cells);
+		cellToFire = getFarthestCellFrom(minPathCells, getCell(target));
 	}
 
 	debug('getCellToFireWithChip(' + getChipName(chip) + ', ' + getName(target) + ')');
+	debug(' ↳ cells: ' + cells);
 	debug(' ↳ startCell: ' + startCell);
 	debug(' ↳ cellToFire: ' + cellToFire);
 	debug(' ↳ pathLength: ' + getPathLength(startCell, cellToFire));
@@ -77,19 +84,34 @@ function getCellToFireWithChip(chip, target) {
 
 function getCellToFireWithWeapon(weapon, enemy) {
 	var startCell = getCell();
-	var cells = getCellsToUseWeapon(weapon, enemy);
+	var ignoredCells = [];
+
+	// The getCellsToUseWeapon function does not take into acount that
+	// the flame thrower can cross enemies
+	if (weapon === WEAPON_FLAME_THROWER) {
+		var aliveEnemies = getAliveEnemies();
+		var otherAliveEnemies = arrayFilter(aliveEnemies, function(aliveEnemy) {
+			return aliveEnemy !== enemy;
+		});
+		ignoredCells = arrayMap(otherAliveEnemies, function(otherEnemy) {
+			return getCell(otherEnemy);
+		});
+	}
+
+	// Removes ignored cells as they contain enemies
+	var cellsToUseWeapon = getCellsToUseWeapon(weapon, enemy, ignoredCells);
+	var cells = arrayFilter(cellsToUseWeapon, function(cell) {
+		return !inArray(ignoredCells, cell);
+	});
 	var cellToFire = null;
 
 	if (cells !== null) {
-		var reachableCells = removeUnreachableCells(cells);
-		var minPathLength = getPathLength(startCell, getClosestCell(reachableCells));
-		var cellsWithMinPath = arrayFilter(reachableCells, function(cell) {
-			return getPathLength(startCell, cell) <= minPathLength;
-		});
-		cellToFire = getFarthestCellFrom(cellsWithMinPath, getCell(enemy));
+		var minPathCells = getMinPathCells(cells);
+		cellToFire = getFarthestCellFrom(minPathCells, getCell(enemy));
 	}
 
 	debug('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
+	debug(' ↳ cells: ' + cells);
 	debug(' ↳ startCell: ' + startCell);
 	debug(' ↳ cellToFire: ' + cellToFire);
 	debug(' ↳ pathLength: ' + getPathLength(startCell, cellToFire));
@@ -110,19 +132,34 @@ function getMinDistanceCells(cells, enemy) {
 	});
 }
 
+function getMinPathCells(cells) {
+	var startCell = getCell();
+	var reachableCells = removeUnreachableCells(cells);
+	var closestReachableCell = getClosestCell(reachableCells);
+	var minPathLength = getPathLength(startCell, closestReachableCell);
+
+	return arrayFilter(reachableCells, function(cell) {
+		return getPathLength(startCell, cell) <= minPathLength;
+	});
+}
+
 function getNearestLeekEnemy() {
 	var enemies = getAliveEnemies();
 	var startCell = getCell();
 
-	enemies = arrayFilter(enemies, function(e) {
-		return !isSummon(e);
+	enemies = arrayFilter(enemies, function(enemy) {
+		return !isSummon(enemy);
 	});
 
-	return arrayFoldLeft(enemies, function(nearestEnemy, e) {
-		var enemyPathLength = getPathLength(startCell, getCell(e));
-		var nearestEnemyPathLength = getPathLength(startCell, getCell(nearestEnemy));
-		var isNearest = enemyPathLength !== null && enemyPathLength < nearestEnemyPathLength;
-		return isNearest ? e : nearestEnemy;
+	return arrayFoldLeft(enemies, function(nearestEnemy, enemy) {
+		var enemyPathLength = getPathLength(startCell, getCell(enemy));
+		var nearestEnemyPathLength = getPathLength(
+			startCell, getCell(nearestEnemy)
+		);
+		var isNearest = enemyPathLength !== null &&
+			enemyPathLength < nearestEnemyPathLength;
+
+		return isNearest ? enemy : nearestEnemy;
 	}, shift(enemies));
 }
 
@@ -167,32 +204,52 @@ function move(enemy, mode) {
 		}
 
 		var highlyCoveredCells = getHighlyCoveredCells(enemy);
-		var filteredHighlyCoveredCells = getMinDistanceCells(highlyCoveredCells, enemy);
+		var filteredHighlyCoveredCells = getMinDistanceCells(
+			highlyCoveredCells, enemy
+		);
 
 		if (mode === SNEAK_MODE) {
-			filteredHighlyCoveredCells = getCloserCellsTo(filteredHighlyCoveredCells, enemyCell);
+			filteredHighlyCoveredCells = getCloserCellsTo(
+				filteredHighlyCoveredCells, enemyCell
+			);
 		}
 
-		debug('filteredHighlyCoveredCells: ' + arrayConcat([], filteredHighlyCoveredCells));
+		debug(
+			'filteredHighlyCoveredCells: ' +
+			arrayConcat([], filteredHighlyCoveredCells)
+		);
 
 		if (count(filteredHighlyCoveredCells) > 0) {
+			var targetCell = getClosestCellTo(
+				filteredHighlyCoveredCells, enemyCell
+			);
 			mark(filteredHighlyCoveredCells);
 			debug('move to highly covered cell');
-			debug('move: ' + moveTowardCell(getClosestCellTo(filteredHighlyCoveredCells, enemyCell)));
+			debug('move: ' + moveTowardCell(targetCell));
 		} else {
 			var coveredCells = getCoveredCells(enemy);
-			var filteredCoveredCells = getMinDistanceCells(coveredCells, enemy);
+			var filteredCoveredCells = getMinDistanceCells(
+				coveredCells, enemy
+			);
 
 			if (mode === SNEAK_MODE) {
-				filteredCoveredCells = getCloserCellsTo(filteredCoveredCells, enemyCell);
+				filteredCoveredCells = getCloserCellsTo(
+					filteredCoveredCells, enemyCell
+				);
 			}
 
-			debug('filteredCoveredCells: ' + arrayConcat([], filteredCoveredCells));
+			debug(
+				'filteredCoveredCells: ' +
+				arrayConcat([], filteredCoveredCells)
+			);
 
 			if (count(filteredCoveredCells) > 0) {
+				var targetCell = getClosestCellTo(
+					filteredCoveredCells, enemyCell
+				);
 				mark(filteredCoveredCells);
 				debug('move to covered cell');
-				debug('move: ' + moveTowardCell(getClosestCellTo(filteredCoveredCells, enemyCell)));
+				debug('move: ' + moveTowardCell(targetCell));
 			} else {
 				var distance = getDistance(startCell, enemyCell);
 				var reachableCells = getReachableCellsOnTurn(enemy);
@@ -202,33 +259,49 @@ function move(enemy, mode) {
 					return;
 				}
 
-				var minDistanceCells = getMinDistanceCells(reachableCells, enemy);
+				var minDistanceCells = getMinDistanceCells(
+					reachableCells, enemy
+				);
 				var hiddenCells = getHiddenCells(reachableCells, enemy);
-				var targetCells = count(hiddenCells) > 0 ? hiddenCells : minDistanceCells;
 
 				if (mode === ESCAPE_MODE) {
 					if (distance < minDistance) {
-						var targetCell = count(minDistanceCells) > 0 ?
-							getClosestCellTo(minDistanceCells, enemyCell) :
-							getFarthestCellFrom(targetCells, enemyCell);
-
-						debug('run away');
-						debug('move: ' + moveTowardCell(targetCell));
+						if (count(minDistanceCells) > 0) {
+							var targetCell = getClosestCellTo(
+								minDistanceCells, enemyCell
+							);
+							debug('run away to min distance cell');
+							debug('move: ' + moveTowardCell(targetCell));
+						} else if (count(hiddenCells) > 0) {
+							var targetCell = getFarthestCellFrom(
+								hiddenCells, enemyCell
+							);
+							debug('run away to hidden cell');
+							debug('move: ' + moveTowardCell(targetCell));
+						} else {
+							var targetCell = getFarthestCellFrom(
+								reachableCells, enemyCell
+							);
+							debug('run away to reachable cell');
+							debug('move: ' + moveTowardCell(targetCell));
+						}
 					}
 				} else if (mode === SNEAK_MODE) {
 					if (distance > minDistance) {
-						debug('sneak to enemy');
-
 						if (count(minDistanceCells) > 0) {
-							debug('move: ' + moveTowardCell(getClosestCellTo(targetCells, enemyCell)));
+							var targetCell = getClosestCellTo(
+								minDistanceCells, enemyCell
+							);
+							debug('sneak to min distance cell');
+							debug('move: ' + moveTowardCell(targetCell));
 						} else {
-							debug('no cell found with min distance');
+							debug('no cell found with min distance, do not sneak');
 						}
 					} else if (distance < minDistance) {
 						move(enemy, ESCAPE_MODE);
 					}
 				} else {
-					debugE('Unknown move mode');
+					debugE('unknown move mode');
 				}
 			}
 		}
