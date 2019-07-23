@@ -10,7 +10,7 @@ function shouldFire(enemy, cellToFire, pathlength) {
 	var enemyFireCellDistance = getDistance(enemyCell, cellToFire);
 	var theoricDistanceAfter = enemyFireCellDistance + getMP() - pathlength;
 
-	return pathlength <= 2 ||
+	return pathlength <= max(getMP() / 4, 1) ||
 		getDistance(enemyCell, cellToFire) >= getDistance(enemyCell, getCell()) ||
 		theoricDistanceAfter >= minDistance;
 }
@@ -26,7 +26,7 @@ function canFireWithChip(chip, target) {
 
 		if (canFire && isEnemy(target)) {
 			canFire = shouldFire(target, cellToFire, pathlength) ||
-				(chip === CHIP_VENOM && !isPoisoned(target));
+			((chip === CHIP_TOXIN || chip === CHIP_VENOM) && !isPoisoned(target));
 		}
 	}
 
@@ -63,9 +63,13 @@ function ensureWearingWeapon(weapon) {
 	}
 }
 
+function getCellsToFireWithChip(chip, target) {
+	return getCellsToUseChip(chip, target, [getCell()]);
+}
+
 function getCellToFireWithChip(chip, target) {
 	var startCell = getCell();
-	var cells = getCellsToUseChip(chip, target);
+	var cells = getCellsToFireWithChip(chip, target);
 	var cellToFire = null;
 
 	if (cells !== null) {
@@ -82,9 +86,10 @@ function getCellToFireWithChip(chip, target) {
 	return cellToFire;
 }
 
-function getCellToFireWithWeapon(weapon, enemy) {
+function getCellsToFireWithWeapon(weapon, enemy) {
 	var startCell = getCell();
-	var ignoredCells = [];
+	var ignoredCells = [startCell];
+	var otherEnemiesCells = [];
 
 	// The getCellsToUseWeapon function does not take into acount that
 	// the flame thrower can cross enemies
@@ -93,16 +98,22 @@ function getCellToFireWithWeapon(weapon, enemy) {
 		var otherAliveEnemies = arrayFilter(aliveEnemies, function(aliveEnemy) {
 			return aliveEnemy !== enemy;
 		});
-		ignoredCells = arrayMap(otherAliveEnemies, function(otherEnemy) {
+		otherEnemiesCells = arrayMap(otherAliveEnemies, function(otherEnemy) {
 			return getCell(otherEnemy);
 		});
+		ignoredCells = arrayConcat(ignoredCells, otherEnemiesCells);
 	}
 
-	// Removes ignored cells as they contain enemies
+	// Removes enemy cells
 	var cellsToUseWeapon = getCellsToUseWeapon(weapon, enemy, ignoredCells);
-	var cells = arrayFilter(cellsToUseWeapon, function(cell) {
-		return !inArray(ignoredCells, cell);
+	return arrayFilter(cellsToUseWeapon, function(cell) {
+		return !inArray(otherEnemiesCells, cell);
 	});
+}
+
+function getCellToFireWithWeapon(weapon, enemy) {
+	var startCell = getCell();
+	var cells = getCellsToFireWithWeapon(weapon, enemy);
 	var cellToFire = null;
 
 	if (cells !== null) {
@@ -111,7 +122,7 @@ function getCellToFireWithWeapon(weapon, enemy) {
 	}
 
 	debug('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
-	debug(' ↳ cells: ' + cells);
+	debug(' ↳ cells: ' + arrayConcat([], cells));
 	debug(' ↳ startCell: ' + startCell);
 	debug(' ↳ cellToFire: ' + cellToFire);
 	debug(' ↳ pathLength: ' + getPathLength(startCell, cellToFire));
