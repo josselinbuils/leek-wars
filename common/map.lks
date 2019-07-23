@@ -40,7 +40,10 @@ function getClosestCellTo(cells, refCell) {
 		var cellPathLength = getPathLength(refCell, cell);
 		var closestCellPathLength = getPathLength(refCell, closestCell);
 
-		return (cellPathLength !== null && cellPathLength < closestCellPathLength) ? cell : closestCell;
+		return (
+			cellPathLength !== null &&
+			cellPathLength < closestCellPathLength
+		) ? cell : closestCell;
 	}, shift(cells));
 }
 
@@ -50,7 +53,8 @@ function getCoveredCells(enemy) {
 	var coveredCells = [];
 
 	arrayIter(obstacles, function(obstacle) {
-		var obstacleCoveredCells = arrayFilter(getCellsAround(obstacle), function(cell) {
+		var cellsAround = getCellsAround(obstacle);
+		var obstacleCoveredCells = arrayFilter(cellsAround, function(cell) {
 			var v1 = createVector(cell, obstacle);
 			var v2 = createVector(enemyCell, obstacle);
 			return angle(v1, v2) >= toRadians(150);
@@ -80,7 +84,8 @@ function getHighlyCoveredCells(enemy) {
 	var highlyCoveredCells = [];
 
 	arrayIter(obstacles, function(obstacle) {
-		var obstacleCoveredCells = arrayFilter(getCellsAround(obstacle), function(cell) {
+		var cellsAround = getCellsAround(obstacle);
+		var obstacleCoveredCells = arrayFilter(cellsAround, function(cell) {
 			var v1 = createVector(cell, obstacle);
 			var v2 = createVector(enemyCell, obstacle);
 
@@ -95,7 +100,10 @@ function getHighlyCoveredCells(enemy) {
 					getCellFromXY(enemyX, enemyY - i),
 					getCellFromXY(enemyX, enemyY + i),
 				], function(c) {
-					return c !== null && isEmptyCell(c) && isOnSameLine(c, obstacle) && isOnSameLine(c, cell);
+					return c !== null &&
+						isEmptyCell(c) &&
+						isOnSameLine(c, obstacle) &&
+						isOnSameLine(c, cell);
 				});
 
 				if (count(cells) > 0) {
@@ -104,7 +112,10 @@ function getHighlyCoveredCells(enemy) {
 			}
 			return false;
 		});
-		highlyCoveredCells = arrayConcat(highlyCoveredCells, obstacleCoveredCells);
+
+		highlyCoveredCells = arrayConcat(
+			highlyCoveredCells, obstacleCoveredCells
+		);
 	});
 
 	highlyCoveredCells = removeUnreachableCellsOnTurn(highlyCoveredCells);
@@ -118,7 +129,10 @@ function getFarthestCellFrom(cells, refCell) {
 		var cellPathLength = getPathLength(refCell, cell);
 		var farestCellPathLength = getPathLength(refCell, farestCell);
 
-		return (cellPathLength !== null && cellPathLength > farestCellPathLength) ? cell : farestCell;
+		return (
+			cellPathLength !== null &&
+			cellPathLength > farestCellPathLength
+		) ? cell : farestCell;
 	}, shift(cells));
 }
 
