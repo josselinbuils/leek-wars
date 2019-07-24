@@ -1,6 +1,6 @@
 include('map');
 
-global ENEMY_RANGE = 8;
+global ENEMY_RANGE = 7;
 global ESCAPE_MODE = 'ESCAPE';
 global SNEAK_MODE = 'SNEAK';
 
@@ -26,7 +26,7 @@ function canFireWithChip(chip, target) {
 
 		if (canFire && isEnemy(target)) {
 			canFire = shouldFire(target, cellToFire, pathlength) ||
-			((chip === CHIP_TOXIN || chip === CHIP_VENOM) && !isPoisoned(target));
+				((chip === CHIP_TOXIN || chip === CHIP_VENOM) && !isPoisoned(target));
 		}
 	}
 
@@ -189,6 +189,19 @@ function getReachableCellsOnTurn(enemy) {
 	return removeUnreachableCellsOnTurn(cells);
 }
 
+function hasBeenAffected() {
+	var me = getLeek();
+
+	for (var effect in getEffects()) {
+		var caster = effect[2];
+
+		if (caster !== me && !isAlly(caster)) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function isPoisoned(leek) {
 	for (var effect in getEffects()) {
 		if (effect[0] === EFFECT_POISON) {
@@ -262,7 +275,6 @@ function move(enemy, mode) {
 				debug('move to covered cell');
 				debug('move: ' + moveTowardCell(targetCell));
 			} else {
-				var distance = getDistance(startCell, enemyCell);
 				var reachableCells = getReachableCellsOnTurn(enemy);
 
 				if (count(reachableCells) == 0) {
@@ -273,46 +285,67 @@ function move(enemy, mode) {
 				var minDistanceCells = getMinDistanceCells(
 					reachableCells, enemy
 				);
-				var hiddenCells = getHiddenCells(reachableCells, enemy);
+
+				debug(
+					'minDistanceCells: ' +
+					arrayConcat([], minDistanceCells)
+				);
 
 				if (mode === ESCAPE_MODE) {
-					if (distance < minDistance) {
-						if (count(minDistanceCells) > 0) {
-							var targetCell = getClosestCellTo(
-								minDistanceCells, enemyCell
-							);
-							debug('run away to min distance cell');
-							debug('move: ' + moveTowardCell(targetCell));
-						} else if (count(hiddenCells) > 0) {
-							var targetCell = getFarthestCellFrom(
-								hiddenCells, enemyCell
-							);
+					if (count(minDistanceCells) > 0) {
+						var targetCell = getClosestCellTo(
+							minDistanceCells, enemyCell
+						);
+						debug('run away to min distance cell');
+						debug('move: ' + moveTowardCell(targetCell));
+					} else {
+						var safestReachableCells = getFarthestCellsFrom(
+							reachableCells, enemyCell
+						);
+						var hiddenCells = getHiddenCells(
+							safestReachableCells, enemy
+						);
+						var nonAlignedCells = arrayFilter(
+							safestReachableCells,
+							function(cell) {
+								return !isOnSameLine(cell, enemyCell);
+							}
+						);
+
+						debug(
+							'safestReachableCells: ' +
+							arrayConcat([], safestReachableCells)
+						);
+						debug(
+							'hiddenCells: ' +
+							arrayConcat([], hiddenCells)
+						);
+						debug(
+							'nonAlignedCells: ' +
+							arrayConcat([], hiddenCells)
+						);
+
+						if (count(hiddenCells) > 0) {
 							debug('run away to hidden cell');
-							debug('move: ' + moveTowardCell(targetCell));
+							debug('move: ' + moveTowardCell(hiddenCells[0]));
+						} else if (count(nonAlignedCells) > 0) {
+							debug('run away to non aligned cell');
+							debug('move: ' + moveTowardCell(nonAlignedCells[0]));
 						} else {
-							var targetCell = getFarthestCellFrom(
-								reachableCells, enemyCell
-							);
 							debug('run away to reachable cell');
-							debug('move: ' + moveTowardCell(targetCell));
+							debug('move: ' + moveTowardCell(safestReachableCells[0]));
 						}
 					}
 				} else if (mode === SNEAK_MODE) {
-					if (distance > minDistance) {
-						if (count(minDistanceCells) > 0) {
-							var targetCell = getClosestCellTo(
-								minDistanceCells, enemyCell
-							);
-							debug('sneak to min distance cell');
-							debug('move: ' + moveTowardCell(targetCell));
-						} else {
-							debug('no cell found with min distance, do not sneak');
-						}
-					} else if (distance < minDistance) {
-						move(enemy, ESCAPE_MODE);
+					if (count(minDistanceCells) > 0) {
+						var targetCell = getClosestCellTo(
+							minDistanceCells, enemyCell
+						);
+						debug('sneak to min distance cell');
+						debug('move: ' + moveTowardCell(targetCell));
+					} else {
+						debug('no cell found with min distance, do not sneak');
 					}
-				} else {
-					debugE('unknown move mode');
 				}
 			}
 		}
