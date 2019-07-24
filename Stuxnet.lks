@@ -88,10 +88,12 @@ function Stuxnet() {
 			optimizer = Optimizer();
 			continue;
 		} else {
-			if (hasFired && enemy === initialEnemy) {
-				move(initialEnemy, ESCAPE_MODE);
-			} else if (getMP() > 0) {
-				move(initialEnemy, SNEAK_MODE);
+			if (getMP() > 0) {
+				var mode = hasFired || hasBeenAffected() ?
+					ESCAPE_MODE :
+					SNEAK_MODE;
+
+				move(initialEnemy, mode);
 			}
 			break;
 		}
