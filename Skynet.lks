@@ -24,8 +24,6 @@ function icedBulbAI() {
 
 	while (getAliveEnemiesCount() > 0) {
 		var chip = null;
-		var mp = getMP();
-		var tp = getTP();
 		var result;
 		var shouldTry = optimizer();
 		var target = null;
@@ -59,22 +57,12 @@ function icedBulbAI() {
 			chip = CHIP_REFLEXES;
 			target = me;
 		} else {
-			if (hasFired && enemy === initialEnemy) {
-				move(initialEnemy, ESCAPE_MODE);
-			} else if (mp > 0) {
-				var preferredChip = CHIP_ICE;
+			if (getMP() > 0) {
+				var mode = hasFired || hasBeenAffected() ?
+					ESCAPE_MODE :
+					SNEAK_MODE;
 
-				if (totalTP >= 7) {
-					preferredChip = CHIP_ICEBERG;
-				} else if (totalTP >= 6) {
-					preferredChip = CHIP_STALACTITE;
-				}
-
-				var targetCell = getCellToFireWithChip(
-					preferredChip, initialEnemy
-				);
-				debug('move to fire cell');
-				debug('move: ' + moveTowardCell(targetCell));
+				move(initialEnemy, mode);
 			}
 			break;
 		}
@@ -247,19 +235,12 @@ function Skynet() {
 		} else if (doOnce(shouldTry() && getTP() > 0)) {
 			say('Canarticho !');
 		} else {
-			if (hasFired && enemy === initialEnemy) {
-				move(initialEnemy, ESCAPE_MODE);
-			} else if (getMP() > 0) {
-				var targetCell = getCellToFireWithWeapon(
-					WEAPON_FLAME_THROWER, initialEnemy
-				);
+			if (getMP() > 0) {
+				var mode = hasFired || hasBeenAffected() ?
+					ESCAPE_MODE :
+					SNEAK_MODE;
 
-				if (getCooldown(CHIP_TOXIN) === 0) {
-					targetCell = getCellToFireWithChip(
-						CHIP_TOXIN, initialEnemy
-					);
-				}
-				move(initialEnemy, SNEAK_MODE);
+				move(initialEnemy, mode);
 			}
 			break;
 		}
