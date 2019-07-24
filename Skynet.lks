@@ -58,11 +58,7 @@ function icedBulbAI() {
 			target = me;
 		} else {
 			if (getMP() > 0) {
-				var mode = hasFired || hasBeenAffected() ?
-					ESCAPE_MODE :
-					SNEAK_MODE;
-
-				move(initialEnemy, mode);
+				move(initialEnemy);
 			}
 			break;
 		}
@@ -236,11 +232,7 @@ function Skynet() {
 			say('Canarticho !');
 		} else {
 			if (getMP() > 0) {
-				var mode = hasFired || hasBeenAffected() ?
-					ESCAPE_MODE :
-					SNEAK_MODE;
-
-				move(initialEnemy, mode);
+				move(initialEnemy);
 			}
 			break;
 		}

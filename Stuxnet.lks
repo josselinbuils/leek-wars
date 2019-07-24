@@ -89,11 +89,7 @@ function Stuxnet() {
 			continue;
 		} else {
 			if (getMP() > 0) {
-				var mode = hasFired || hasBeenAffected() ?
-					ESCAPE_MODE :
-					SNEAK_MODE;
-
-				move(initialEnemy, mode);
+				move(initialEnemy);
 			}
 			break;
 		}

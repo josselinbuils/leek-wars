@@ -130,6 +130,13 @@ function getCellToFireWithWeapon(weapon, enemy) {
 	return cellToFire;
 }
 
+function getEnemyPathLengthToFireOnCell(cell, enemy) {
+	var enemyCell = getCell(enemy);
+	var cellsToFire = getCellsToUseWeaponOnCell(WEAPON_PISTOL, cell);
+	var cellToFire = getClosestCellTo(cellsToFire, enemyCell);
+	return getPathLength(enemyCell, cellToFire);
+}
+
 function getMinDistance(enemy) {
 	return getTotalMP(enemy) + ENEMY_RANGE + 1;
 }
@@ -174,21 +181,6 @@ function getNearestLeekEnemy() {
 	}, shift(enemies));
 }
 
-function getReachableCellsOnTurn(enemy) {
-	var startCell = getCell();
-	var x = getCellX(startCell);
-	var y = getCellY(startCell);
-	var cells = [];
-
-	for (var j = y - 10; j <= y + 10; j++) {
-		for (var i = x - 10; i <= x + 10; i++) {
-			push(cells, getCellFromXY(i, j));
-		}
-	}
-
-	return removeUnreachableCellsOnTurn(cells);
-}
-
 function hasBeenAffected() {
 	var me = getLeek();
 
@@ -211,144 +203,61 @@ function isPoisoned(leek) {
 	return false;
 }
 
-function move(enemy, mode) {
-	debug('move(' + mode + ')');
+function isSafeCell(cell, enemy) {
+	return getEnemyPathLengthToFireOnCell(cell, enemy) > getTotalMP(enemy);
+}
 
-	if (getMP() > 0) {
-		var startCell = getCell();
-		var enemyCell = getCell(enemy);
-		var minDistance = getMinDistance(enemy);
+function move(enemy) {
+	debug('move()');
 
-		if (getTP() > 0) {
-			if (mode === SNEAK_MODE) {
-				say('Avançons prudemment...');
-			} else if (mode === ESCAPE_MODE) {
-				say('Sauve qui peut !');
-			}
+	if (getMP() === 0) {
+		return;
+	}
+
+	var startCell = getCell();
+	var enemyCell = getCell(enemy);
+	var reachableCells = getReachableCellsOnTurn();
+	var safeReachableCells = arrayFilter(
+		reachableCells,
+		function(cell) {
+			return isSafeCell(cell, enemy);
 		}
+	);
 
-		var highlyCoveredCells = getHighlyCoveredCells(enemy);
-		var filteredHighlyCoveredCells = getMinDistanceCells(
-			highlyCoveredCells, enemy
+	debug(
+		'safeReachableCells: ' +
+		arrayConcat([], safeReachableCells)
+	);
+
+	if (count(safeReachableCells) > 0) {
+		var targetCell = getClosestCellTo(
+			safeReachableCells, enemyCell
 		);
+		var pathLength = getEnemyPathLengthToFireOnCell(targetCell, enemy);
 
-		if (mode === SNEAK_MODE) {
-			filteredHighlyCoveredCells = getCloserCellsTo(
-				filteredHighlyCoveredCells, enemyCell
-			);
-		}
-
-		debug(
-			'filteredHighlyCoveredCells: ' +
-			arrayConcat([], filteredHighlyCoveredCells)
+		mark(safeReachableCells);
+		debug('move to safe cell ' + targetCell + ' (' + pathLength + ')');
+		debug('move: ' + moveTowardCell(targetCell));
+	} else {
+		var targetCell = arrayFoldLeft(
+			reachableCells,
+			function(safestCell, cell) {
+				var pathLengthSafestCell = getEnemyPathLengthToFireOnCell(
+					safestCell, enemy
+				);
+				var pathLengthCell = getEnemyPathLengthToFireOnCell(
+					cell, enemy
+				);
+				return pathLengthCell > pathLengthSafestCell ?
+					cell :
+					safestCell;
+			},
+			shift(reachableCells)
 		);
+		var pathLength = getEnemyPathLengthToFireOnCell(targetCell, enemy);
 
-		if (count(filteredHighlyCoveredCells) > 0) {
-			var targetCell = getClosestCellTo(
-				filteredHighlyCoveredCells, enemyCell
-			);
-			mark(filteredHighlyCoveredCells);
-			debug('move to highly covered cell');
-			debug('move: ' + moveTowardCell(targetCell));
-		} else {
-			var coveredCells = getCoveredCells(enemy);
-			var filteredCoveredCells = getMinDistanceCells(
-				coveredCells, enemy
-			);
-
-			if (mode === SNEAK_MODE) {
-				filteredCoveredCells = getCloserCellsTo(
-					filteredCoveredCells, enemyCell
-				);
-			}
-
-			debug(
-				'filteredCoveredCells: ' +
-				arrayConcat([], filteredCoveredCells)
-			);
-
-			if (count(filteredCoveredCells) > 0) {
-				var targetCell = getClosestCellTo(
-					filteredCoveredCells, enemyCell
-				);
-				mark(filteredCoveredCells);
-				debug('move to covered cell');
-				debug('move: ' + moveTowardCell(targetCell));
-			} else {
-				var reachableCells = getReachableCellsOnTurn(enemy);
-
-				if (count(reachableCells) == 0) {
-					debug('no reachable cell found :(');
-					return;
-				}
-
-				var minDistanceCells = getMinDistanceCells(
-					reachableCells, enemy
-				);
-
-				debug(
-					'minDistanceCells: ' +
-					arrayConcat([], minDistanceCells)
-				);
-
-				if (mode === ESCAPE_MODE) {
-					if (count(minDistanceCells) > 0) {
-						var targetCell = getClosestCellTo(
-							minDistanceCells, enemyCell
-						);
-						debug('run away to min distance cell');
-						debug('move: ' + moveTowardCell(targetCell));
-					} else {
-						var safestReachableCells = getFarthestCellsFrom(
-							reachableCells, enemyCell
-						);
-						var hiddenCells = getHiddenCells(
-							safestReachableCells, enemy
-						);
-						var nonAlignedCells = arrayFilter(
-							safestReachableCells,
-							function(cell) {
-								return !isOnSameLine(cell, enemyCell);
-							}
-						);
-
-						debug(
-							'safestReachableCells: ' +
-							arrayConcat([], safestReachableCells)
-						);
-						debug(
-							'hiddenCells: ' +
-							arrayConcat([], hiddenCells)
-						);
-						debug(
-							'nonAlignedCells: ' +
-							arrayConcat([], hiddenCells)
-						);
-
-						if (count(hiddenCells) > 0) {
-							debug('run away to hidden cell');
-							debug('move: ' + moveTowardCell(hiddenCells[0]));
-						} else if (count(nonAlignedCells) > 0) {
-							debug('run away to non aligned cell');
-							debug('move: ' + moveTowardCell(nonAlignedCells[0]));
-						} else {
-							debug('run away to reachable cell');
-							debug('move: ' + moveTowardCell(safestReachableCells[0]));
-						}
-					}
-				} else if (mode === SNEAK_MODE) {
-					if (count(minDistanceCells) > 0) {
-						var targetCell = getClosestCellTo(
-							minDistanceCells, enemyCell
-						);
-						debug('sneak to min distance cell');
-						debug('move: ' + moveTowardCell(targetCell));
-					} else {
-						debug('no cell found with min distance, do not sneak');
-					}
-				}
-			}
-		}
+		debug('move to less bad cell ' + targetCell + ' (' + pathLength + ')');
+		debug('move: ' + moveTowardCell(targetCell));
 	}
 }
 
