@@ -128,7 +128,10 @@ function getCellToFireWithWeapon(weapon, enemy) {
 
 function getEnemyPathLengthToFireOnCell(cell, enemy) {
 	var enemyCell = getCell(enemy);
-	var cellsToFire = getCellsToUseChipOnCell(CHIP_VENOM, cell, arrayConcat([getCell()], getAllies()));
+	var alliesCells = arrayMap(getAllies(), function(ally) {
+		return getCell(ally);
+	});
+	var cellsToFire = getCellsToUseChipOnCell(CHIP_VENOM, cell, arrayConcat([getCell()], alliesCells));
 	var cellToFire = getClosestCellTo(cellsToFire, enemyCell);
 	return getPathLength(enemyCell, cellToFire);
 }
@@ -177,7 +180,7 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 
 	if (count(safeReachableCells) > 0) {
 		if (shouldMark) {
-			mark(safeReachableCells);
+			mark(safeReachableCells, getColor(255, 128, 210));
 		}
 		nextCell = getClosestCellTo(
 			safeReachableCells, enemyCell
