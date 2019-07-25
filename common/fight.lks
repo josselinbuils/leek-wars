@@ -12,7 +12,7 @@ function canFireWithChip(chip, target) {
 		if (canFire && isEnemy(target)) {
 			var isPoisonChip = chip === CHIP_TOXIN ||
 				chip === CHIP_VENOM;
-			canFire = shouldFire(target, cellToFire, pathlength, isPoisonChip);
+			canFire = shouldFire(cellToFire, pathlength, isPoisonChip);
 		}
 	}
 
@@ -34,7 +34,7 @@ function canFireWithWeapon(weapon, enemy) {
 
 		canFire = cellToFire !== null &&
 			getMP() >= pathlength &&
-			shouldFire(enemy, cellToFire, pathlength, false);
+			shouldFire(cellToFire, pathlength, false);
 	}
 
 	debug('canFireWithWeapon(' + getWeaponName(weapon) + ') => ' + canFire);
@@ -298,30 +298,37 @@ function Optimizer() {
 	});
 }
 
-function shouldFire(enemy, cellToFire, pathlength, isPoisonChip) {
+function shouldFire(cellToFire, pathlength, isPoisonChip) {
 	if (pathlength === 0) {
 		return true;
 	}
 
+	// We do not want to take summons into account
+	var enemy = getNearestLeekEnemy();
+	var startCell = getCell();
 	var availableMP = getMP() - pathlength;
 	var nextCell = getNextCell(
+		enemy, startCell, getMP(), false
+	);
+	var nextCellAfterFire = getNextCell(
 		enemy, cellToFire, availableMP, false
 	);
 	var enemyPathLength = getEnemyPathLengthToFireOnCell(
-		nextCell, enemy
+		nextCellAfterFire, enemy
 	);
 	var totalEnemyMP = getTotalMP(enemy);
 	var limit = isPoisonChip && !isPoisoned(enemy) ? totalEnemyMP / 3 : totalEnemyMP;
 	var isSafe = enemyPathLength > getTotalMP(enemy);
-	var inWay = !isSummon(enemy) && inArray(getPath(getCell(), nextCell), cellToFire);
+	var inWay = !isSummon(enemy) && inArray(getPath(startCell, nextCell), cellToFire);
 
 	debug('shouldFire()');
+	debug(' ↳ nextCell: ' + nextCell);
 	debug(' ↳ cellToFire: ' + cellToFire);
 	debug(' ↳ availableMP: ' + availableMP);
-	debug(' ↳ nextCell: ' + nextCell);
+	debug(' ↳ nextCellAfterFire: ' + nextCell);
 	debug(
-		' ↳ ' + (isSafe ? '' : 'not ') + 'safe, ' +
-		(inWay ? '' : 'not ') + 'in way (' + enemyPathLength + ')'
+		' ↳ ' + (isSafe ? '' : 'not ') + 'safe (' + enemyPathLength + '), ' +
+		(inWay ? '' : 'not ') + 'in way'
 	);
 
 	return isSafe || inWay;
