@@ -58,7 +58,23 @@ function icedBulbAI() {
 			target = me;
 		} else {
 			if (getMP() > 0) {
-				move(initialEnemy);
+				if (hasFired || hasBeenAffected()) {
+					move(initialEnemy);
+				} else {
+					var preferredChip = CHIP_ICE;
+
+					if (totalTP >= 7) {
+						preferredChip = CHIP_ICEBERG;
+					} else if (totalTP >= 6) {
+						preferredChip = CHIP_STALACTITE;
+					}
+
+					var targetCell = getCellToFireWithChip(
+						preferredChip, initialEnemy
+					);
+					debug('move to fire cell');
+					debug('move: ' + moveTowardCell(targetCell));
+				}
 			}
 			break;
 		}
@@ -96,7 +112,6 @@ function icedBulbAI() {
 
 function Skynet() {
 	var hasFired = false;
-	var hasUsedAntidote = false;
 	var enemy = getNearestLeekEnemy();
 	var initialEnemy = enemy;
 	var me = getLeek();
@@ -147,15 +162,6 @@ function Skynet() {
 		) {
 			chip = CHIP_ANTIDOTE;
 			target = me;
-			hasUsedAntidote = true;
-		} else if (
-			shouldTry() &&
-			poisoned &&
-			!hasUsedAntidote &&
-			canFireWithChip(CHIP_LIBERATION, me)
-		) {
-			chip = CHIP_LIBERATION;
-			target = me;
 		} else if (shouldTry() && canFireWithChip(CHIP_ARMOR, me)) {
 			chip = CHIP_ARMOR;
 			target = me;
@@ -184,12 +190,6 @@ function Skynet() {
 			canFireWithWeapon(WEAPON_DESTROYER, enemy)
 		) {
 			weapon = WEAPON_DESTROYER;
-		} else if (
-			shouldTry() &&
-			canFireWithWeapon(WEAPON_GRENADE_LAUNCHER, enemy)
-		) {
-			// TODO try to fire on cells around enemy
-			weapon = WEAPON_GRENADE_LAUNCHER;
 		} else if (shouldTry() && getNearestEnemy() !== enemy) {
 			debug('change target');
 			enemy = getNearestEnemy();
@@ -222,6 +222,12 @@ function Skynet() {
 			shouldTry() && getWeapon() === null && getTP() > 0
 		) {
 			ensureWearingWeapon(WEAPON_FLAME_THROWER);
+		} else if (
+			shouldTry() &&
+			canFireWithChip(CHIP_FRACTURE, initialEnemy)
+		) {
+			chip = CHIP_FRACTURE;
+			target = initialEnemy;
 		} else if (
 			shouldTry() &&
 			canFireWithChip(CHIP_BALL_AND_CHAIN, initialEnemy)

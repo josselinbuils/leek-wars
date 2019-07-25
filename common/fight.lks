@@ -1,20 +1,5 @@
 include('map');
 
-global ENEMY_RANGE = 7;
-global ESCAPE_MODE = 'ESCAPE';
-global SNEAK_MODE = 'SNEAK';
-
-function shouldFire(enemy, cellToFire, pathlength) {
-	var enemyCell = getCell(enemy);
-	var minDistance = getMinDistance(enemy);
-	var enemyFireCellDistance = getDistance(enemyCell, cellToFire);
-	var theoricDistanceAfter = enemyFireCellDistance + getMP() - pathlength;
-
-	return pathlength <= max(getMP() / 4, 1) ||
-		getDistance(enemyCell, cellToFire) >= getDistance(enemyCell, getCell()) ||
-		theoricDistanceAfter >= minDistance;
-}
-
 function canFireWithChip(chip, target) {
 	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
 
@@ -25,8 +10,9 @@ function canFireWithChip(chip, target) {
 		canFire = cellToFire !== null && getMP() >= pathlength;
 
 		if (canFire && isEnemy(target)) {
-			canFire = shouldFire(target, cellToFire, pathlength) ||
-				((chip === CHIP_TOXIN || chip === CHIP_VENOM) && !isPoisoned(target));
+			var isPoisonChip = chip === CHIP_TOXIN ||
+				chip === CHIP_VENOM;
+			canFire = shouldFire(target, cellToFire, pathlength, isPoisonChip);
 		}
 	}
 
@@ -45,12 +31,10 @@ function canFireWithWeapon(weapon, enemy) {
 	if (getTP() >= cost) {
 		var cellToFire = getCellToFireWithWeapon(weapon, enemy);
 		var pathlength = getPathLength(getCell(), cellToFire);
-		var enemyCell = getCell(enemy);
-		var minDistance = getMinDistance(enemy);
 
 		canFire = cellToFire !== null &&
 			getMP() >= pathlength &&
-			shouldFire(enemy, cellToFire, pathlength);
+			shouldFire(enemy, cellToFire, pathlength, false);
 	}
 
 	debug('canFireWithWeapon(' + getWeaponName(weapon) + ') => ' + canFire);
@@ -69,12 +53,18 @@ function getCellsToFireWithChip(chip, target) {
 
 function getCellToFireWithChip(chip, target) {
 	var startCell = getCell();
-	var cells = getCellsToFireWithChip(chip, target);
 	var cellToFire = null;
+	var cells = [];
 
-	if (cells !== null) {
-		var minPathCells = getMinPathCells(cells);
-		cellToFire = getFarthestCellFrom(minPathCells, getCell(target));
+	if (canUseChip(chip, target)) {
+		cellToFire = startCell;
+	} else {
+		cells = getCellsToFireWithChip(chip, target);
+
+		if (cells !== null) {
+			var minPathCells = getMinPathCells(cells);
+			cellToFire = getFarthestCellFrom(minPathCells, getCell(target));
+		}
 	}
 
 	debug('getCellToFireWithChip(' + getChipName(chip) + ', ' + getName(target) + ')');
@@ -113,12 +103,18 @@ function getCellsToFireWithWeapon(weapon, enemy) {
 
 function getCellToFireWithWeapon(weapon, enemy) {
 	var startCell = getCell();
-	var cells = getCellsToFireWithWeapon(weapon, enemy);
 	var cellToFire = null;
+	var cells = [];
 
-	if (cells !== null) {
-		var minPathCells = getMinPathCells(cells);
-		cellToFire = getFarthestCellFrom(minPathCells, getCell(enemy));
+	if (canUseWeapon(weapon, enemy)) {
+		cellToFire = startCell;
+	} else {
+		cells = getCellsToFireWithWeapon(weapon, enemy);
+
+		if (cells !== null) {
+			var minPathCells = getMinPathCells(cells);
+			cellToFire = getFarthestCellFrom(minPathCells, getCell(enemy));
+		}
 	}
 
 	debug('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
@@ -132,22 +128,9 @@ function getCellToFireWithWeapon(weapon, enemy) {
 
 function getEnemyPathLengthToFireOnCell(cell, enemy) {
 	var enemyCell = getCell(enemy);
-	var cellsToFire = getCellsToUseWeaponOnCell(WEAPON_PISTOL, cell);
+	var cellsToFire = getCellsToUseChipOnCell(CHIP_VENOM, cell, arrayConcat([getCell()], getAllies()));
 	var cellToFire = getClosestCellTo(cellsToFire, enemyCell);
 	return getPathLength(enemyCell, cellToFire);
-}
-
-function getMinDistance(enemy) {
-	return getTotalMP(enemy) + ENEMY_RANGE + 1;
-}
-
-function getMinDistanceCells(cells, enemy) {
-	var enemyCell = getCell(enemy);
-	var minDistance = getMinDistance(enemy);
-
-	return arrayFilter(cells, function(cell) {
-		return getDistance(cell, enemyCell) >= minDistance;
-	});
 }
 
 function getMinPathCells(cells) {
@@ -179,6 +162,51 @@ function getNearestLeekEnemy() {
 
 		return isNearest ? enemy : nearestEnemy;
 	}, shift(enemies));
+}
+
+function getNextCell(enemy, startCell, availableMP, shouldMark) {
+	var enemyCell = getCell(enemy);
+	var reachableCells = getReachableCells(startCell, availableMP);
+	var safeReachableCells = arrayFilter(
+		reachableCells,
+		function(cell) {
+			return isSafeCell(cell, enemy);
+		}
+	);
+	var nextCell;
+
+	if (count(safeReachableCells) > 0) {
+		if (shouldMark) {
+			mark(safeReachableCells);
+		}
+		nextCell = getClosestCellTo(
+			safeReachableCells, enemyCell
+		);
+	} else {
+		nextCell = arrayFoldLeft(
+			reachableCells,
+			function(safestCell, cell) {
+				var pathLengthSafestCell = getEnemyPathLengthToFireOnCell(
+					safestCell, enemy
+				);
+				var pathLengthCell = getEnemyPathLengthToFireOnCell(
+					cell, enemy
+				);
+				return pathLengthCell > pathLengthSafestCell ?
+					cell :
+					safestCell;
+			},
+			shift(reachableCells)
+		);
+	}
+
+	debug('getNextCell()');
+	debug(' ↳ enemy: ' + getName(enemy));
+	debug(' ↳ startCell: ' + startCell);
+	debug(' ↳ availableMP: ' + availableMP);
+	debug(' ↳ nextCell: ' + nextCell);
+
+	return nextCell;
 }
 
 function hasBeenAffected() {
@@ -214,51 +242,11 @@ function move(enemy) {
 		return;
 	}
 
-	var startCell = getCell();
-	var enemyCell = getCell(enemy);
-	var reachableCells = getReachableCellsOnTurn();
-	var safeReachableCells = arrayFilter(
-		reachableCells,
-		function(cell) {
-			return isSafeCell(cell, enemy);
-		}
-	);
+	var nextCell = getNextCell(enemy, getCell(), getMP(), true);
+	var pathLength = getEnemyPathLengthToFireOnCell(nextCell, enemy);
 
-	debug(
-		'safeReachableCells: ' +
-		arrayConcat([], safeReachableCells)
-	);
-
-	if (count(safeReachableCells) > 0) {
-		var targetCell = getClosestCellTo(
-			safeReachableCells, enemyCell
-		);
-		var pathLength = getEnemyPathLengthToFireOnCell(targetCell, enemy);
-
-		mark(safeReachableCells);
-		debug('move to safe cell ' + targetCell + ' (' + pathLength + ')');
-		debug('move: ' + moveTowardCell(targetCell));
-	} else {
-		var targetCell = arrayFoldLeft(
-			reachableCells,
-			function(safestCell, cell) {
-				var pathLengthSafestCell = getEnemyPathLengthToFireOnCell(
-					safestCell, enemy
-				);
-				var pathLengthCell = getEnemyPathLengthToFireOnCell(
-					cell, enemy
-				);
-				return pathLengthCell > pathLengthSafestCell ?
-					cell :
-					safestCell;
-			},
-			shift(reachableCells)
-		);
-		var pathLength = getEnemyPathLengthToFireOnCell(targetCell, enemy);
-
-		debug('move to less bad cell ' + targetCell + ' (' + pathLength + ')');
-		debug('move: ' + moveTowardCell(targetCell));
-	}
+	debug('move to ' + nextCell + ' (' + isSafeCell(nextCell, enemy) + ': ' + pathLength + ')');
+	debug('move: ' + moveTowardCell(nextCell));
 }
 
 function Once() {
@@ -308,6 +296,35 @@ function Optimizer() {
 			return false;
 		});
 	});
+}
+
+function shouldFire(enemy, cellToFire, pathlength, isPoisonChip) {
+	if (pathlength === 0) {
+		return true;
+	}
+
+	var availableMP = getMP() - pathlength;
+	var nextCell = getNextCell(
+		enemy, cellToFire, availableMP, false
+	);
+	var enemyPathLength = getEnemyPathLengthToFireOnCell(
+		nextCell, enemy
+	);
+	var totalEnemyMP = getTotalMP(enemy);
+	var limit = isPoisonChip && !isPoisoned(enemy) ? totalEnemyMP / 3 : totalEnemyMP;
+	var isSafe = enemyPathLength > getTotalMP(enemy);
+	var inWay = !isSummon(enemy) && inArray(getPath(getCell(), nextCell), cellToFire);
+
+	debug('shouldFire()');
+	debug(' ↳ cellToFire: ' + cellToFire);
+	debug(' ↳ availableMP: ' + availableMP);
+	debug(' ↳ nextCell: ' + nextCell);
+	debug(
+		' ↳ ' + (isSafe ? '' : 'not ') + 'safe, ' +
+		(inWay ? '' : 'not ') + 'in way (' + enemyPathLength + ')'
+	);
+
+	return isSafe || inWay;
 }
 
 function showResult(result) {
