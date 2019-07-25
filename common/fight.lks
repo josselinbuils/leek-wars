@@ -1,8 +1,6 @@
 include('map');
 
 function canFireWithChip(chip, target) {
-	debug('canFireWithChip(' + getChipName(chip) + ')');
-
 	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
 
 	if (canFire && target !== getLeek()) {
@@ -18,13 +16,11 @@ function canFireWithChip(chip, target) {
 		}
 	}
 
-	debug(' ↳ ' + canFire);
+	debug('canFireWithChip(' + getChipName(chip) + ') => ' + canFire);
 	return canFire;
 }
 
 function canFireWithWeapon(weapon, enemy) {
-	debug('canFireWithWeapon(' + getWeaponName(weapon) + ')');
-
 	var cost = getWeaponCost(weapon);
 	var canFire = false;
 
@@ -41,7 +37,7 @@ function canFireWithWeapon(weapon, enemy) {
 			shouldFire(cellToFire, pathlength, false);
 	}
 
-	debug(' ↳ ' + canFire);
+	debug('canFireWithWeapon(' + getWeaponName(weapon) + ') => ' + canFire);
 	return canFire;
 }
 
@@ -442,11 +438,14 @@ function summonBulb(bulb, ai, enemy) {
 		getCellFromXY(x + 1, y + 1),
 	]);
 
-	possibleCells = arraySort(possibleCells, function(a, b) {
-		return getDistance(enemyCell, a) < getDistance(enemyCell, b) ? -1 : 1;
+	possibleCells = arrayFilter(possibleCells, function(cell) {
+		return canUseChipOnCell(bulb, cell);
 	});
 
 	if (count(possibleCells) > 0) {
+		possibleCells = arraySort(possibleCells, function(a, b) {
+			return getDistance(enemyCell, a) < getDistance(enemyCell, b) ? -1 : 1;
+		});
 		showResult(summon(bulb, shift(possibleCells), ai));
 	} else {
 		debug('No cell available for bulb :(');
