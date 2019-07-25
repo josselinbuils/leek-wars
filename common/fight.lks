@@ -1,6 +1,8 @@
 include('map');
 
 function canFireWithChip(chip, target) {
+	debug('canFireWithChip(' + getChipName(chip) + ')');
+
 	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
 
 	if (canFire && target !== getLeek()) {
@@ -16,11 +18,13 @@ function canFireWithChip(chip, target) {
 		}
 	}
 
-	debug('canFireWithChip(' + getChipName(chip) + ') => ' + canFire);
+	debug(' ↳ ' + canFire);
 	return canFire;
 }
 
 function canFireWithWeapon(weapon, enemy) {
+	debug('canFireWithWeapon(' + getWeaponName(weapon) + ')');
+
 	var cost = getWeaponCost(weapon);
 	var canFire = false;
 
@@ -37,7 +41,7 @@ function canFireWithWeapon(weapon, enemy) {
 			shouldFire(cellToFire, pathlength, false);
 	}
 
-	debug('canFireWithWeapon(' + getWeaponName(weapon) + ') => ' + canFire);
+	debug(' ↳ ' + canFire);
 	return canFire;
 }
 
@@ -48,10 +52,13 @@ function ensureWearingWeapon(weapon) {
 }
 
 function getCellsToFireWithChip(chip, target) {
-	return getCellsToUseChip(chip, target, [getCell()]);
+	var cells = getCellsToUseChip(chip, target, [getCell()]);
+	return cells !== null ? cells : [];
 }
 
 function getCellToFireWithChip(chip, target) {
+	debug('getCellToFireWithChip(' + getChipName(chip) + ', ' + getName(target) + ')');
+
 	var startCell = getCell();
 	var cellToFire = null;
 	var cells = [];
@@ -60,14 +67,10 @@ function getCellToFireWithChip(chip, target) {
 		cellToFire = startCell;
 	} else {
 		cells = getCellsToFireWithChip(chip, target);
-
-		if (cells !== null) {
-			var minPathCells = getMinPathCells(cells);
-			cellToFire = getFarthestCellFrom(minPathCells, getCell(target));
-		}
+		var minPathCells = getMinPathCells(cells);
+		cellToFire = getFarthestCellFrom(minPathCells, getCell(target));
 	}
 
-	debug('getCellToFireWithChip(' + getChipName(chip) + ', ' + getName(target) + ')');
 	debug(' ↳ cells: ' + cells);
 	debug(' ↳ startCell: ' + startCell);
 	debug(' ↳ cellToFire: ' + cellToFire);
@@ -96,12 +99,19 @@ function getCellsToFireWithWeapon(weapon, enemy) {
 
 	// Removes enemy cells
 	var cellsToUseWeapon = getCellsToUseWeapon(weapon, enemy, ignoredCells);
+
+	if (cellsToUseWeapon === null) {
+		cellsToUseWeapon = [];
+	}
+
 	return arrayFilter(cellsToUseWeapon, function(cell) {
 		return !inArray(otherEnemiesCells, cell);
 	});
 }
 
 function getCellToFireWithWeapon(weapon, enemy) {
+	debug('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
+
 	var startCell = getCell();
 	var cellToFire = null;
 	var cells = [];
@@ -110,15 +120,11 @@ function getCellToFireWithWeapon(weapon, enemy) {
 		cellToFire = startCell;
 	} else {
 		cells = getCellsToFireWithWeapon(weapon, enemy);
-
-		if (cells !== null) {
-			var minPathCells = getMinPathCells(cells);
-			cellToFire = getFarthestCellFrom(minPathCells, getCell(enemy));
-		}
+		var minPathCells = getMinPathCells(cells);
+		cellToFire = getFarthestCellFrom(minPathCells, getCell(enemy));
 	}
 
-	debug('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
-	debug(' ↳ cells: ' + arrayConcat([], cells));
+	debug(' ↳ cells: ' + (cells !== null ? arrayConcat([], cells) : null));
 	debug(' ↳ startCell: ' + startCell);
 	debug(' ↳ cellToFire: ' + cellToFire);
 	debug(' ↳ pathLength: ' + getPathLength(startCell, cellToFire));
@@ -132,6 +138,11 @@ function getEnemyPathLengthToFireOnCell(cell, enemy) {
 		return getCell(ally);
 	});
 	var cellsToFire = getCellsToUseChipOnCell(CHIP_VENOM, cell, arrayConcat([getCell()], alliesCells));
+
+	if (cellsToFire === null) {
+		return null;
+	}
+
 	var cellToFire = getClosestCellTo(cellsToFire, enemyCell);
 	return getPathLength(enemyCell, cellToFire);
 }
@@ -168,6 +179,8 @@ function getNearestLeekEnemy() {
 }
 
 function getNextCell(enemy, startCell, availableMP, shouldMark) {
+	debug('getNextCell()');
+
 	var enemyCell = getCell(enemy);
 	var reachableCells = getReachableCells(startCell, availableMP);
 	var safeReachableCells = arrayFilter(
@@ -176,7 +189,7 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 			return isSafeCell(cell, enemy);
 		}
 	);
-	var nextCell;
+	var nextCell = null;
 
 	if (count(safeReachableCells) > 0) {
 		if (shouldMark) {
@@ -185,7 +198,7 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 		nextCell = getClosestCellTo(
 			safeReachableCells, enemyCell
 		);
-	} else {
+	} else if (count(reachableCells) > 0) {
 		nextCell = arrayFoldLeft(
 			reachableCells,
 			function(safestCell, cell) {
@@ -203,13 +216,47 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 		);
 	}
 
-	debug('getNextCell()');
 	debug(' ↳ enemy: ' + getName(enemy));
 	debug(' ↳ startCell: ' + startCell);
 	debug(' ↳ availableMP: ' + availableMP);
 	debug(' ↳ nextCell: ' + nextCell);
 
 	return nextCell;
+}
+
+function getTargetEnemy(weapon, enemy) {
+	var currentCell = getCell();
+	var targetEnemy = null;
+
+	if (canUseWeapon(weapon, enemy)) {
+		targetEnemy = enemy;
+	} else {
+		// There may be another enemy between me and my target
+
+		for (var aliveEnemy in getAliveEnemies()) {
+			var aliveEnemyCell = getCell(aliveEnemy);
+			var enemyCell = getCell(enemy);
+
+			if (
+				aliveEnemy !== enemy &&
+				canUseWeapon(weapon, aliveEnemy) &&
+				isOnSameLine(currentCell, aliveEnemyCell) &&
+				isOnSameLine(currentCell, enemyCell) &&
+				isOnSameLine(enemyCell, aliveEnemyCell) &&
+				getDistance(enemyCell, aliveEnemyCell) < getDistance(enemyCell, currentCell)
+			) {
+				targetEnemy = aliveEnemy;
+				break;
+			}
+		}
+	}
+
+	debug(
+		'getTargetEnemy(): ' + getName(targetEnemy) +
+		(targetEnemy !== null ? (' on cell ' + getCell(targetEnemy)) : '')
+	);
+
+	return targetEnemy;
 }
 
 function hasBeenAffected() {
@@ -235,7 +282,11 @@ function isPoisoned(leek) {
 }
 
 function isSafeCell(cell, enemy) {
-	return getEnemyPathLengthToFireOnCell(cell, enemy) > getTotalMP(enemy);
+	var enemyPathLength = getEnemyPathLengthToFireOnCell(
+		cell, enemy
+	);
+	return enemyPathLength === null ||
+		enemyPathLength > getTotalMP(enemy);
 }
 
 function move(enemy) {
@@ -246,6 +297,12 @@ function move(enemy) {
 	}
 
 	var nextCell = getNextCell(enemy, getCell(), getMP(), true);
+
+	if (nextCell === null) {
+		debug('unable to find the next cell, do not move');
+		return;
+	}
+
 	var pathLength = getEnemyPathLengthToFireOnCell(nextCell, enemy);
 
 	debug('move to ' + nextCell + ' (' + isSafeCell(nextCell, enemy) + ': ' + pathLength + ')');
@@ -321,7 +378,7 @@ function shouldFire(cellToFire, pathlength, isPoisonChip) {
 	);
 	var totalEnemyMP = getTotalMP(enemy);
 	var limit = isPoisonChip && !isPoisoned(enemy) ? totalEnemyMP / 3 : totalEnemyMP;
-	var isSafe = enemyPathLength > getTotalMP(enemy);
+	var isSafe = enemyPathLength === null || enemyPathLength > getTotalMP(enemy);
 	var inWay = !isSummon(enemy) && inArray(getPath(startCell, nextCell), cellToFire);
 
 	debug('shouldFire()');

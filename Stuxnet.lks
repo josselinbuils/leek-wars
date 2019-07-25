@@ -96,15 +96,24 @@ function Stuxnet() {
 
 		if (weapon !== null) {
 			var targetCell = getCellToFireWithWeapon(weapon, enemy);
-			debug('use ' + getWeaponName(weapon));
+
 			debug('move: ' + moveTowardCell(targetCell));
-			ensureWearingWeapon(weapon);
-			result = useWeapon(enemy);
-			hasFired = true;
+
+			var targetEnemy = getTargetEnemy(weapon, enemy);
+
+			if (targetEnemy !== null) {
+				debug('use ' + getWeaponName(weapon));
+				ensureWearingWeapon(weapon);
+				result = useWeapon(targetEnemy);
+				hasFired = true;
+			} else {
+				debugE('Unable to find a target enemy');
+			}
+
 		} else if (chip !== null) {
 			debug('use ' + getChipName(chip));
 
-			if (target !== me) {
+			if (target !== me && !isAlly(target)) {
 				var targetCell = getCellToFireWithChip(chip, target);
 				debug('move: ' + moveTowardCell(targetCell));
 				hasFired = true;
