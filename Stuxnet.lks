@@ -22,6 +22,8 @@ function Stuxnet() {
 		say('Hello :)');
 	}
 
+	debug('turnsWithoutFire: ' + turnsWithoutFire);
+
 	while (isAlive(initialEnemy)) {
 		var chip = null;
 		var doOnce = once();
@@ -91,6 +93,7 @@ function Stuxnet() {
 			if (getMP() > 0) {
 				move(initialEnemy);
 			}
+			updateTurnsWithoutFire(hasFired);
 			break;
 		}
 
@@ -107,7 +110,7 @@ function Stuxnet() {
 				result = useWeapon(targetEnemy);
 				hasFired = true;
 			} else {
-				debugE('Unable to find a target enemy');
+				debugW('Unable to find a target enemy');
 			}
 
 		} else if (chip !== null) {

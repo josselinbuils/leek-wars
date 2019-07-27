@@ -58,23 +58,19 @@ function icedBulbAI() {
 			target = me;
 		} else {
 			if (getMP() > 0) {
-				if (hasFired || hasBeenAffected()) {
-					move(initialEnemy);
-				} else {
-					var preferredChip = CHIP_ICE;
+				var preferredChip = CHIP_ICE;
 
-					if (totalTP >= 7) {
-						preferredChip = CHIP_ICEBERG;
-					} else if (totalTP >= 6) {
-						preferredChip = CHIP_STALACTITE;
-					}
-
-					var targetCell = getCellToFireWithChip(
-						preferredChip, initialEnemy
-					);
-					debug('move to fire cell');
-					debug('move: ' + moveTowardCell(targetCell));
+				if (totalTP >= 7) {
+					preferredChip = CHIP_ICEBERG;
+				} else if (totalTP >= 6) {
+					preferredChip = CHIP_STALACTITE;
 				}
+
+				var targetCell = getCellToFireWithChip(
+					preferredChip, initialEnemy
+				);
+				debug('move to fire cell');
+				debug('move: ' + moveTowardCell(targetCell));
 			}
 			break;
 		}
@@ -125,15 +121,19 @@ function Skynet() {
 	);
 	mark(venomCells, COLOR_GREEN);
 
-	var toxinCells = getCellsToFireWithChip(
-		CHIP_TOXIN, initialEnemy
-	);
-	mark(toxinCells, COLOR_BLUE);
+	if (getCooldown(CHIP_TOXIN) === 0) {
+		var toxinCells = getCellsToFireWithChip(
+			CHIP_TOXIN, initialEnemy
+		);
+		mark(toxinCells, COLOR_BLUE);
+	}
 
 	var flameThrowerCells = getCellsToFireWithWeapon(
 		WEAPON_FLAME_THROWER, initialEnemy
 	);
 	mark(flameThrowerCells, COLOR_RED);
+
+	debug('turnsWithoutFire: ' + turnsWithoutFire);
 
 	while (getAliveEnemiesCount() > 0) {
 		var chip = null;
@@ -240,6 +240,7 @@ function Skynet() {
 			if (getMP() > 0) {
 				move(initialEnemy);
 			}
+			updateTurnsWithoutFire(hasFired);
 			break;
 		}
 
@@ -256,7 +257,7 @@ function Skynet() {
 				result = useWeapon(targetEnemy);
 				hasFired = true;
 			} else {
-				debugE('Unable to find a target enemy');
+				debugW('Unable to find a target enemy');
 			}
 
 		} else if (chip !== null) {

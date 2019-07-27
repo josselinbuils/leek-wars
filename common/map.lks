@@ -36,7 +36,7 @@ function getClosestCell(cells) {
 }
 
 function getClosestCellTo(cells, refCell) {
-	if (count(cells) === 0) {
+	if (cells === null || count(cells) === 0) {
 		return null;
 	}
 	return arrayFoldLeft(cells, function(closestCell, cell) {
