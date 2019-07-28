@@ -1,0 +1,41 @@
+function ensureArray(object) {
+	if (typeOf(object) !== TYPE_ARRAY) {
+		return [];
+	}
+	return object;
+}
+
+function showRemainingOperations(method) {
+	var operations = floor(getOperations() / OPERATIONS_LIMIT * 100);
+	debug(method + '(): ' + operations + '% ops consumed');
+}
+
+function safeCount(array) {
+	return count(ensureArray(array));
+}
+
+function showResult(result) {
+	var humanReadableResult = 'UNKNOWN';
+
+	if (result == USE_CRITICAL) {
+		humanReadableResult = 'CRITICAL';
+	} else if (result === USE_SUCCESS) {
+		humanReadableResult = 'SUCCESS';
+	} else if (result === USE_FAILED) {
+		humanReadableResult = 'FAILED';
+	} else if (result === USE_INVALID_TARGET) {
+		debugE('INVALID_TARGET');
+		humanReadableResult = 'INVALID_TARGET';
+	} else if (result === USE_NOT_ENOUGH_TP) {
+		debugE('NOT_ENOUGH_TP');
+		humanReadableResult = 'NOT_ENOUGH_TP';
+	} else if (result === USE_INVALID_POSITION) {
+		debugE('INVALID_POSITION');
+		humanReadableResult = 'INVALID_POSITION';
+	} else if (result === USE_INVALID_COOLDOWN) {
+		debugE('INVALID_COOLDOWN');
+		humanReadableResult = 'INVALID_COOLDOWN';
+	}
+
+	debug('result: ' + humanReadableResult);
+}
