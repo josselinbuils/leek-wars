@@ -197,17 +197,17 @@ function Skynet() {
 			continue;
 		} else if (
 			shouldTry() &&
+			getLife() < totalLife &&
+			canFireWithChip(CHIP_REMISSION, me)
+		) {
+			chip = CHIP_REMISSION;
+			target = me;
+		} else if (
+			shouldTry() &&
 			(hasFiredOnce || getLife() < totalLife) &&
 			canFireWithChip(CHIP_VACCINE, me)
 		) {
 			chip = CHIP_VACCINE;
-			target = me;
-		} else if (
-			shouldTry() &&
-			getLife() < totalLife &&
-			canFireWithChip(CHIP_CURE, me)
-		) {
-			chip = CHIP_CURE;
 			target = me;
 		} else if (
 			shouldTry() && canFireWithChip(CHIP_ARMORING, me)
@@ -234,6 +234,8 @@ function Skynet() {
 		) {
 			chip = CHIP_BALL_AND_CHAIN;
 			target = initialEnemy;
+		} else if (shouldTry() && getTP() > 0 && getWeapon() !== WEAPON_FLAME_THROWER) {
+			ensureWearingWeapon(WEAPON_FLAME_THROWER);
 		} else if (doOnce(shouldTry() && getTP() > 0)) {
 			say('Canarticho !');
 		} else {
