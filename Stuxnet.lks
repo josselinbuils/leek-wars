@@ -67,6 +67,11 @@ function Stuxnet() {
 		) {
 			chip = CHIP_SPARK;
 			target = enemy;
+		} else if (shouldTry() && getNearestEnemy() !== enemy) {
+			debug('change target');
+			enemy = getNearestEnemy();
+			optimizer = Optimizer();
+			continue;
 		} else if (
 			shouldTry() &&
 			getLife() < totalLife &&
@@ -85,10 +90,6 @@ function Stuxnet() {
 			doOnce(shouldTry() && canFireWithChip(CHIP_PUNY_BULB, me))
 		) {
 			summonBulb(CHIP_PUNY_BULB, punyBulbAI, initialEnemy);
-		} else if (shouldTry() && getNearestEnemy() !== enemy) {
-			enemy = getNearestEnemy();
-			optimizer = Optimizer();
-			continue;
 		} else {
 			if (getMP() > 0) {
 				move(initialEnemy);
