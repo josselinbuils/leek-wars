@@ -71,6 +71,21 @@ function getCellToFireWithChip(chip, target) {
 		cellToFire = startCell;
 	} else {
 		cells = getCellsToFireWithChip(chip, target);
+
+		if (chip === CHIP_TOXIN) {
+			var targetCell = getCell(target);
+			var x = getCellX(targetCell);
+			var y = getCellY(targetCell);
+			var deltas = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+			var deltaCells = arrayMap(deltas, function(delta) {
+				return getCellFromXY(x + delta[0], y + delta[1]);
+			});
+			var validDeltaCells = arrayFilter(deltaCells, function(cell) {
+				return canUseChipOnCell(chip, cell);
+			});
+			cells = arrayConcat(cells, ensureArray(validDeltaCells));
+		}
+
 		var minPathCells = getMinPathCells(cells);
 		cellToFire = getFarthestCellFrom(minPathCells, getCell(target));
 	}
