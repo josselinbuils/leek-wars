@@ -246,9 +246,13 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 			if (shouldMark) {
 				mark(safeReachableCells, getColor(255, 128, 210));
 			}
-			nextCell = getClosestCellTo(
-				safeReachableCells, enemyCell
-			);
+			nextCell = shift(sortByDistanceAsc(safeReachableCells, enemyCell));
+
+			if (nextCell === null) {
+				debugE('sortByDistanceAsc returned null: ' + safeReachableCells);
+				nextCell = shift(safeReachableCells);
+			}
+
 			debug(' ↳ 11');
 		} else if (safeCount(reachableCells) > 0) {
 			debug(' ↳ 20');
@@ -478,7 +482,8 @@ function shouldFire(enemy, cellToFire, pathlength, isPoisonChip) {
 		!isPoisoned(isInitialEnemy) &&
 		enemyPathLengthAfter >= (getTotalMP(initialEnemy) * 2 / 3);
 	var isNotWorst = enemyPathLengthAfter >= enemyPathLength;
-	var inWay = inArray(getPath(startCell, nextCell), cellToFire);
+	var path = getPath(startCell, nextCell);
+	var inWay = path !== null && inArray(path, cellToFire);
 
 	debug('shouldFire()');
 	debug(' ↳ nextCell: ' + nextCell);

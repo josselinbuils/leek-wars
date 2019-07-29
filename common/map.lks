@@ -1,8 +1,6 @@
 include('math');
 include('utils');
 
-global MAX_CELLS_PATH_LENGTH = 10;
-
 function getCellsAround(centerCell) {
 	if (centerCell === null) {
 		return [];
@@ -35,16 +33,8 @@ function getClosestCell(cells) {
 }
 
 function getClosestCellTo(cells, refCell) {
-	var count = safeCount(cells);
-
-	if (count === 0) {
+	if (safeCount(cells) === 0) {
 		return null;
-	}
-
-	if (count > MAX_CELLS_PATH_LENGTH) {
-		cells = subArray(
-			sortByDistanceAsc(cells, refCell), 0, 9
-		);
 	}
 
 	var firstCell = shift(cells);
@@ -73,16 +63,8 @@ function getDirectReachableCellsAround(cell) {
 }
 
 function getFarthestCellFrom(cells, refCell) {
-	var count = safeCount(cells);
-
-	if (count === 0) {
+	if (safeCount(cells) === 0) {
 		return null;
-	}
-
-	if (count > MAX_CELLS_PATH_LENGTH) {
-		cells = subArray(
-			sortByDistanceDesc(cells, refCell), 0, 9
-		);
 	}
 
 	var firstCell = shift(cells);
