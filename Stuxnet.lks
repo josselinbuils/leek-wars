@@ -12,10 +12,13 @@ function Stuxnet() {
 	var enemy = getNearestLeekEnemy();
 	var hasFired = false;
 	var initialEnemy = enemy;
+	var isEnemyPoisoner = getMagic(enemy) > getStrength(enemy);
 	var me = getLeek();
 	var once = Once();
 	var optimizer = Optimizer();
 	var totalLife = getTotalLife();
+
+	setRefEnemyChips([CHIP_SPARK, CHIP_SPARK]);
 
 	if (getWeapon() === null) {
 		ensureWearingWeapon(WEAPON_LASER);
@@ -36,11 +39,11 @@ function Stuxnet() {
 		debug('MP: ' + getMP());
 		debug('TP: ' + getTP());
 
-		if (shouldTry() && canFireWithChip(CHIP_SHIELD, me)) {
+		if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_SHIELD, me)) {
 			chip = CHIP_SHIELD;
 			target = me;
 		} else if (
-			shouldTry() && canFireWithChip(CHIP_HELMET, me)
+			shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_HELMET, me)
 		) {
 			chip = CHIP_HELMET;
 			target = me;

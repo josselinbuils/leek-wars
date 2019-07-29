@@ -10,7 +10,7 @@ function isBadlyPoisoned() {
 			poisonDammages += effect[1];
 		}
 	}
-	return poisonDammages >= 150;
+	return poisonDammages >= 300;
 }
 
 function icedBulbAI() {
@@ -110,6 +110,7 @@ function Skynet() {
 	var hasFired = false;
 	var enemy = getNearestLeekEnemy();
 	var initialEnemy = enemy;
+	var isEnemyPoisoner = getMagic(enemy) > getStrength(enemy);
 	var me = getLeek();
 	var once = Once();
 	var optimizer = Optimizer();
@@ -162,10 +163,10 @@ function Skynet() {
 		) {
 			chip = CHIP_ANTIDOTE;
 			target = me;
-		} else if (shouldTry() && canFireWithChip(CHIP_ARMOR, me)) {
+		} else if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_ARMOR, me)) {
 			chip = CHIP_ARMOR;
 			target = me;
-		} else if (shouldTry() && canFireWithChip(CHIP_SHIELD, me)) {
+		} else if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_SHIELD, me)) {
 			chip = CHIP_SHIELD;
 			target = me;
 		} else if (
@@ -187,9 +188,14 @@ function Skynet() {
 			target = enemy;
 		} else if (
 			shouldTry() &&
-			canFireWithWeapon(WEAPON_DESTROYER, enemy)
+			canFireWithChip(CHIP_FRACTURE, initialEnemy)
 		) {
-			weapon = WEAPON_DESTROYER;
+			chip = CHIP_FRACTURE;
+			target = initialEnemy;
+		} else if (
+			doOnce(shouldTry() && getLife() > (totalLife / 2) && canFireWithChip(CHIP_ICED_BULB, me))
+		) {
+			summonBulb(CHIP_ICED_BULB, icedBulbAI, initialEnemy);
 		} else if (shouldTry() && getNearestEnemy() !== enemy) {
 			debug('change target');
 			enemy = getNearestEnemy();
@@ -210,30 +216,25 @@ function Skynet() {
 			chip = CHIP_VACCINE;
 			target = me;
 		} else if (
+			shouldTry() &&
+			canFireWithWeapon(WEAPON_DESTROYER, enemy)
+		) {
+			weapon = WEAPON_DESTROYER;
+		} else if (
 			shouldTry() && canFireWithChip(CHIP_ARMORING, me)
 		) {
 			chip = CHIP_ARMORING;
 			target = me;
-		} else if (
-			doOnce(shouldTry() && canFireWithChip(CHIP_ICED_BULB, me))
-		) {
-			summonBulb(CHIP_ICED_BULB, icedBulbAI, initialEnemy);
-		} else if (
-			shouldTry() && getWeapon() === null && getTP() > 0
-		) {
-			ensureWearingWeapon(WEAPON_FLAME_THROWER);
-		} else if (
-			shouldTry() &&
-			canFireWithChip(CHIP_FRACTURE, initialEnemy)
-		) {
-			chip = CHIP_FRACTURE;
-			target = initialEnemy;
 		} else if (
 			shouldTry() &&
 			canFireWithChip(CHIP_BALL_AND_CHAIN, initialEnemy)
 		) {
 			chip = CHIP_BALL_AND_CHAIN;
 			target = initialEnemy;
+		} else if (
+			doOnce(shouldTry() && canFireWithChip(CHIP_ICED_BULB, me))
+		) {
+			summonBulb(CHIP_ICED_BULB, icedBulbAI, initialEnemy);
 		} else if (shouldTry() && getTP() > 0 && getWeapon() !== WEAPON_FLAME_THROWER) {
 			ensureWearingWeapon(WEAPON_FLAME_THROWER);
 		} else if (doOnce(shouldTry() && getTP() > 0)) {

@@ -1,7 +1,13 @@
 include('math');
 include('utils');
 
+global MAX_CELLS_PATH_LENGTH = 10;
+
 function getCellsAround(centerCell) {
+	if (centerCell === null) {
+		return [];
+	}
+
 	var x = getCellX(centerCell);
 	var y = getCellY(centerCell);
 	var deltas = [
@@ -24,33 +30,38 @@ function getCellsAround(centerCell) {
 	return removeUnreachableCells(emptyCells);
 }
 
-function getCloserCellsTo(cells, refCell) {
-	var startCell = getCell();
-
-	return ensureArray(
-		arrayFilter(cells, function(cell) {
-			return getPathLength(cell, refCell) < getPathLength(startCell, refCell);
-		})
-	);
-}
-
 function getClosestCell(cells) {
 	return getClosestCellTo(cells, getCell());
 }
 
 function getClosestCellTo(cells, refCell) {
-	if (safeCount(cells) === 0) {
+	var count = safeCount(cells);
+
+	if (count === 0) {
 		return null;
 	}
+
+	if (count > MAX_CELLS_PATH_LENGTH) {
+		cells = subArray(
+			sortByDistanceAsc(cells, refCell), 0, 9
+		);
+	}
+
+	var firstCell = shift(cells);
+	var closestCellPathLength = getPathLength(refCell, firstCell);
+
 	return arrayFoldLeft(cells, function(closestCell, cell) {
 		var cellPathLength = getPathLength(refCell, cell);
-		var closestCellPathLength = getPathLength(refCell, closestCell);
 
-		return (
+		if (
 			cellPathLength !== null &&
 			cellPathLength < closestCellPathLength
-		) ? cell : closestCell;
-	}, shift(cells));
+		) {
+			closestCellPathLength = cellPathLength;
+			return cell;
+		}
+		return closestCell;
+	}, firstCell);
 }
 
 function getDirectReachableCellsAround(cell) {
@@ -62,18 +73,33 @@ function getDirectReachableCellsAround(cell) {
 }
 
 function getFarthestCellFrom(cells, refCell) {
-	if (safeCount(cells) === 0) {
+	var count = safeCount(cells);
+
+	if (count === 0) {
 		return null;
 	}
+
+	if (count > MAX_CELLS_PATH_LENGTH) {
+		cells = subArray(
+			sortByDistanceDesc(cells, refCell), 0, 9
+		);
+	}
+
+	var firstCell = shift(cells);
+	var farestCellPathLength = getPathLength(refCell, firstCell);
+
 	return arrayFoldLeft(cells, function(farestCell, cell) {
 		var cellPathLength = getPathLength(refCell, cell);
-		var farestCellPathLength = getPathLength(refCell, farestCell);
 
-		return (
+		if (
 			cellPathLength !== null &&
 			cellPathLength > farestCellPathLength
-		) ? cell : farestCell;
-	}, shift(cells));
+		) {
+			farestCellPathLength = cellPathLength;
+			return cell;
+		}
+		return farestCell;
+	}, firstCell);
 }
 
 function getMinPathCells(cells) {
@@ -126,4 +152,22 @@ function removeUnreachableCellsWith(cells, startCell, availableMP) {
 				pathLength <= availableMP;
 		})
 	);
+}
+
+function sortByDistanceAsc(cells, refCell) {
+	cells = ensureArray(cells);
+	return arraySort(cells, function(a, b) {
+		var distA = getDistance(refCell, a);
+		var distB = getDistance(refCell, b);
+		return distA < distB ? -1 : (distA === distB ? 0 : 1);
+	});
+}
+
+function sortByDistanceDesc(cells, refCell) {
+	cells = ensureArray(cells);
+	return arraySort(cells, function(a, b) {
+		var distA = getDistance(refCell, a);
+		var distB = getDistance(refCell, b);
+		return distA > distB ? -1 : (distA === distB ? 0 : 1);
+	});
 }
