@@ -330,6 +330,7 @@ function getNearestLeekEnemy() {
 function getNextCell(enemy, startCell, availableMP, shouldMark) {
 	var debugOperations = monitorOperations();
 	var nextCell = startCell;
+	var debugOperationsInt;
 
 	logInfo('getNextCell()');
 	logDetail('enemy: ' + getName(enemy));
@@ -345,15 +346,19 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 	} else if (availableMP > 0) {
 		var enemyCell = getCell(enemy);
 		var reachableCells = getReachableCells(startCell, availableMP);
+
+		debugOperationsInt = monitorIntermediateOperations('arrayFilter: isSafeCell');
 		var safeReachableCells = arrayFilter(
 			reachableCells,
 			function(cell) {
 				return isSafeCell(cell);
 			}
 		);
+		debugOperationsInt();
 
 		if (safeCount(safeReachableCells) > 0) {
-			logDetail('safe cell found');
+			logDetail('safe cells found');
+
 			if (shouldMark) {
 				mark(safeReachableCells, getColor(255, 128, 210));
 			}
@@ -370,7 +375,9 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 			});
 
 			if (safeCount(minSafetyCells) > 0) {
-				logDetail('min safety cell found');
+				logDetail('min safety cells found');
+
+				debugOperationsInt = monitorIntermediateOperations('arrayFoldLeft');
 
 				var firstCell = shift(minSafetyCells);
 				var pathLengthSafestCell = getEnemyPathLengthToFireOnCell(
@@ -392,6 +399,12 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 					},
 					firstCell
 				);
+				debugOperationsInt();
+
+				if (pathLengthSafestCell === 0) {
+					logDetail('use farthest cell');
+					nextCell = getFarthestCellFrom(minSafetyCells, enemy);
+				}
 			}
 		}
 		putInStore(cacheKey, nextCell);

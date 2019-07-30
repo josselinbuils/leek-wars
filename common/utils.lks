@@ -19,6 +19,18 @@ function monitorOperations() {
 	});
 }
 
+function monitorIntermediateOperations(label) {
+	logDetail(label);
+	var startOperations = getOperations();
+
+	return @(function() {
+		var consumedOperations = ceil((getOperations() - startOperations) / OPERATIONS_LIMIT * 1000) / 10;
+		increaseLogIndent();
+		logDetail(consumedOperations + '% ops consumed');
+		decreaseLogIndent();
+	});
+}
+
 function Once() {
 	var flagArray = [];
 
