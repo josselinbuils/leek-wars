@@ -1,0 +1,79 @@
+include('../common/fight');
+
+function IcedBulb() {
+	var hasFired = false;
+	var enemy = getNearestLeekEnemy();
+	var initialEnemy = enemy;
+	var me = getLeek();
+	var optimizer = Optimizer();
+	var summoner = getSummoner();
+	var totalTP = getTotalTP();
+
+	while (getAliveEnemiesCount() > 0) {
+		resetLogIndent();
+		logInfo('');
+
+		var arm = null;
+		var shouldTry = optimizer();
+		var target = enemy;
+
+		debug('life: ' + getLife());
+		debug('MP: ' + getMP());
+		debug('TP: ' + getTP());
+
+		if (shouldTry() && canFireWithChip(CHIP_ICEBERG, enemy)) {
+			arm = CHIP_ICEBERG;
+		} else if (
+			shouldTry() && canFireWithChip(CHIP_STALACTITE, enemy)
+		) {
+			arm = CHIP_STALACTITE;
+		} else if (shouldTry() && canFireWithChip(CHIP_ICE, enemy)) {
+			arm = CHIP_ICE;
+		} else if (shouldTry() && getNearestEnemy() !== enemy) {
+			debug('change target');
+			enemy = getNearestEnemy();
+			optimizer = Optimizer();
+			continue;
+		} else if (
+			shouldTry() && canFireWithChip(CHIP_REFLEXES, summoner)
+		) {
+			arm = CHIP_REFLEXES;
+			target = summoner;
+		} else if (shouldTry() && canFireWithChip(CHIP_REFLEXES, me)) {
+			arm = CHIP_REFLEXES;
+			target = me;
+		} else {
+			if (getMP() > 0) {
+				var preferredChip = CHIP_ICE;
+
+				if (totalTP >= 7) {
+					preferredChip = CHIP_ICEBERG;
+				} else if (totalTP >= 6) {
+					preferredChip = CHIP_STALACTITE;
+				}
+
+				var targetCell = getCellToFireWithChip(
+					preferredChip, initialEnemy
+				);
+				debug('move to fire cell');
+				debug('move: ' + moveTowardCell(targetCell));
+			}
+			break;
+		}
+
+		if (arm !== null) {
+			var result = fire(arm, target);
+			hasFired = result[0];
+			var hasError = result[1];
+
+			if (hasError) {
+				break;
+			}
+		}
+
+		if (!isAlive(initialEnemy)) {
+			enemy = getNearestLeekEnemy();
+			initialEnemy = enemy;
+		}
+	}
+}

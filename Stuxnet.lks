@@ -1,14 +1,11 @@
+include('bulbs/PonyBulb');
 include('common/fight');
-
-function punyBulbAI() {
-	var summoner = getSummoner();
-	var targetCell = getCellToFireWithChip(CHIP_BANDAGE, summoner);
-	debug('move: ' + moveTowardCell(targetCell));
-	useChip(CHIP_BANDAGE, summoner);
-	useChip(CHIP_BANDAGE, summoner);
-}
+include('common/logger');
+include('common/utils');
 
 function Stuxnet() {
+	initTurn();
+
 	var enemy = getNearestLeekEnemy();
 	var hasFired = false;
 	var initialEnemy = enemy;
@@ -18,8 +15,6 @@ function Stuxnet() {
 	var optimizer = Optimizer();
 	var totalLife = getTotalLife();
 
-	setRefEnemyChips([CHIP_SPARK, CHIP_SPARK]);
-
 	if (getWeapon() === null) {
 		ensureWearingWeapon(WEAPON_LASER);
 		say('Hello :)');
@@ -28,48 +23,46 @@ function Stuxnet() {
 	debug('turnsWithoutFire: ' + turnsWithoutFire);
 
 	while (isAlive(initialEnemy)) {
-		var chip = null;
+		resetLogIndent();
+		logInfo('');
+
+		var arm = null;
 		var doOnce = once();
-		var result;
 		var shouldTry = optimizer();
-		var target = null;
-		var weapon = null;
+		var target = enemy;
 
 		debug('life: ' + getLife());
 		debug('MP: ' + getMP());
 		debug('TP: ' + getTP());
 
 		if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_SHIELD, me)) {
-			chip = CHIP_SHIELD;
+			arm = CHIP_SHIELD;
 			target = me;
 		} else if (
 			shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_HELMET, me)
 		) {
-			chip = CHIP_HELMET;
+			arm = CHIP_HELMET;
 			target = me;
 		} else if (
 			shouldTry() && canFireWithChip(CHIP_VENOM, enemy)
 		) {
-			chip = CHIP_VENOM;
-			target = enemy;
+			arm = CHIP_VENOM;
 		} else if (
 			shouldTry() && canFireWithChip(CHIP_STALACTITE, enemy)
 		) {
-			chip = CHIP_STALACTITE;
-			target = enemy;
+			arm = CHIP_STALACTITE;
 		} else if (
 			shouldTry() && canFireWithWeapon(WEAPON_LASER, enemy)
 		) {
-			weapon = WEAPON_LASER;
+			arm = WEAPON_LASER;
 		} else if (
 			shouldTry() && canFireWithWeapon(WEAPON_MAGNUM, enemy)
 		) {
-			weapon = WEAPON_MAGNUM;
+			arm = WEAPON_MAGNUM;
 		} else if (
 			shouldTry() && canFireWithChip(CHIP_SPARK, enemy)
 		) {
-			chip = CHIP_SPARK;
-			target = enemy;
+			arm = CHIP_SPARK;
 		} else if (shouldTry() && getNearestEnemy() !== enemy) {
 			debug('change target');
 			enemy = getNearestEnemy();
@@ -80,19 +73,19 @@ function Stuxnet() {
 			getLife() < totalLife &&
 			canFireWithChip(CHIP_CURE, me)
 		) {
-			chip = CHIP_CURE;
+			arm = CHIP_CURE;
 			target = me;
 		} else if (
 			shouldTry() &&
 			getLife() < totalLife &&
 			canFireWithChip(CHIP_BANDAGE, me)
 		) {
-			chip = CHIP_BANDAGE;
+			arm = CHIP_BANDAGE;
 			target = me;
 		} else if (
 			doOnce(shouldTry() && canFireWithChip(CHIP_PUNY_BULB, me))
 		) {
-			summonBulb(CHIP_PUNY_BULB, punyBulbAI, initialEnemy);
+			summonBulb(CHIP_PUNY_BULB, PonyBulb, initialEnemy);
 		} else {
 			if (getMP() > 0) {
 				move(initialEnemy);
@@ -101,42 +94,12 @@ function Stuxnet() {
 			break;
 		}
 
-		if (weapon !== null) {
-			var targetCell = getCellToFireWithWeapon(weapon, enemy);
+		if (arm !== null) {
+			var result = fire(arm, target);
+			hasFired = result[0];
+			var hasError = result[1];
 
-			debug('move: ' + moveTowardCell(targetCell));
-
-			var targetEnemy = getTargetEnemy(weapon, enemy);
-
-			if (targetEnemy !== null) {
-				debug('use ' + getWeaponName(weapon));
-				ensureWearingWeapon(weapon);
-				result = useWeapon(targetEnemy);
-				hasFired = true;
-			} else {
-				debugW('Unable to find a target enemy');
-			}
-
-		} else if (chip !== null) {
-			debug('use ' + getChipName(chip));
-
-			if (target !== me && !isAlly(target)) {
-				var targetCell = getCellToFireWithChip(chip, target);
-				debug('move: ' + moveTowardCell(targetCell));
-				hasFired = true;
-			}
-
-			result = useChip(chip, target);
-		}
-
-		if (result !== null) {
-			showResult(result);
-
-			if (
-				result !== USE_SUCCESS &&
-				result !== USE_FAILED &&
-				result !== USE_CRITICAL
-			) {
+			if (hasError) {
 				break;
 			}
 		}

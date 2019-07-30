@@ -1,0 +1,13 @@
+global store = [];
+
+function clearStore() {
+	store = [];
+}
+
+function getInStore(key) {
+	return store[key];
+}
+
+function putInStore(key, value) {
+	store[key] = value;
+}

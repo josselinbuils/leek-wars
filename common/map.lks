@@ -137,8 +137,7 @@ function removeUnreachableCellsWith(cells, startCell, availableMP) {
 }
 
 function sortByDistanceAsc(cells, refCell) {
-	cells = ensureArray(cells);
-	return arraySort(cells, function(a, b) {
+	return arraySort(ensureArray(cells), function(a, b) {
 		var distA = getDistance(refCell, a);
 		var distB = getDistance(refCell, b);
 		return distA < distB ? -1 : (distA === distB ? 0 : 1);
@@ -146,8 +145,7 @@ function sortByDistanceAsc(cells, refCell) {
 }
 
 function sortByDistanceDesc(cells, refCell) {
-	cells = ensureArray(cells);
-	return arraySort(cells, function(a, b) {
+	return arraySort(ensureArray(cells), function(a, b) {
 		var distA = getDistance(refCell, a);
 		var distB = getDistance(refCell, b);
 		return distA > distB ? -1 : (distA === distB ? 0 : 1);

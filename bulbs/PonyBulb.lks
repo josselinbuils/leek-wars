@@ -1,0 +1,9 @@
+include('../common/fight');
+
+function PonyBulb() {
+	var summoner = getSummoner();
+	var targetCell = getCellToFireWithChip(CHIP_BANDAGE, summoner);
+	debug('move: ' + moveTowardCell(targetCell));
+	useChip(CHIP_BANDAGE, summoner);
+	useChip(CHIP_BANDAGE, summoner);
+}

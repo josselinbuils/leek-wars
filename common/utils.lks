@@ -1,3 +1,5 @@
+include('logger');
+
 function ensureArray(object) {
 	if (typeOf(object) !== TYPE_ARRAY) {
 		return [];
@@ -5,9 +7,69 @@ function ensureArray(object) {
 	return object;
 }
 
-function showRemainingOperations(method) {
-	var operations = floor(getOperations() / OPERATIONS_LIMIT * 100);
-	debug(method + '(): ' + operations + '% ops consumed');
+function monitorOperations() {
+	var startOperations = getOperations();
+
+	return @(function() {
+		var endOperations = getOperations();
+		var consumedOperations = ceil((endOperations - startOperations) / OPERATIONS_LIMIT * 1000) / 10;
+		var remainingOperations = floor((OPERATIONS_LIMIT - endOperations) / OPERATIONS_LIMIT * 1000) / 10;
+		logDetail(consumedOperations + '% ops consumed');
+		logDetail(remainingOperations + '% ops remaining');
+	});
+}
+
+function Once() {
+	var flagArray = [];
+
+	return @(function() {
+		logInfo('reset once');
+		var currentIndex = -1;
+
+		return @(function(willBeUsed) {
+			currentIndex++;
+
+			if (safeCount(flagArray) < (currentIndex + 1)) {
+				flagArray[currentIndex] = true;
+			}
+
+			if (willBeUsed) {
+				var result = flagArray[currentIndex];
+
+				if (result) {
+					flagArray[currentIndex] = false;
+				} else {
+					logInfo('already did once');
+				}
+				return result;
+			}
+			return false;
+		});
+	});
+}
+
+function Optimizer() {
+	var startIndex = 0;
+	var currentIndex;
+
+	return @(function() {
+		logInfo('reset optimizer');
+		currentIndex = -1;
+
+		return @(function() {
+			currentIndex++;
+
+			if (getOperations() > (OPERATIONS_LIMIT * 70 / 100)) {
+				debugE('Oparations limit reached');
+				return false;
+			}
+			if (currentIndex >= startIndex) {
+				startIndex = currentIndex;
+				return true;
+			}
+			return false;
+		});
+	});
 }
 
 function safeCount(array) {
@@ -37,5 +99,5 @@ function showResult(result) {
 		humanReadableResult = 'INVALID_COOLDOWN';
 	}
 
-	debug('result: ' + humanReadableResult);
+	logDetail('result: ' + humanReadableResult);
 }
