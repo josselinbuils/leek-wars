@@ -254,6 +254,10 @@ function getEnemyPathLengthToFireOnCell(cell, enemy) {
 
 	var refArm = getEnemyRefArm(enemy);
 
+	if (refArm === null) {
+		return null;
+	}
+
 	var cellRetrieveMethod = isChip(refArm) ?
 		getCellsToUseChipOnCell :
 		getCellsToUseWeaponOnCell;
@@ -273,15 +277,16 @@ function getEnemyPathLengthToFireOnCell(cell, enemy) {
 // TODO manage arm areas
 function getEnemyRefArm(enemy) {
 	var cacheKey = 'refArm-' + enemy;
-	var cachedValue = getInStore(cacheKey);
 
-	if (cachedValue !== null) {
-		return number(cachedValue);
+	if (hasInStore(cacheKey)) {
+		return getInStore(cacheKey);
 	}
 
-	var arms = arrayConcat(getEnemyFightChips(enemy), getWeapons(enemy));
+	var enemyChips = ensureArray(getEnemyFightChips(enemy));
+	var enemyWeapons = ensureArray(getWeapons(enemy));
+	var arms = arrayConcat(enemyChips, enemyWeapons);
 
-	arms = arrayFilter(arms, function(arm) {
+	var filteredArms = arrayFilter(arms, function(arm) {
 		var area = isChip(arm) ?
 			getChipArea(arm) :
 			getWeaponArea(arm);
@@ -289,14 +294,21 @@ function getEnemyRefArm(enemy) {
 		return area !== AREA_LASER_LINE;
 	});
 
-	var refArm = shift(sortArmamentByRangeDesc(arms));
-	var armName = isChip(refArm) ?
-		getChipName(refArm) :
-		getWeaponName(refArm);
+	var refArm = safeCount(filteredArms) > 0 ?
+		shift(sortArmamentByRangeDesc(filteredArms)) :
+		shift(sortArmamentByRangeDesc(arms));
 
-	logDetail('refArm: ' + armName);
+	if (refArm !== null) {
+		var armName = isChip(refArm) ?
+			getChipName(refArm) :
+			getWeaponName(refArm);
+
+		logDetail('refArm: ' + armName);
+	} else if (!isSummon(enemy)) {
+		debugE('Unable to retrieve ' + getName(enemy) + ' ref arm: ' + arms);
+	}
+
 	putInStore(cacheKey, refArm);
-
 	return refArm;
 }
 
@@ -338,11 +350,10 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 	logDetail('availableMP: ' + availableMP);
 
 	var cacheKey = 'nextCell-' + enemy + '-' + startCell + '-' + availableMP;
-	var cachedCell = getInStore(cacheKey);
 
-	if (cachedCell !== null) {
+	if (hasInStore(cacheKey)) {
 		logDetail('use cache');
-		nextCell = number(cachedCell);
+		nextCell = getInStore(cacheKey);
 	} else if (availableMP > 0) {
 		var enemyCell = getCell(enemy);
 		var reachableCells = getReachableCells(startCell, availableMP);

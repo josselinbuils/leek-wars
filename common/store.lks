@@ -8,6 +8,15 @@ function getInStore(key) {
 	return store[key];
 }
 
+function hasInStore(key) {
+	for (var k: var v in store) {
+		if (k === key) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function putInStore(key, value) {
 	store[key] = value;
 }
