@@ -16,8 +16,8 @@ function Stuxnet() {
 	var totalLife = getTotalLife();
 
 	if (getWeapon() === null) {
-		ensureWearingWeapon(WEAPON_LASER);
-		say('Hello :)');
+		ensureWearingWeapon(WEAPON_BROADSWORD);
+		say('Hello ' + getName(enemy) + ' :)');
 	}
 
 	debug('turnsWithoutFire: ' + turnsWithoutFire);
@@ -44,25 +44,14 @@ function Stuxnet() {
 			arm = CHIP_HELMET;
 			target = me;
 		} else if (
+			shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_WALL, me)
+		) {
+			arm = CHIP_WALL;
+			target = me;
+		} else if (
 			shouldTry() && canFireWithChip(CHIP_VENOM, enemy)
 		) {
 			arm = CHIP_VENOM;
-		} else if (
-			shouldTry() && canFireWithChip(CHIP_STALACTITE, enemy)
-		) {
-			arm = CHIP_STALACTITE;
-		} else if (
-			shouldTry() && canFireWithWeapon(WEAPON_LASER, enemy)
-		) {
-			arm = WEAPON_LASER;
-		} else if (
-			shouldTry() && canFireWithWeapon(WEAPON_MAGNUM, enemy)
-		) {
-			arm = WEAPON_MAGNUM;
-		} else if (
-			shouldTry() && canFireWithChip(CHIP_SPARK, enemy)
-		) {
-			arm = CHIP_SPARK;
 		} else if (shouldTry() && getNearestEnemy() !== enemy) {
 			debug('change target');
 			enemy = getNearestEnemy();
@@ -86,6 +75,10 @@ function Stuxnet() {
 			doOnce(shouldTry() && canFireWithChip(CHIP_PUNY_BULB, me))
 		) {
 			summonBulb(CHIP_PUNY_BULB, PonyBulb, initialEnemy);
+		} else if (
+			shouldTry() && canFireWithWeapon(WEAPON_BROADSWORD, enemy)
+		) {
+			arm = WEAPON_BROADSWORD;
 		} else {
 			if (getMP() > 0) {
 				move(initialEnemy);
@@ -106,7 +99,7 @@ function Stuxnet() {
 
 		if (!isAlive(initialEnemy)) {
 			if (getAliveEnemiesCount() === 0) {
-				say("Oups ^^");
+				say('Oups ^^');
 			} else {
 				enemy = getNearestLeekEnemy();
 				initialEnemy = enemy;
