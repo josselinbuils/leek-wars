@@ -23,9 +23,7 @@ function canFireWithChip(chip, target) {
 		canFire = cellToFire !== null && getMP() >= pathlength;
 
 		if (canFire && isEnemy(target)) {
-			var isPoisonChip = chip === CHIP_TOXIN ||
-				chip === CHIP_VENOM;
-			canFire = shouldFire(target, cellToFire, pathlength, isPoisonChip);
+			canFire = shouldFire(target, chip, cellToFire, pathlength);
 		}
 	}
 
@@ -54,7 +52,7 @@ function canFireWithWeapon(weapon, enemy) {
 
 		canFire = cellToFire !== null &&
 			getMP() >= pathlength &&
-			shouldFire(enemy, cellToFire, pathlength, false);
+			shouldFire(enemy, weapon, cellToFire, pathlength);
 	}
 
 	decreaseLogIndent();
@@ -579,7 +577,7 @@ function move(enemy) {
 	debugOperations();
 }
 
-function shouldFire(enemy, cellToFire, pathlength, isPoisonChip) {
+function shouldFire(enemy, arm, cellToFire, pathlength) {
 	logInfo('shouldFire()');
 
 	var debugOperations = monitorOperations();
@@ -589,47 +587,68 @@ function shouldFire(enemy, cellToFire, pathlength, isPoisonChip) {
 		should = true;
 		logDetail('can fire without moving');
 	} else {
-		increaseLogIndent();
+		var mpDecrease = 0;
+		var armEffects = isWeapon(arm) ?
+			getWeaponEffects(arm) :
+			getChipEffects(arm);
 
-		// We do not want to take summons into account
-		var initialEnemy = getNearestLeekEnemy();
-		var isInitialEnemy = enemy === initialEnemy;
-		var startCell = getCell();
-		var availableMP = getMP() - pathlength;
-		var nextCell = getNextCell(
-			initialEnemy, startCell, getMP(), false
-		);
-		var enemyPathLength = getEnemyPathLengthToFireOnCell(
-			nextCell, initialEnemy
-		);
-		var nextCellAfterFire = getNextCell(
-			initialEnemy, cellToFire, availableMP, false
-		);
-		var enemyPathLengthAfter = getEnemyPathLengthToFireOnCell(
-			nextCellAfterFire, initialEnemy
-		);
-		var isSafe = isSafeCell(nextCellAfterFire);
-		var isSafeForPoison = isInitialEnemy &&
-			isPoisonChip &&
-			!isPoisoned(isInitialEnemy) &&
-			enemyPathLengthAfter >= (getTotalMP(initialEnemy) * 2 / 3);
-		var isNotWorst = enemyPathLengthAfter >= enemyPathLength;
-		var path = getPath(startCell, nextCell);
-		var inWay = path !== null && inArray(path, cellToFire);
+		for (var effects in armEffects) {
+			if (effects[0] === EFFECT_SHACKLE_MP) {
+				mpDecrease = floor(effects[1] * (1 + getMagic() / 100));
+				break;
+			}
+		}
 
-		decreaseLogIndent();
-		logDetail('nextCell: ' + nextCell);
-		logDetail('cellToFire: ' + cellToFire);
-		logDetail('availableMP: ' + availableMP);
-		logDetail('nextCellAfterFire: ' + nextCell);
-		logDetail(
-			(isSafe ? '' : 'not ') + 'safe (' + enemyPathLengthAfter + '), ' +
-			(isSafeForPoison ? '' : 'not ') + 'safe for poison, ' +
-			(isNotWorst ? 'not ' : '') + 'worst, ' +
-			(inWay ? '' : 'not ') + 'in way'
-		);
+		if (mpDecrease > 0) {
+			logDetail('mpDecrease: ' + mpDecrease);
+		}
 
-		should = isSafe || isNotWorst || inWay;
+		if (pathlength <= mpDecrease) {
+			should = true;
+			logDetail('path length <= mp decrease');
+		} else {
+			increaseLogIndent();
+
+			// We do not want to take summons into account
+			var initialEnemy = getNearestLeekEnemy();
+			var isInitialEnemy = enemy === initialEnemy;
+			var startCell = getCell();
+			var availableMP = getMP() - pathlength;
+			var nextCell = getNextCell(
+				initialEnemy, startCell, getMP(), false
+			);
+			var enemyPathLength = getEnemyPathLengthToFireOnCell(
+				nextCell, initialEnemy
+			);
+			var nextCellAfterFire = getNextCell(
+				initialEnemy, cellToFire, availableMP, false
+			);
+			var enemyPathLengthAfter = getEnemyPathLengthToFireOnCell(
+				nextCellAfterFire, initialEnemy
+			);
+			var isSafe = isSafeCell(nextCellAfterFire);
+			var isSafeForPoison = isInitialEnemy &&
+				(arm === CHIP_TOXIN || arm === CHIP_VENOM) &&
+				!isPoisoned(isInitialEnemy) &&
+				enemyPathLengthAfter >= (getTotalMP(initialEnemy) * 2 / 3);
+			var isNotWorst = enemyPathLengthAfter >= enemyPathLength;
+			var path = getPath(startCell, nextCell);
+			var inWay = path !== null && inArray(path, cellToFire);
+
+			decreaseLogIndent();
+			logDetail('nextCell: ' + nextCell);
+			logDetail('cellToFire: ' + cellToFire);
+			logDetail('availableMP: ' + availableMP);
+			logDetail('nextCellAfterFire: ' + nextCell);
+			logDetail(
+				(isSafe ? '' : 'not ') + 'safe (' + enemyPathLengthAfter + '), ' +
+				(isSafeForPoison ? '' : 'not ') + 'safe for poison, ' +
+				(isNotWorst ? 'not ' : '') + 'worst, ' +
+				(inWay ? '' : 'not ') + 'in way'
+			);
+
+			should = isSafe || isNotWorst || inWay;
+		}
 	}
 
 	debugOperations();
