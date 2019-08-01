@@ -25,7 +25,7 @@ function getCellsAround(centerCell) {
 	var emptyCells = arrayFilter(cells, function(cell) {
 		return cell !== null && isEmptyCell(cell);
 	});
-	return removeUnreachableCells(emptyCells);
+	return removeUnreachableCells(emptyCells, getCell());
 }
 
 function getClosestCell(cells) {
@@ -86,7 +86,7 @@ function getFarthestCellFrom(cells, refCell) {
 
 function getMinPathCells(cells) {
 	var startCell = getCell();
-	var reachableCells = removeUnreachableCells(cells);
+	var reachableCells = removeUnreachableCells(cells, startCell);
 	var closestReachableCell = getClosestCell(reachableCells);
 	var minPathLength = getPathLength(startCell, closestReachableCell);
 
@@ -100,7 +100,7 @@ function getMinPathCells(cells) {
 function getReachableCells(startCell, availableMP) {
 	var x = getCellX(startCell);
 	var y = getCellY(startCell);
-	var cells = [];
+	var cells = [startCell];
 
 	for (var j = y - availableMP; j <= y + availableMP; j++) {
 		for (var i = x - availableMP; i <= x + availableMP; i++) {
@@ -111,13 +111,18 @@ function getReachableCells(startCell, availableMP) {
 	return removeUnreachableCellsWith(cells, startCell, availableMP);
 }
 
-function removeUnreachableCells(cells) {
+function removeUnreachableCells(cells, startCell) {
 	var currentCell = getCell();
 
 	return ensureArray(
 		arrayFilter(cells, function(cell) {
-			return cell !== null &&
-				isEmptyCell(cell) &&
+			if (cell === null) {
+				return false;
+			}
+			if (cell === startCell) {
+				return true;
+			}
+			return isEmptyCell(cell) &&
 				getPathLength(currentCell, cell) !== null;
 		})
 	);
@@ -126,6 +131,9 @@ function removeUnreachableCells(cells) {
 function removeUnreachableCellsWith(cells, startCell, availableMP) {
 	return ensureArray(
 		arrayFilter(cells, function(cell) {
+			if (cell === startCell) {
+				return true;
+			}
 			if (cell === null || !isEmptyCell(cell)) {
 				return false;
 			}

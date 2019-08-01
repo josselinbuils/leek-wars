@@ -22,7 +22,7 @@ function canFireWithChip(chip, target) {
 
 		canFire = cellToFire !== null && getMP() >= pathlength;
 
-		if (canFire && isEnemy(target)) {
+		if (canFire) {
 			canFire = shouldFire(target, chip, cellToFire, pathlength);
 		}
 	}
@@ -242,6 +242,14 @@ function getCellToFireWithWeapon(weapon, enemy) {
 	return cellToFire;
 }
 
+function getDangerousEnemies() {
+	return ensureArray(
+		arrayFilter(getAliveEnemies(), function(enemy) {
+			return getEnemyRefArm(enemy) !== null;
+		})
+	);
+}
+
 function getEnemyFightChips(enemy) {
 	return ensureArray(
 		arrayFilter(getChips(enemy), function(chip) {
@@ -260,21 +268,16 @@ function getEnemyName(enemy) {
 		return null;
 	}
 	return getName(enemy) +
-		(isSummon(enemy) ? ('-' + enemy) : '');
+		(isSummon(enemy) ? ('_' + enemy) : '');
 }
 
 function getEnemyPathLengthToFireOnCell(cell, enemy) {
 	var enemyCell = getCell(enemy);
-
-	var alliesCells = arrayMap(getAllies(), function(ally) {
-		return getCell(ally);
-	});
-
-	var ignoredCells = arrayConcat(
-		[enemyCell, getCell()],
-		ensureArray(alliesCells)
+	var alliesCells = ensureArray(
+		arrayMap(getAliveAllies(), function(ally) {
+			return getCell(ally);
+		})
 	);
-
 	var refArm = getEnemyRefArm(enemy);
 
 	if (refArm === null) {
@@ -286,7 +289,7 @@ function getEnemyPathLengthToFireOnCell(cell, enemy) {
 		getCellsToUseWeaponOnCell;
 
 	var cellsToFire = cellRetrieveMethod(
-		refArm, cell, ignoredCells
+		refArm, cell, alliesCells
 	);
 
 	if (safeCount(cellsToFire) === 0) {
@@ -377,6 +380,10 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 	if (hasInStore(cacheKey)) {
 		logDetail('use cache');
 		nextCell = getInStore(cacheKey);
+
+		if (shouldMark && isSafeCell(nextCell)) {
+			mark([nextCell], getColor(255, 128, 210));
+		}
 	} else if (availableMP > 0) {
 		var enemyCell = getCell(enemy);
 		var reachableCells = getReachableCells(startCell, availableMP);
@@ -539,7 +546,7 @@ function isSafeCell(cell) {
 		return false;
 	}
 
-	return arrayFoldLeft(getAliveEnemies(), function(isSafe, enemy) {
+	return arrayFoldLeft(getDangerousEnemies(), function(isSafe, enemy) {
 		if (!isSafe) {
 			return false;
 		}
@@ -577,7 +584,7 @@ function move(enemy) {
 	debugOperations();
 }
 
-function shouldFire(enemy, arm, cellToFire, pathlength) {
+function shouldFire(target, arm, cellToFire, pathlength) {
 	logInfo('shouldFire()');
 
 	var debugOperations = monitorOperations();
@@ -603,15 +610,15 @@ function shouldFire(enemy, arm, cellToFire, pathlength) {
 			logDetail('mpDecrease: ' + mpDecrease);
 		}
 
-		if (pathlength <= mpDecrease) {
+		if (pathlength <= (mpDecrease / 2)) {
 			should = true;
-			logDetail('path length <= mp decrease');
+			logDetail('path length <= 1/2 mp decrease');
 		} else {
 			increaseLogIndent();
 
 			// We do not want to take summons into account
 			var initialEnemy = getNearestLeekEnemy();
-			var isInitialEnemy = enemy === initialEnemy;
+			var isInitialEnemy = target === initialEnemy;
 			var startCell = getCell();
 			var availableMP = getMP() - pathlength;
 			var nextCell = getNextCell(
@@ -689,7 +696,7 @@ function summonBulb(bulb, ai, enemy) {
 		getCellFromXY(x - 1, y + 1),
 		getCellFromXY(x + 1, y - 1),
 		getCellFromXY(x + 1, y + 1),
-	]);
+	], null);
 
 	possibleCells = arrayFilter(possibleCells, function(cell) {
 		return canUseChipOnCell(bulb, cell);
