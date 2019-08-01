@@ -485,7 +485,13 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 							cell, enemy
 						);
 
-						if (pathLengthCell > pathLengthSafestCell) {
+						if (
+							pathLengthCell > pathLengthSafestCell ||
+							(
+								pathLengthCell === pathLengthSafestCell &&
+								getDistance(cell, enemyCell) > getDistance(safestCell, enemyCell)
+							)
+						) {
 							pathLengthSafestCell = pathLengthCell;
 							return cell;
 						}
@@ -823,13 +829,13 @@ function summonBulb(bulb, ai, enemy) {
 	});
 
 	var possibleCells = arrayFilter(deltaCells, function(cell) {
-		return canUseChipOnCell(bulb, cell);
+		return cell !== null && canUseChipOnCell(bulb, cell);
 	});
 
 	if (safeCount(possibleCells) > 0) {
 		showResult(summon(bulb, getClosestCellTo(possibleCells, enemyCell), ai));
 	} else {
-		logInfo('No cell available for bulb :(');
+		debugW('No cell available for bulb :(');
 	}
 }
 
