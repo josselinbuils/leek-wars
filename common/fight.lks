@@ -3,6 +3,10 @@ include('map');
 include('store');
 include('utils');
 
+// TODO make area arms management more generic
+// TODO optimizes area arms management to reach as enemies as possible
+// TODO manage arm areas for ref arms
+
 global FIGHT_EFFECTS = [EFFECT_DAMAGE, EFFECT_POISON];
 global MIN_DIRECT_CELLS_AROUND = 2;
 
@@ -245,7 +249,9 @@ function getCellToFireWithWeapon(weapon, enemy) {
 function getDangerousEnemies() {
 	return ensureArray(
 		arrayFilter(getAliveEnemies(), function(enemy) {
-			return getEnemyRefArm(enemy) !== null;
+			var refArms = getEnemyRefArms(enemy);
+			return refArms['chip'] !== null ||
+				refArms['weapon'] !== null;
 		})
 	);
 }
@@ -278,19 +284,29 @@ function getEnemyPathLengthToFireOnCell(cell, enemy) {
 			return getCell(ally);
 		})
 	);
-	var refArm = getEnemyRefArm(enemy);
+	var refArms = getEnemyRefArms(enemy);
+	var refChip = refArms['chip'];
+	var refWeapon = refArms['weapon'];
 
-	if (refArm === null) {
+	if (refChip === null && refWeapon === null) {
 		return null;
 	}
 
-	var cellRetrieveMethod = isChip(refArm) ?
-		getCellsToUseChipOnCell :
-		getCellsToUseWeaponOnCell;
+	var cellsToFire = [];
 
-	var cellsToFire = cellRetrieveMethod(
-		refArm, cell, alliesCells
-	);
+	if (refChip !== null) {
+		var chipCells = ensureArray(
+			getCellsToUseChipOnCell(refChip, cell, alliesCells)
+		);
+		pushAll(cellsToFire, chipCells);
+	}
+
+	if (refWeapon !== null) {
+		var weaponCells = ensureArray(
+			getCellsToUseWeaponOnCell(refWeapon, cell, alliesCells)
+		);
+		pushAll(cellsToFire, weaponCells);
+	}
 
 	if (safeCount(cellsToFire) === 0) {
 		return null;
@@ -300,42 +316,70 @@ function getEnemyPathLengthToFireOnCell(cell, enemy) {
 	return getPathLength(enemyCell, cellToFire);
 }
 
-// TODO manage arm areas
-function getEnemyRefArm(enemy) {
-	var cacheKey = 'refArm-' + enemy;
+function getEnemyRefArms(enemy) {
+	var cacheKey = 'refArms-' + enemy;
 
 	if (hasInStore(cacheKey)) {
-		return getInStore(cacheKey);
+		return jsonDecode(getInStore(cacheKey));
 	}
 
-	var enemyChips = ensureArray(getEnemyFightChips(enemy));
-	var enemyWeapons = ensureArray(getWeapons(enemy));
-	var arms = arrayConcat(enemyChips, enemyWeapons);
+	var refChip = getMaxRangeChip(getEnemyFightChips(enemy));
+	var refWeapon = getMaxRangeWeapon(getWeapons(enemy));
+	var refArms = ['chip': refChip, 'weapon': refWeapon];
 
-	var filteredArms = arrayFilter(arms, function(arm) {
-		var area = isChip(arm) ?
-			getChipArea(arm) :
-			getWeaponArea(arm);
+	if (refChip !== null || refWeapon !== null) {
+		var chipName = refChip !== null ?
+			getChipName(refChip) :
+			null;
+		var weaponName = refWeapon !== null ?
+			getWeaponName(refWeapon) :
+			null;
 
-		return area !== AREA_LASER_LINE;
-	});
-
-	var refArm = safeCount(filteredArms) > 0 ?
-		shift(sortArmamentByRangeDesc(filteredArms)) :
-		shift(sortArmamentByRangeDesc(arms));
-
-	if (refArm !== null) {
-		var armName = isChip(refArm) ?
-			getChipName(refArm) :
-			getWeaponName(refArm);
-
-		logDetail('refArm of ' + getEnemyName(enemy) + ': ' + armName);
+		logDetail('refArms of ' + getEnemyName(enemy) + ': ' + chipName + ', ' + weaponName);
 	} else if (!isSummon(enemy)) {
-		debugE('Unable to retrieve ' + getEnemyName(enemy) + ' ref arm: ' + arms);
+		debugE('Unable to retrieve ' + getEnemyName(enemy) + ' ref arms');
 	}
 
-	putInStore(cacheKey, refArm);
-	return refArm;
+	putInStore(cacheKey, jsonEncode(refArms));
+	return refArms;
+}
+
+function getMaxRangeChip(chips) {
+	if (safeCount(chips) === 0) {
+		return null;
+	}
+
+	var firstChip = shift(chips);
+	var maxRange = getChipMaxRange(firstChip);
+
+	return arrayFoldLeft(chips, function(maxRangeChip, chip) {
+		var chipMaxRange = getChipMaxRange(chip);
+
+		if (chipMaxRange > maxRange) {
+			maxRange = chipMaxRange;
+			return chip;
+		}
+		return maxRangeChip;
+	}, firstChip);
+}
+
+function getMaxRangeWeapon(weapons) {
+	if (safeCount(weapons) === 0) {
+		return null;
+	}
+
+	var firstWeapon = shift(weapons);
+	var maxRange = getWeaponMaxRange(firstWeapon);
+
+	return arrayFoldLeft(weapons, function(maxRangeWeapon, weapon) {
+		var weaponMaxRange = getWeaponMaxRange(weapon);
+
+		if (weaponMaxRange > maxRange) {
+			maxRange = weaponMaxRange;
+			return weapon;
+		}
+		return maxRangeWeapon;
+	}, firstWeapon);
 }
 
 function getNearestLeekEnemy() {
@@ -660,20 +704,6 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 
 	debugOperations();
 	return should;
-}
-
-function sortArmamentByRangeDesc(armament) {
-	return arraySort(ensureArray(armament), function(a, b) {
-		var rangeA = isChip(a) ?
-			getChipMaxRange(a) :
-			getWeaponMaxRange(a);
-
-		var rangeB = isChip(b) ?
-			getChipMaxRange(b) :
-			getWeaponMaxRange(b);
-
-		return rangeA > rangeB ? -1 : (rangeA === rangeB ? 0 : 1);
-	});
 }
 
 function summonBulb(bulb, ai, enemy) {
