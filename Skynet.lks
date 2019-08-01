@@ -26,11 +26,13 @@ function Skynet() {
 	var enemy = getNearestLeekEnemy();
 	var initialEnemy = enemy;
 	var isEnemyPoisoner = getMagic(enemy) > getStrength(enemy);
+	var shouldProtect = !isEnemyPoisoner || safeCount(getDangerousEnemies()) > 3;
 	var me = getLeek();
 	var once = Once();
 	var optimizer = Optimizer();
 	var poisoned = isBadlyPoisoned();
 	var totalLife = getTotalLife();
+	var minSafeLife = max(600, totalLife / 2);
 
 	var venomCells = getCellsToFireWithChip(
 		CHIP_VENOM, initialEnemy
@@ -67,14 +69,14 @@ function Skynet() {
 
 		if (
 			shouldTry() &&
-			getLife() <= 400 &&
+			getLife() < minSafeLife &&
 			canFireWithChip(CHIP_REGENERATION, me)
 		) {
 			arm = CHIP_REGENERATION;
 			target = me;
 		} else if (
 			shouldTry() &&
-			getLife() < (totalLife / 3) &&
+			getLife() < minSafeLife &&
 			canFireWithChip(CHIP_REMISSION, me)
 		) {
 			arm = CHIP_REMISSION;
@@ -86,10 +88,18 @@ function Skynet() {
 		) {
 			arm = CHIP_ANTIDOTE;
 			target = me;
-		} else if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_ARMOR, me)) {
+		} else if (
+			shouldTry() &&
+			shouldProtect &&
+			canFireWithChip(CHIP_ARMOR, me)
+		) {
 			arm = CHIP_ARMOR;
 			target = me;
-		} else if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_SHIELD, me)) {
+		} else if (
+			shouldTry() &&
+			shouldProtect &&
+			canFireWithChip(CHIP_SHIELD, me)
+		) {
 			arm = CHIP_SHIELD;
 			target = me;
 		} else if (
@@ -126,7 +136,9 @@ function Skynet() {
 		) {
 			arm = CHIP_FRACTURE;
 		} else if (
-			doOnce(shouldTry() && getLife() > (totalLife / 2) && canFireWithChip(CHIP_ICED_BULB, me))
+			doOnce(shouldTry() &&
+				getLife() > minSafeLife &&
+				canFireWithChip(CHIP_ICED_BULB, me))
 		) {
 			summonBulb(CHIP_ICED_BULB, IcedBulb, initialEnemy);
 		} else if (shouldTry() && getNearestEnemy() !== enemy) {
@@ -134,13 +146,6 @@ function Skynet() {
 			enemy = getNearestEnemy();
 			optimizer = Optimizer();
 			continue;
-		} else if (
-			shouldTry() &&
-			getLife() < totalLife &&
-			canFireWithChip(CHIP_REMISSION, me)
-		) {
-			arm = CHIP_REMISSION;
-			target = me;
 		} else if (
 			shouldTry() &&
 			(hasFiredOnce || getLife() < totalLife) &&
@@ -152,6 +157,13 @@ function Skynet() {
 			shouldTry() && canFireWithChip(CHIP_ARMORING, me)
 		) {
 			arm = CHIP_ARMORING;
+			target = me;
+		} else if (
+			shouldTry() &&
+			getLife() < totalLife &&
+			canFireWithChip(CHIP_REMISSION, me)
+		) {
+			arm = CHIP_REMISSION;
 			target = me;
 		} else if (
 			doOnce(shouldTry() && canFireWithChip(CHIP_ICED_BULB, me))

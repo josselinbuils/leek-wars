@@ -10,6 +10,7 @@ function Stuxnet() {
 	var hasFired = false;
 	var initialEnemy = enemy;
 	var isEnemyPoisoner = getMagic(enemy) > getStrength(enemy);
+	var shouldProtect = !isEnemyPoisoner || safeCount(getDangerousEnemies()) > 3;
 	var me = getLeek();
 	var once = Once();
 	var optimizer = Optimizer();
@@ -35,16 +36,24 @@ function Stuxnet() {
 		debug('MP: ' + getMP());
 		debug('TP: ' + getTP());
 
-		if (shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_SHIELD, me)) {
+		if (
+			shouldTry() &&
+			shouldProtect &&
+			canFireWithChip(CHIP_SHIELD, me)
+		) {
 			arm = CHIP_SHIELD;
 			target = me;
 		} else if (
-			shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_HELMET, me)
+			shouldTry() &&
+			shouldProtect &&
+			canFireWithChip(CHIP_HELMET, me)
 		) {
 			arm = CHIP_HELMET;
 			target = me;
 		} else if (
-			shouldTry() && !isEnemyPoisoner && canFireWithChip(CHIP_WALL, me)
+			shouldTry() &&
+			shouldProtect &&
+			canFireWithChip(CHIP_WALL, me)
 		) {
 			arm = CHIP_WALL;
 			target = me;
