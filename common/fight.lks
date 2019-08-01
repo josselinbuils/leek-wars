@@ -3,7 +3,6 @@ include('map');
 include('store');
 include('utils');
 
-// TODO make area arms management more generic
 // TODO optimizes area arms management to reach as enemies as possible
 // TODO manage arm areas for ref arms
 
@@ -72,12 +71,8 @@ function ensureWearingWeapon(weapon) {
 }
 
 function fire(arm, target) {
-	var armName = isChip(arm) ?
-		getChipName(arm) :
-		getWeaponName(arm);
-
 	logInfo('');
-	debug('fire(' + armName + ', ' + getEnemyName(target) + ')');
+	debug('fire(' + getArmName(arm) + ', ' + getEnemyName(target) + ')');
 	increaseLogIndent();
 
 	var hasFired = false;
@@ -105,17 +100,25 @@ function fire(arm, target) {
 			}
 		}
 
-		if (arm === CHIP_TOXIN && !canUseChip(arm, target)) {
+		if (
+			(isChip(arm) && !canUseChip(arm, target)) ||
+			(isWeapon(arm) && !canUseWeapon(arm, target))
+		) {
+			var targetCell = getCell(target);
 			var targetableDeltaCells = getTargetableDeltaCells(
-				getCell(target)
+				targetCell, arm
 			);
 
-			for (var cell in targetableDeltaCells) {
-				if (canUseChipOnCell(arm, cell)) {
-					logDetail('fire on delta cell: ' + cell);
-					result = useChipOnCell(arm, cell);
-					break;
+			if (safeCount(targetableDeltaCells) > 0) {
+				for (var cell in targetableDeltaCells) {
+					if (canUseChipOnCell(arm, cell)) {
+						logDetail('fire on delta cell: ' + cell);
+						result = useChipOnCell(arm, cell);
+						break;
+					}
 				}
+			} else {
+				debugE('Cannot use arm ' + getArmName(arm) + ' on cell ' + targetCell);
 			}
 		} else {
 			result = useChip(arm, target);
@@ -134,6 +137,12 @@ function fire(arm, target) {
 	}
 
 	return [hasFired, hasError];
+}
+
+function getArmName(arm) {
+	return isChip(arm) ?
+		getChipName(arm) :
+		getWeaponName(arm);
 }
 
 function getCellsToFireWithChip(chip, target) {
@@ -162,21 +171,21 @@ function getCellToFireWithChip(chip, target) {
 		cellsToFire = getCellsToFireWithChip(chip, target);
 		logDetail('getCellsToFireWithChip: ' + arrayConcat([], cellsToFire));
 
-		if (chip === CHIP_TOXIN) {
-			var targetableDeltaCells = getTargetableDeltaCells(targetCell);
-			var newFireCells = [];
+		if (getChipArea(chip) !== AREA_POINT) {
+			var targetableDeltaCells = getTargetableDeltaCells(targetCell, chip);
+			var areaFireCells = [];
 
 			arrayIter(targetableDeltaCells, function(cell) {
 				var newCellsToFire = getCellsToFireWithChipOnCell(chip, cell);
 
 				for (var newCellToFire in newCellsToFire) {
 					if (!inArray(cellsToFire, newCellToFire)) {
-						push(newFireCells, newCellToFire);
+						push(areaFireCells, newCellToFire);
 						push(cellsToFire, newCellToFire);
 					}
 				}
 			});
-			logDetail('newFireCells: ' + newFireCells);
+			logDetail('areaFireCells: ' + areaFireCells);
 		}
 
 		cellsToFire = getMinPathCells(cellsToFire);
@@ -501,15 +510,64 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 	return nextCell;
 }
 
-function getTargetableDeltaCells(targetCell) {
+function getTargetableDeltaCells(targetCell, arm) {
+	var deltas;
 	var x = getCellX(targetCell);
 	var y = getCellY(targetCell);
-	var deltas = [
-		[0, 1],
-		[1, 0],
-		[0, -1],
-		[-1, 0]
-	];
+	var area = isChip(arm) ?
+		getChipArea(arm) :
+		getWeaponArea(arm);
+
+	if (area === AREA_CIRCLE_1) {
+		deltas = [
+			[0, 1],
+			[1, 0],
+			[0, -1],
+			[-1, 0]
+		];
+	} else if (area === AREA_CIRCLE_2) {
+		deltas = [
+			[0, -2],
+			[0, -1],
+			[0, 1],
+			[0, 2],
+			[-2, 0],
+			[-1, 0],
+			[1, 0],
+			[2, 0],
+			[-1, -1],
+			[-1, 1],
+			[1, -1],
+			[1, 1],
+		];
+	} else if (area === AREA_CIRCLE_3) {
+		deltas = [
+			[0, -3],
+			[0, -2],
+			[0, -1],
+			[0, 1],
+			[0, 2],
+			[0, 3],
+			[-3, 0],
+			[-2, 0],
+			[-1, 0],
+			[1, 0],
+			[2, 0],
+			[3, 0],
+			[-2, -1],
+			[-2, 1],
+			[-1, -2],
+			[-1, -1],
+			[-1, 1],
+			[-1, 2],
+			[1, -2],
+			[1, -1],
+			[1, 1],
+			[1, 2],
+			[2, -1],
+			[2, 1],
+		];
+	}
 
 	var deltaCells = arrayMap(deltas, function(delta) {
 		return getCellFromXY(x + delta[0], y + delta[1]);
@@ -711,22 +769,7 @@ function summonBulb(bulb, ai, enemy) {
 	var summonerCell = getCell();
 	var x = getCellX(summonerCell);
 	var y = getCellY(summonerCell);
-
-	// TODO manage differet ranges
-	var possibleCells = removeUnreachableCells([
-		getCellFromXY(x, y - 2),
-		getCellFromXY(x, y - 1),
-		getCellFromXY(x, y + 1),
-		getCellFromXY(x, y + 2),
-		getCellFromXY(x - 2, y),
-		getCellFromXY(x - 1, y),
-		getCellFromXY(x + 1, y),
-		getCellFromXY(x + 2, y),
-		getCellFromXY(x - 1, y - 1),
-		getCellFromXY(x - 1, y + 1),
-		getCellFromXY(x + 1, y - 1),
-		getCellFromXY(x + 1, y + 1),
-	], null);
+	var possibleCells = getTargetableDeltaCells(summonerCell, bulb);
 
 	possibleCells = arrayFilter(possibleCells, function(cell) {
 		return canUseChipOnCell(bulb, cell);
