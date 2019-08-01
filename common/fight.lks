@@ -75,12 +75,11 @@ function fire(arm, target) {
 		getWeaponName(arm);
 
 	logInfo('');
-	debug('fire(' + armName + ', ' + getName(target) + ')');
+	debug('fire(' + armName + ', ' + getEnemyName(target) + ')');
 	increaseLogIndent();
 
 	var hasFired = false;
 	var hasError = false;
-	var targetCell = null;
 	var result;
 
 	if (isWeapon(arm)) {
@@ -103,7 +102,22 @@ function fire(arm, target) {
 				hasFired = true;
 			}
 		}
-		result = useChip(arm, target);
+
+		if (arm === CHIP_TOXIN && !canUseChip(arm, target)) {
+			var targetableDeltaCells = getTargetableDeltaCells(
+				getCell(target)
+			);
+
+			for (var cell in targetableDeltaCells) {
+				if (canUseChipOnCell(arm, cell)) {
+					logDetail('fire on delta cell: ' + cell);
+					result = useChipOnCell(arm, cell);
+					break;
+				}
+			}
+		} else {
+			result = useChip(arm, target);
+		}
 	}
 
 	decreaseLogIndent();
@@ -126,46 +140,49 @@ function getCellsToFireWithChip(chip, target) {
 	);
 }
 
+function getCellsToFireWithChipOnCell(chip, cell) {
+	return ensureArray(
+		getCellsToUseChipOnCell(chip, cell, [getCell()])
+	);
+}
+
 function getCellToFireWithChip(chip, target) {
-	logInfo('getCellToFireWithChip(' + getChipName(chip) + ', ' + getName(target) + ')');
+	logInfo('getCellToFireWithChip(' + getChipName(chip) + ', ' + getEnemyName(target) + ')');
 
 	var startCell = getCell();
 	var targetCell = getCell(target);
 	var cellToFire = null;
-	var cells = [];
+	var cellsToFire = [];
 
 	if (canUseChip(chip, target)) {
 		cellToFire = startCell;
 	} else {
-		cells = getCellsToFireWithChip(chip, target);
-		logDetail('getCellsToFireWithChip: ' + (cells !== null ? arrayConcat([], cells) : null));
+		cellsToFire = getCellsToFireWithChip(chip, target);
+		logDetail('getCellsToFireWithChip: ' + arrayConcat([], cellsToFire));
 
 		if (chip === CHIP_TOXIN) {
-			var x = getCellX(targetCell);
-			var y = getCellY(targetCell);
-			var deltas = [
-				[0, 1],
-				[1, 0],
-				[0, -1],
-				[-1, 0]
-			];
-			var deltaCells = arrayMap(deltas, function(delta) {
-				return getCellFromXY(x + delta[0], y + delta[1]);
+			var targetableDeltaCells = getTargetableDeltaCells(targetCell);
+			var newFireCells = [];
+
+			arrayIter(targetableDeltaCells, function(cell) {
+				var newCellsToFire = getCellsToFireWithChipOnCell(chip, cell);
+
+				for (var newCellToFire in newCellsToFire) {
+					if (!inArray(cellsToFire, newCellToFire)) {
+						push(newFireCells, newCellToFire);
+						push(cellsToFire, newCellToFire);
+					}
+				}
 			});
-			logDetail('deltaCells: ' + (deltaCells !== null ? arrayConcat([], deltaCells) : null));
-			var validDeltaCells = arrayFilter(deltaCells, function(cell) {
-				return cell !== null && canUseChipOnCell(chip, cell);
-			});
-			logDetail('validDeltaCells: ' + (validDeltaCells !== null ? arrayConcat([], validDeltaCells) : null));
-			cells = arrayConcat(cells, ensureArray(validDeltaCells));
+			logDetail('newFireCells: ' + newFireCells);
 		}
 
-		cells = getMinPathCells(cells);
-		logDetail('getMinPathCells: ' + (cells !== null ? arrayConcat([], cells) : null));
-		cellToFire = getFarthestCellFrom(cells, targetCell);
+		cellsToFire = getMinPathCells(cellsToFire);
+		logDetail('getMinPathCells: ' + arrayConcat([], cellsToFire));
+		cellToFire = getFarthestCellFrom(cellsToFire, targetCell);
 	}
 
-	logDetail('cells: ' + (cells !== null ? arrayConcat([], cells) : null));
+	logDetail('cellsToFire: ' + arrayConcat([], cellsToFire));
 	logDetail('startCell: ' + startCell);
 	logDetail('cellToFire: ' + cellToFire);
 	logDetail('pathLength: ' + getPathLength(startCell, cellToFire));
@@ -188,7 +205,7 @@ function getCellsToFireWithWeapon(weapon, enemy) {
 		otherEnemiesCells = arrayMap(otherAliveEnemies, function(otherEnemy) {
 			return getCell(otherEnemy);
 		});
-		ignoredCells = arrayConcat(ignoredCells, ensureArray(otherEnemiesCells));
+		pushAll(ignoredCells, ensureArray(otherEnemiesCells));
 	}
 
 	// Removes enemy cells
@@ -238,6 +255,14 @@ function getEnemyFightChips(enemy) {
 			return false;
 		})
 	);
+}
+
+function getEnemyName(enemy) {
+	if (enemy === null) {
+		return null;
+	}
+	return getName(enemy) +
+		(isSummon(enemy) ? ('-' + enemy) : '');
 }
 
 function getEnemyPathLengthToFireOnCell(cell, enemy) {
@@ -303,9 +328,9 @@ function getEnemyRefArm(enemy) {
 			getChipName(refArm) :
 			getWeaponName(refArm);
 
-		logDetail('refArm: ' + armName);
+		logDetail('refArm of ' + getEnemyName(enemy) + ': ' + armName);
 	} else if (!isSummon(enemy)) {
-		debugE('Unable to retrieve ' + getName(enemy) + ' ref arm: ' + arms);
+		debugE('Unable to retrieve ' + getEnemyName(enemy) + ' ref arm: ' + arms);
 	}
 
 	putInStore(cacheKey, refArm);
@@ -345,7 +370,7 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 	var debugOperationsInt;
 
 	logInfo('getNextCell()');
-	logDetail('enemy: ' + getName(enemy));
+	logDetail('enemy: ' + getEnemyName(enemy));
 	logDetail('startCell: ' + startCell);
 	logDetail('availableMP: ' + availableMP);
 
@@ -427,6 +452,27 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 	return nextCell;
 }
 
+function getTargetableDeltaCells(targetCell) {
+	var x = getCellX(targetCell);
+	var y = getCellY(targetCell);
+	var deltas = [
+		[0, 1],
+		[1, 0],
+		[0, -1],
+		[-1, 0]
+	];
+
+	var deltaCells = arrayMap(deltas, function(delta) {
+		return getCellFromXY(x + delta[0], y + delta[1]);
+	});
+
+	return ensureArray(
+		arrayFilter(deltaCells, function(cell) {
+			return cell !== null && !isObstacle(cell);
+		})
+	);
+}
+
 function getTargetEnemy(weapon, enemy) {
 	var currentCell = getCell();
 	var targetEnemy = null;
@@ -455,7 +501,7 @@ function getTargetEnemy(weapon, enemy) {
 	}
 
 	logInfo(
-		'getTargetEnemy(): ' + getName(targetEnemy) +
+		'getTargetEnemy(): ' + getEnemyName(targetEnemy) +
 		(targetEnemy !== null ? (' on cell ' + getCell(targetEnemy)) : '')
 	);
 
@@ -509,7 +555,7 @@ function isSafeCell(cell) {
 
 function move(enemy) {
 	logInfo('');
-	logInfo('move(' + getName(enemy) + ')');
+	logInfo('move(' + getEnemyName(enemy) + ')');
 	increaseLogIndent();
 
 	var debugOperations = monitorOperations();
