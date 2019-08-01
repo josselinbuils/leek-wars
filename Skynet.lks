@@ -3,6 +3,9 @@ include('common/fight');
 include('common/logger');
 include('common/utils');
 
+// TODO use health bulb
+// TODO use mp steal to increase safety when it would allow to use a weapon
+
 global hasFiredOnce = false;
 
 function isBadlyPoisoned() {
@@ -106,10 +109,22 @@ function Skynet() {
 			arm = CHIP_VENOM;
 		} else if (
 			shouldTry() &&
-			canFireWithChip(CHIP_FRACTURE, initialEnemy)
+			isInitialEnemy &&
+			canFireWithWeapon(WEAPON_AXE, enemy)
+		) {
+			arm = WEAPON_AXE;
+		} else if (
+			shouldTry() &&
+			isInitialEnemy &&
+			canFireWithChip(CHIP_BALL_AND_CHAIN, enemy)
+		) {
+			arm = CHIP_BALL_AND_CHAIN;
+		} else if (
+			shouldTry() &&
+			isInitialEnemy &&
+			canFireWithChip(CHIP_FRACTURE, enemy)
 		) {
 			arm = CHIP_FRACTURE;
-			target = initialEnemy;
 		} else if (
 			doOnce(shouldTry() && getLife() > (totalLife / 2) && canFireWithChip(CHIP_ICED_BULB, me))
 		) {
@@ -134,21 +149,10 @@ function Skynet() {
 			arm = CHIP_VACCINE;
 			target = me;
 		} else if (
-			shouldTry() &&
-			canFireWithWeapon(WEAPON_DESTROYER, enemy)
-		) {
-			arm = WEAPON_DESTROYER;
-		} else if (
 			shouldTry() && canFireWithChip(CHIP_ARMORING, me)
 		) {
 			arm = CHIP_ARMORING;
 			target = me;
-		} else if (
-			shouldTry() &&
-			canFireWithChip(CHIP_BALL_AND_CHAIN, initialEnemy)
-		) {
-			arm = CHIP_BALL_AND_CHAIN;
-			target = initialEnemy;
 		} else if (
 			doOnce(shouldTry() && canFireWithChip(CHIP_ICED_BULB, me))
 		) {
