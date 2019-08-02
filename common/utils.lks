@@ -7,6 +7,16 @@ function ensureArray(object) {
 	return object;
 }
 
+function getMonitorLogMethod(consumedOperations) {
+	if (consumedOperations >= 20) {
+		return logDetailE;
+	}
+	if (consumedOperations >= 10) {
+		return logDetailW;
+	}
+	return logDetail;
+}
+
 function monitorOperations() {
 	var startOperations = getOperations();
 
@@ -14,7 +24,7 @@ function monitorOperations() {
 		var endOperations = getOperations();
 		var consumedOperations = ceil((endOperations - startOperations) / OPERATIONS_LIMIT * 1000) / 10;
 		var remainingOperations = floor((OPERATIONS_LIMIT - endOperations) / OPERATIONS_LIMIT * 1000) / 10;
-		logDetail(consumedOperations + '% ops consumed');
+		getMonitorLogMethod(consumedOperations)(consumedOperations + '% ops consumed');
 		logDetail(remainingOperations + '% ops remaining');
 	});
 }
@@ -26,7 +36,7 @@ function monitorIntermediateOperations(label) {
 	return @(function() {
 		var consumedOperations = ceil((getOperations() - startOperations) / OPERATIONS_LIMIT * 1000) / 10;
 		increaseLogIndent();
-		logDetail(consumedOperations + '% ops consumed');
+		getMonitorLogMethod(consumedOperations)(consumedOperations + '% ops consumed');
 		decreaseLogIndent();
 	});
 }

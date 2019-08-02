@@ -5,10 +5,10 @@ include('utils');
 
 // TODO optimizes area arms management to reach as enemies as possible
 // TODO manage arm areas for ref arms
-// TODO Use safety levels: sort cells by min enemy path length, use the less worth
 
 global FIGHT_EFFECTS = [EFFECT_DAMAGE, EFFECT_POISON];
 global MIN_DIRECT_CELLS_AROUND = 2;
+global SAFE_LEVEL = 80;
 
 global turnsWithoutFire = 0;
 
@@ -144,6 +144,64 @@ function getArmName(arm) {
 	return isChip(arm) ?
 		getChipName(arm) :
 		getWeaponName(arm);
+}
+
+function getCellSafetyLevel(cell) {
+	var level = 0;
+	var protectedAgainstBulbs = true;
+	var protectedAgainstLeeks = true;
+	var middlyProtectedAgainstBulbs = true;
+	var middlyProtectedAgainstLeeks = true;
+
+	for (var enemy in getDangerousEnemies()) {
+		var enemyPathLength = getEnemyPathLengthToFireOnCell(
+			cell, enemy
+		);
+
+		if (enemyPathLength !== null) {
+			var enemyMP = getTotalMP(enemy);
+
+			if (enemyPathLength <= enemyMP) {
+				if (isSummon(enemy)) {
+					protectedAgainstBulbs = false;
+				} else {
+					protectedAgainstLeeks = false;
+				}
+
+				if (enemyPathLength <= (enemyMP * 2 / 3)) {
+					if (isSummon(enemy)) {
+						middlyProtectedAgainstBulbs = false;
+					} else {
+						middlyProtectedAgainstLeeks = false;
+					}
+				}
+
+				if (
+					!middlyProtectedAgainstBulbs &&
+					!middlyProtectedAgainstLeeks
+				) {
+					break;
+				}
+			}
+		}
+	}
+
+	if (protectedAgainstBulbs && protectedAgainstLeeks) {
+		level = 100;
+	} else if (middlyProtectedAgainstBulbs && protectedAgainstLeeks) {
+		level = 80;
+	} else if (protectedAgainstLeeks) {
+		level = 70;
+	} else if (middlyProtectedAgainstLeeks) {
+		level = 60;
+	}
+
+	var cellsAround = getDirectReachableCellsAround(cell);
+
+	if (safeCount(cellsAround) < MIN_DIRECT_CELLS_AROUND) {
+		level -= 20;
+	}
+	return level;
 }
 
 function getCellsToFireWithChip(chip, target) {
@@ -431,90 +489,61 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 	logDetail('startCell: ' + startCell);
 	logDetail('availableMP: ' + availableMP);
 
-	var cacheKey = 'tmp-nextCell-' + enemy + '-' + startCell + '-' + availableMP;
+	var cacheKey = 'tmp-nextCell-' + enemy + '-' +
+		startCell + '-' + availableMP;
 
 	if (hasInStore(cacheKey)) {
 		logDetail('use cache');
 		nextCell = getInStore(cacheKey);
 
-		if (shouldMark && isSafeCell(nextCell, 0)) {
+		if (
+			shouldMark &&
+			getCellSafetyLevel(nextCell) >= SAFE_LEVEL
+		) {
 			mark([nextCell], getColor(255, 128, 210));
 		}
 	} else if (availableMP > 0) {
-		var enemyCell = getCell(enemy);
-		var reachableCells = getReachableCells(startCell, availableMP);
+		var reachableCells = getReachableCells(
+			startCell, availableMP
+		);
 
 		debugOperationsInt = monitorIntermediateOperations(
-			'arrayFilter: isSafeCell (' + count(reachableCells) + ' entries)'
+			'iterates cells safety (' + safeCount(reachableCells) +
+			' entries)'
 		);
-		var safeReachableCells = arrayFilter(
-			reachableCells,
-			function(cell) {
-				return isSafeCell(cell, 0);
-			}
-		);
-		debugOperationsInt();
+		var maxSafetyLevel = 0;
+		var maxSafetyCells = [];
 
-		if (safeCount(safeReachableCells) > 0) {
-			logDetail('safe cells found');
+		for (var cell in reachableCells) {
+			var safetyLevel = getCellSafetyLevel(cell);
 
-			if (shouldMark) {
-				mark(safeReachableCells, getColor(255, 128, 210));
-			}
-			nextCell = shift(sortByDistanceAsc(safeReachableCells, enemyCell));
-
-			if (nextCell === null) {
-				debugE('sortByDistanceAsc returned null: ' + safeReachableCells);
-				nextCell = shift(safeReachableCells);
-			}
-		} else if (safeCount(reachableCells) > 0) {
-			var minSafetyCells = arrayFilter(reachableCells, function(cell) {
-				var cellsAround = getDirectReachableCellsAround(cell);
-				return safeCount(cellsAround) >= MIN_DIRECT_CELLS_AROUND;
-			});
-			var minSafetyCellsCount = safeCount(minSafetyCells);
-
-			if (minSafetyCellsCount > 0) {
-				logDetail('min safety cells found');
-
-				debugOperationsInt = monitorIntermediateOperations(
-					'arrayFoldLeft (' + minSafetyCellsCount + ' entries)'
-				);
-
-				var firstCell = shift(minSafetyCells);
-				var pathLengthSafestCell = getEnemyPathLengthToFireOnCell(
-					firstCell, enemy
-				);
-
-				nextCell = arrayFoldLeft(
-					minSafetyCells,
-					function(safestCell, cell) {
-						var pathLengthCell = getEnemyPathLengthToFireOnCell(
-							cell, enemy
-						);
-
-						if (
-							pathLengthCell > pathLengthSafestCell ||
-							(
-								pathLengthCell === pathLengthSafestCell &&
-								getDistance(cell, enemyCell) > getDistance(safestCell, enemyCell)
-							)
-						) {
-							pathLengthSafestCell = pathLengthCell;
-							return cell;
-						}
-						return safestCell;
-					},
-					firstCell
-				);
-				debugOperationsInt();
-
-				if (pathLengthSafestCell === 0) {
-					logDetail('use farthest cell');
-					nextCell = getFarthestCellFrom(minSafetyCells, enemy);
-				}
+			if (safetyLevel > maxSafetyLevel) {
+				maxSafetyLevel = safetyLevel;
+				maxSafetyCells = [cell];
+			} else if (safetyLevel === maxSafetyLevel) {
+				push(maxSafetyCells, cell);
 			}
 		}
+		debugOperationsInt();
+
+		if (safeCount(maxSafetyCells) > 0) {
+			if (maxSafetyLevel >= SAFE_LEVEL) {
+				nextCell = getClosestCellTo(
+					maxSafetyCells, getCell(enemy)
+				);
+
+				if (shouldMark) {
+					mark(maxSafetyCells, getColor(255, 128, 210));
+				}
+			} else {
+				nextCell = getFarthestCellFrom(
+					maxSafetyCells, getCell(enemy)
+				);
+			}
+		} else {
+			debugW('No cell found');
+		}
+
 		putInStore(cacheKey, nextCell);
 	}
 
@@ -666,28 +695,6 @@ function isPoisoned(leek) {
 	return false;
 }
 
-function isSafeCell(cell, mpDecrease) {
-	var cellsAround = getDirectReachableCellsAround(cell);
-
-	if (safeCount(cellsAround) < MIN_DIRECT_CELLS_AROUND) {
-		return false;
-	}
-
-	for (var enemy in getDangerousEnemies()) {
-		var enemyPathLength = getEnemyPathLengthToFireOnCell(
-			cell, enemy
-		);
-
-		if (
-			enemyPathLength !== null &&
-			enemyPathLength <= (getTotalMP(enemy) - mpDecrease)
-		) {
-			return false;
-		}
-	}
-	return true;
-}
-
 function move(enemy) {
 	logInfo('');
 	logInfo('move(' + getEnemyName(enemy) + ')');
@@ -707,10 +714,8 @@ function move(enemy) {
 		return;
 	}
 
-	var pathLength = getEnemyPathLengthToFireOnCell(nextCell, enemy);
-
 	decreaseLogIndent();
-	logDetail('to ' + nextCell + ' (' + (isSafeCell(nextCell, 0) ? '' : 'not ') + 'safe: ' + pathLength + ')');
+	logDetail('to ' + nextCell + ' (safety: ' + getCellSafetyLevel(nextCell) + ')');
 
 	if (nextCell !== getCell()) {
 		moveTowardCell(nextCell);
@@ -752,29 +757,21 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 
 			// We do not want to take summons into account
 			var initialEnemy = getNearestLeekEnemy();
-			var isInitialEnemy = target === initialEnemy;
-			var startCell = getCell();
 			var availableMP = getMP() - pathlength;
 			var nextCell = getNextCell(
-				initialEnemy, startCell, getMP(), false
+				initialEnemy, getCell(), getMP(), false
 			);
-			var enemyPathLength = getEnemyPathLengthToFireOnCell(
-				nextCell, initialEnemy
-			);
+			var safetyLevel = getCellSafetyLevel(nextCell);
 			var nextCellAfterFire = getNextCell(
 				initialEnemy, cellToFire, availableMP, false
 			);
-			var enemyPathLengthAfter = getEnemyPathLengthToFireOnCell(
-				nextCellAfterFire, initialEnemy
-			);
-			var isSafe = isSafeCell(nextCellAfterFire, mpDecrease);
-			var isSafeForPoison = isInitialEnemy &&
+			var safetyLevelAfter = getCellSafetyLevel(nextCellAfterFire);
+			var isSafe = safetyLevelAfter >= SAFE_LEVEL;
+			var isSafeForPoison = target === initialEnemy &&
 				(arm === CHIP_TOXIN || arm === CHIP_VENOM) &&
-				!isPoisoned(isInitialEnemy) &&
-				enemyPathLengthAfter >= ((getTotalMP(initialEnemy) - mpDecrease) * 2 / 3);
-			var isNotWorst = enemyPathLengthAfter >= enemyPathLength;
-			var path = getPath(startCell, nextCell);
-			var inWay = path !== null && inArray(path, cellToFire);
+				!isPoisoned(initialEnemy) &&
+				safetyLevelAfter >= 60;
+			var isNotWorst = safetyLevelAfter >= safetyLevel;
 
 			decreaseLogIndent();
 			logDetail('nextCell: ' + nextCell);
@@ -782,13 +779,12 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 			logDetail('availableMP: ' + availableMP);
 			logDetail('nextCellAfterFire: ' + nextCell);
 			logDetail(
-				(isSafe ? '' : 'not ') + 'safe (' + enemyPathLengthAfter + '), ' +
+				(isSafe ? '' : 'not ') + 'safe (' + safetyLevelAfter + '), ' +
 				(isSafeForPoison ? '' : 'not ') + 'safe for poison, ' +
-				(isNotWorst ? 'not ' : '') + 'worst, ' +
-				(inWay ? '' : 'not ') + 'in way'
+				(isNotWorst ? 'not ' : '') + 'worst, '
 			);
 
-			should = isSafe || isNotWorst || inWay;
+			should = isSafe || isSafeForPoison || isNotWorst;
 		}
 	}
 

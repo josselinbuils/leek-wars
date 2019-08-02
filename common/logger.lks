@@ -8,7 +8,6 @@ function decreaseLogIndent() {
 	logIndent--;
 }
 
-
 function logDetail(str) {
 	str = '  ↳ ' + str;
 
@@ -17,6 +16,26 @@ function logDetail(str) {
 	}
 
 	debug(str);
+}
+
+function logDetailE(str) {
+	str = '  ↳ ' + str;
+
+	for (var i = 0; i < logIndent; i++) {
+		str = '  ' + str;
+	}
+
+	debugC(str, COLOR_RED);
+}
+
+function logDetailW(str) {
+	str = '  ↳ ' + str;
+
+	for (var i = 0; i < logIndent; i++) {
+		str = '  ' + str;
+	}
+
+	debugC(str, getColor(255, 110, 0));
 }
 
 function logInfo(str) {
