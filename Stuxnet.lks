@@ -9,6 +9,7 @@ function Stuxnet() {
 	var enemy = getNearestLeekEnemy();
 	var hasFired = false;
 	var initialEnemy = enemy;
+	var isInitialEnemy = enemy === initialEnemy;
 	var isEnemyPoisoner = getMagic(enemy) > getStrength(enemy);
 	var shouldProtect = !isEnemyPoisoner || safeCount(getDangerousEnemies()) > 3;
 	var me = getLeek();
@@ -57,6 +58,12 @@ function Stuxnet() {
 		) {
 			arm = CHIP_WALL;
 			target = me;
+		} else if (
+			shouldTry() &&
+			isInitialEnemy &&
+			canFireWithChip(CHIP_TOXIN, enemy)
+		) {
+			arm = CHIP_TOXIN;
 		} else if (
 			shouldTry() && canFireWithChip(CHIP_VENOM, enemy)
 		) {
