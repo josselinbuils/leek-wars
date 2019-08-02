@@ -385,7 +385,8 @@ function getEnemyPathLengthToFireOnCell(cell, enemy) {
 }
 
 function getEnemyRefArms(enemy) {
-	var cacheKey = 'refArms-' + enemy;
+	// Same name for all bulbs that have the same type
+	var cacheKey = 'refArms-' + getName(enemy);
 
 	if (hasInStore(cacheKey)) {
 		return jsonDecode(getInStore(cacheKey));
@@ -482,8 +483,6 @@ function getNearestLeekEnemy() {
 function getNextCell(enemy, startCell, availableMP, shouldMark) {
 	var debugOperations = monitorOperations();
 	var nextCell = startCell;
-	var debugOperationsInt;
-
 	logInfo('getNextCell()');
 	logDetail('enemy: ' + getEnemyName(enemy));
 	logDetail('startCell: ' + startCell);
@@ -507,7 +506,7 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 			startCell, availableMP
 		);
 
-		debugOperationsInt = monitorIntermediateOperations(
+		var debugOperationsInt = monitorIntermediateOperations(
 			'iterates cells safety (' + safeCount(reachableCells) +
 			' entries)'
 		);
@@ -771,6 +770,8 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 				(arm === CHIP_TOXIN || arm === CHIP_VENOM) &&
 				!isPoisoned(initialEnemy) &&
 				safetyLevelAfter >= 60;
+			var isSafeAfterInactivity = turnsWithoutFire >= 1 &&
+				safetyLevelAfter >= 70;
 			var isNotWorst = safetyLevelAfter >= safetyLevel;
 
 			decreaseLogIndent();
@@ -781,10 +782,11 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 			logDetail(
 				(isSafe ? '' : 'not ') + 'safe (' + safetyLevelAfter + '), ' +
 				(isSafeForPoison ? '' : 'not ') + 'safe for poison, ' +
-				(isNotWorst ? 'not ' : '') + 'worst, '
+				(isSafeAfterInactivity ? '' : 'not ') + 'safe after inactivity, ' +
+				(isNotWorst ? 'not ' : '') + 'worst'
 			);
 
-			should = isSafe || isSafeForPoison || isNotWorst;
+			should = isSafe || isSafeForPoison || isSafeAfterInactivity || isNotWorst;
 		}
 	}
 
