@@ -333,7 +333,9 @@ function getEnemyRefArms(enemy) {
 	}
 
 	var refChip = getMaxRangeChip(getEnemyFightChips(enemy));
-	var refWeapon = getMaxRangeWeapon(getWeapons(enemy));
+	var refWeapon = !isSummon(enemy) ?
+		getMaxRangeWeapon(getWeapons(enemy)) :
+		null;
 	var refArms = ['chip': refChip, 'weapon': refWeapon];
 
 	if (refChip !== null || refWeapon !== null) {
@@ -428,7 +430,7 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 	logDetail('startCell: ' + startCell);
 	logDetail('availableMP: ' + availableMP);
 
-	var cacheKey = 'nextCell-' + enemy + '-' + startCell + '-' + availableMP;
+	var cacheKey = 'tmp-nextCell-' + enemy + '-' + startCell + '-' + availableMP;
 
 	if (hasInStore(cacheKey)) {
 		logDetail('use cache');
@@ -639,6 +641,14 @@ function hasBeenAffected() {
 
 function initTurn() {
 	clearStore();
+
+	if (getTurn() === 1) {
+		logInfo('Computes enemies ref arms');
+
+		arrayIter(getAliveEnemies(), function(enemy) {
+			getEnemyRefArms(enemy);
+		});
+	}
 }
 
 function isPoisoned(leek) {
@@ -684,6 +694,7 @@ function move(enemy) {
 
 	if (nextCell === null) {
 		debugE('Unable to find the next cell, do not move');
+		decreaseLogIndent();
 		return;
 	}
 
@@ -691,7 +702,10 @@ function move(enemy) {
 
 	decreaseLogIndent();
 	logDetail('to ' + nextCell + ' (' + (isSafeCell(nextCell) ? '' : 'not ') + 'safe: ' + pathLength + ')');
-	moveTowardCell(nextCell);
+
+	if (nextCell !== getCell()) {
+		moveTowardCell(nextCell);
+	}
 	debugOperations();
 }
 

@@ -1,7 +1,11 @@
 global store = [];
 
 function clearStore() {
-	store = [];
+	for (var key : var value in store) {
+		if (contains(key, 'tmp-')) {
+			removeKey(store, key);
+		}
+	}
 }
 
 function getInStore(key) {
