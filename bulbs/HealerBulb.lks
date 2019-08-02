@@ -1,0 +1,61 @@
+include('../common/fight');
+
+function HealerBulb() {
+	var enemy = getNearestLeekEnemy();
+	var initialEnemy = enemy;
+	var me = getLeek();
+	var optimizer = Optimizer();
+	var summoner = getSummoner();
+
+	while (true) {
+		resetLogIndent();
+		logInfo('');
+
+		var chip = null;
+		var shouldTry = optimizer();
+		var target = getLife(me) < (getTotalLife(me) / 2) ?
+			me :
+			summoner;
+
+		debug('life: ' + getLife());
+		debug('MP: ' + getMP());
+		debug('TP: ' + getTP());
+
+		if (
+			shouldTry() && canFireWithChip(CHIP_VACCINE, target)
+		) {
+			chip = CHIP_VACCINE;
+		} else if (
+			shouldTry() && canFireWithChip(CHIP_CURE, target)
+		) {
+			chip = CHIP_CURE;
+		} else if (
+			shouldTry() &&
+			target === summoner &&
+			canFireWithChip(CHIP_DRIP, target)
+		) {
+			chip = CHIP_DRIP;
+		} else if (
+			shouldTry() && canFireWithChip(CHIP_BANDAGE, target)
+		) {
+			chip = CHIP_BANDAGE;
+		} else {
+			if (getMP() > 0) {
+				var targetCell = getCellToFireWithChip(
+					CHIP_CURE, summoner
+				);
+				debug('move: ' + moveTowardCell(targetCell));
+			}
+			break;
+		}
+
+		if (chip !== null) {
+			var result = fire(chip, target);
+			var hasError = result[1];
+
+			if (hasError) {
+				break;
+			}
+		}
+	}
+}

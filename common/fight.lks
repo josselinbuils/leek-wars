@@ -5,6 +5,7 @@ include('utils');
 
 // TODO optimizes area arms management to reach as enemies as possible
 // TODO manage arm areas for ref arms
+// TODO Use safety levels: sort cells by min enemy path length, use the less worth
 
 global FIGHT_EFFECTS = [EFFECT_DAMAGE, EFFECT_POISON];
 global MIN_DIRECT_CELLS_AROUND = 2;
@@ -855,7 +856,11 @@ function summonBulb(bulb, ai, enemy) {
 	});
 
 	if (safeCount(possibleCells) > 0) {
-		showResult(summon(bulb, getClosestCellTo(possibleCells, enemyCell), ai));
+		var targetCell = bulb === CHIP_HEALER_BULB ?
+			getFarthestCellFrom(possibleCells, enemyCell) :
+			getClosestCellTo(possibleCells, enemyCell);
+
+		showResult(summon(bulb, targetCell, ai));
 	} else {
 		debugW('No cell available for bulb :(');
 	}
