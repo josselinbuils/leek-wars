@@ -436,18 +436,20 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 		logDetail('use cache');
 		nextCell = getInStore(cacheKey);
 
-		if (shouldMark && isSafeCell(nextCell)) {
+		if (shouldMark && isSafeCell(nextCell, 0)) {
 			mark([nextCell], getColor(255, 128, 210));
 		}
 	} else if (availableMP > 0) {
 		var enemyCell = getCell(enemy);
 		var reachableCells = getReachableCells(startCell, availableMP);
 
-		debugOperationsInt = monitorIntermediateOperations('arrayFilter: isSafeCell');
+		debugOperationsInt = monitorIntermediateOperations(
+			'arrayFilter: isSafeCell (' + count(reachableCells) + ' entries)'
+		);
 		var safeReachableCells = arrayFilter(
 			reachableCells,
 			function(cell) {
-				return isSafeCell(cell);
+				return isSafeCell(cell, 0);
 			}
 		);
 		debugOperationsInt();
@@ -469,11 +471,14 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 				var cellsAround = getDirectReachableCellsAround(cell);
 				return safeCount(cellsAround) >= MIN_DIRECT_CELLS_AROUND;
 			});
+			var minSafetyCellsCount = safeCount(minSafetyCells);
 
-			if (safeCount(minSafetyCells) > 0) {
+			if (minSafetyCellsCount > 0) {
 				logDetail('min safety cells found');
 
-				debugOperationsInt = monitorIntermediateOperations('arrayFoldLeft');
+				debugOperationsInt = monitorIntermediateOperations(
+					'arrayFoldLeft (' + minSafetyCellsCount + ' entries)'
+				);
 
 				var firstCell = shift(minSafetyCells);
 				var pathLengthSafestCell = getEnemyPathLengthToFireOnCell(
@@ -660,23 +665,26 @@ function isPoisoned(leek) {
 	return false;
 }
 
-function isSafeCell(cell) {
+function isSafeCell(cell, mpDecrease) {
 	var cellsAround = getDirectReachableCellsAround(cell);
 
 	if (safeCount(cellsAround) < MIN_DIRECT_CELLS_AROUND) {
 		return false;
 	}
 
-	return arrayFoldLeft(getDangerousEnemies(), function(isSafe, enemy) {
-		if (!isSafe) {
-			return false;
-		}
+	for (var enemy in getDangerousEnemies()) {
 		var enemyPathLength = getEnemyPathLengthToFireOnCell(
 			cell, enemy
 		);
-		return enemyPathLength === null ||
-			enemyPathLength > getTotalMP(enemy);
-	}, true);
+
+		if (
+			enemyPathLength !== null ||
+			enemyPathLength <= (getTotalMP(enemy) - mpDecrease)
+		) {
+			return false;
+		}
+	}
+	return true;
 }
 
 function move(enemy) {
@@ -701,7 +709,7 @@ function move(enemy) {
 	var pathLength = getEnemyPathLengthToFireOnCell(nextCell, enemy);
 
 	decreaseLogIndent();
-	logDetail('to ' + nextCell + ' (' + (isSafeCell(nextCell) ? '' : 'not ') + 'safe: ' + pathLength + ')');
+	logDetail('to ' + nextCell + ' (' + (isSafeCell(nextCell, 0) ? '' : 'not ') + 'safe: ' + pathLength + ')');
 
 	if (nextCell !== getCell()) {
 		moveTowardCell(nextCell);
@@ -758,11 +766,11 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 			var enemyPathLengthAfter = getEnemyPathLengthToFireOnCell(
 				nextCellAfterFire, initialEnemy
 			);
-			var isSafe = isSafeCell(nextCellAfterFire);
+			var isSafe = isSafeCell(nextCellAfterFire, mpDecrease);
 			var isSafeForPoison = isInitialEnemy &&
 				(arm === CHIP_TOXIN || arm === CHIP_VENOM) &&
 				!isPoisoned(isInitialEnemy) &&
-				enemyPathLengthAfter >= (getTotalMP(initialEnemy) * 2 / 3);
+				enemyPathLengthAfter >= ((getTotalMP(initialEnemy) - mpDecrease) * 2 / 3);
 			var isNotWorst = enemyPathLengthAfter >= enemyPathLength;
 			var path = getPath(startCell, nextCell);
 			var inWay = path !== null && inArray(path, cellToFire);
