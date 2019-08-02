@@ -679,7 +679,7 @@ function isSafeCell(cell, mpDecrease) {
 		);
 
 		if (
-			enemyPathLength !== null ||
+			enemyPathLength !== null &&
 			enemyPathLength <= (getTotalMP(enemy) - mpDecrease)
 		) {
 			return false;
