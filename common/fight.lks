@@ -148,6 +148,8 @@ function getArmName(arm) {
 
 function getCellSafetyLevel(cell) {
 	var level = 0;
+	var highlyProtectedAgainstBulbs = true;
+	var highlyProtectedAgainstLeeks = true;
 	var protectedAgainstBulbs = true;
 	var protectedAgainstLeeks = true;
 	var middlyProtectedAgainstBulbs = true;
@@ -161,32 +163,44 @@ function getCellSafetyLevel(cell) {
 		if (enemyPathLength !== null) {
 			var enemyMP = getTotalMP(enemy);
 
-			if (enemyPathLength <= enemyMP) {
+			if (enemyPathLength <= (enemyMP * 4 / 3)) {
 				if (isSummon(enemy)) {
-					protectedAgainstBulbs = false;
+					highlyProtectedAgainstBulbs = false;
 				} else {
-					protectedAgainstLeeks = false;
+					highlyProtectedAgainstLeeks = false;
 				}
 
-				if (enemyPathLength <= (enemyMP * 2 / 3)) {
+				if (enemyPathLength <= enemyMP) {
 					if (isSummon(enemy)) {
-						middlyProtectedAgainstBulbs = false;
+						protectedAgainstBulbs = false;
 					} else {
-						middlyProtectedAgainstLeeks = false;
+						protectedAgainstLeeks = false;
 					}
-				}
 
-				if (
-					!middlyProtectedAgainstBulbs &&
-					!middlyProtectedAgainstLeeks
-				) {
-					break;
+					if (enemyPathLength <= (enemyMP * 2 / 3)) {
+						if (isSummon(enemy)) {
+							middlyProtectedAgainstBulbs = false;
+						} else {
+							middlyProtectedAgainstLeeks = false;
+						}
+
+						if (
+							!middlyProtectedAgainstBulbs &&
+							!middlyProtectedAgainstLeeks
+						) {
+							break;
+						}
+					}
 				}
 			}
 		}
 	}
 
-	if (protectedAgainstBulbs && protectedAgainstLeeks) {
+	if (highlyProtectedAgainstBulbs && highlyProtectedAgainstLeeks) {
+		level = 120;
+	} else if (protectedAgainstBulbs && highlyProtectedAgainstLeeks) {
+		level = 110;
+	} else if (protectedAgainstBulbs && protectedAgainstLeeks) {
 		level = 100;
 	} else if (middlyProtectedAgainstBulbs && protectedAgainstLeeks) {
 		level = 80;
@@ -714,7 +728,11 @@ function move(enemy) {
 	}
 
 	decreaseLogIndent();
-	logDetail('to ' + nextCell + ' (safety: ' + getCellSafetyLevel(nextCell) + ')');
+	logDetail(
+		'to ' + nextCell +
+		' (safety: ' + getCellSafetyLevel(nextCell) +
+		', path length: ' + getEnemyPathLengthToFireOnCell(nextCell, enemy) + ')'
+	);
 
 	if (nextCell !== getCell()) {
 		moveTowardCell(nextCell);
@@ -765,6 +783,9 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 				initialEnemy, cellToFire, availableMP, false
 			);
 			var safetyLevelAfter = getCellSafetyLevel(nextCellAfterFire);
+			var pathLengthAfter = getEnemyPathLengthToFireOnCell(
+				nextCellAfterFire, initialEnemy
+			);
 			var isSafe = safetyLevelAfter >= SAFE_LEVEL;
 			var isSafeForPoison = target === initialEnemy &&
 				(arm === CHIP_TOXIN || arm === CHIP_VENOM) &&
@@ -780,7 +801,7 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 			logDetail('availableMP: ' + availableMP);
 			logDetail('nextCellAfterFire: ' + nextCell);
 			logDetail(
-				(isSafe ? '' : 'not ') + 'safe (' + safetyLevelAfter + '), ' +
+				(isSafe ? '' : 'not ') + 'safe (' + safetyLevelAfter + ', ' + pathLengthAfter + '), ' +
 				(isSafeForPoison ? '' : 'not ') + 'safe for poison, ' +
 				(isSafeAfterInactivity ? '' : 'not ') + 'safe after inactivity, ' +
 				(isNotWorst ? 'not ' : '') + 'worst'
