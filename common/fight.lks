@@ -591,19 +591,39 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 		}
 		debugOperationsInt();
 
-		if (safeCount(maxSafetyCells) > 0) {
+		var maxSafetyCellsCount = safeCount(maxSafetyCells);
+
+		if (maxSafetyCellsCount > 0) {
+			logDetail(maxSafetyCellsCount + ' cells found with safety ' + maxSafetyLevel);
+
+			var enemyCell = getCell(enemy);
+
 			if (maxSafetyLevel >= SAFE_LEVEL) {
 				nextCell = getClosestCellTo(
-					maxSafetyCells, getCell(enemy)
+					maxSafetyCells, enemyCell
 				);
+
+				if (nextCell === null) {
+					debugE('Error during nextCell computing (safe)');
+					logDetail('maxSafetyCells: ' + maxSafetyCells);
+					logDetail('enemyCell: ' + enemyCell);
+					nextCell = startCell;
+				}
 
 				if (shouldMark) {
 					mark(maxSafetyCells, getColor(255, 128, 210));
 				}
 			} else {
 				nextCell = getFarthestCellFrom(
-					maxSafetyCells, getCell(enemy)
+					maxSafetyCells, enemyCell
 				);
+
+				if (nextCell === null) {
+					debugE('Error during nextCell computing (not safe)');
+					logDetail('maxSafetyCells: ' + maxSafetyCells);
+					logDetail('enemyCell: ' + enemyCell);
+					nextCell = startCell;
+				}
 			}
 		} else {
 			debugW('No cell found');
