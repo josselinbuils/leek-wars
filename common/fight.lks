@@ -395,7 +395,7 @@ function getEnemyPathLengthToFireOnCell(cell, enemy, debug) {
 	var cacheKey = 'tmp-enemy-path-length-' +
 		cell + '-' + enemy;
 
-	if (hasInStore(cacheKey)) {
+	if (!debug && hasInStore(cacheKey)) {
 		return getInStore(cacheKey);
 	}
 
@@ -451,7 +451,7 @@ function getEnemyRefArms(enemy) {
 	var cacheKey = 'refArms-' + getName(enemy);
 
 	if (hasInStore(cacheKey)) {
-		return jsonDecode(getInStore(cacheKey));
+		return getInStore(cacheKey);
 	}
 
 	var refChip = getMaxRangeChip(getEnemyFightChips(enemy));
@@ -473,7 +473,7 @@ function getEnemyRefArms(enemy) {
 		debugE('Unable to retrieve ' + getEnemyName(enemy) + ' ref arms');
 	}
 
-	putInStore(cacheKey, jsonEncode(refArms));
+	putInStore(cacheKey, refArms);
 	return refArms;
 }
 
