@@ -167,12 +167,9 @@ function getCellSafetyLevel(cell, lightMode) {
 	var middlyProtectedAgainstBulbs = true;
 	var middlyProtectedAgainstLeeks = true;
 
-	var enemies = !lightMode ?
-		getDangerousEnemies() : [getNearestLeekEnemy()];
-
-	for (var enemy in enemies) {
+	for (var enemy in getDangerousEnemies()) {
 		var enemyPathLength = getEnemyPathLengthToFireOnCell(
-			cell, enemy, false
+			cell, enemy, false, lightMode
 		);
 
 		if (enemyPathLength !== null) {
@@ -391,9 +388,9 @@ function getEnemyName(enemy) {
 		(isSummon(enemy) ? ('_' + enemy) : '');
 }
 
-function getEnemyPathLengthToFireOnCell(cell, enemy, debug) {
+function getEnemyPathLengthToFireOnCell(cell, enemy, debug, lightMode) {
 	var cacheKey = 'tmp-enemy-path-length-' +
-		cell + '-' + enemy;
+		cell + '-' + enemy + '-' + lightMode;
 
 	if (!debug && hasInStore(cacheKey)) {
 		return getInStore(cacheKey);
@@ -411,13 +408,14 @@ function getEnemyPathLengthToFireOnCell(cell, enemy, debug) {
 	var cellsToFire = [];
 
 	if (refChip !== null) {
-		pushAll(
-			cellsToFire,
-			getCellsToFireWithChipOnCell(refChip, enemy, cell)
-		);
+		var cellsToFireWithChip = lightMode ?
+			getCellsToUseChipOnCell(refChip, cell) :
+			getCellsToFireWithChipOnCell(refChip, enemy, cell);
+
+		pushAll(cellsToFire, cellsToFireWithChip);
 	}
 
-	if (refWeapon !== null) {
+	if (refWeapon !== null && !lightMode) {
 		pushAll(
 			cellsToFire,
 			getCellsToFireWithWeaponOnCell(refWeapon, enemy, cell)
@@ -590,12 +588,12 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 			'iterates cells safety (' + safeCount(reachableCells) +
 			' entries)'
 		);
-		var lightMode = safeCount(reachableCells) > 50;
+		var lightMode = safeCount(reachableCells) > 30;
 		var maxSafetyLevel = 0;
 		var maxSafetyCells = [];
 
 		if (lightMode) {
-			logDetail('use light mode');
+			logDetailW('use light mode');
 		}
 
 		for (var cell in reachableCells) {
@@ -868,7 +866,7 @@ function move(enemy) {
 	}
 
 	var enemyPathLength = getEnemyPathLengthToFireOnCell(
-		nextCell, enemy, true
+		nextCell, enemy, true, false
 	);
 
 	decreaseLogIndent();
@@ -941,7 +939,7 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 				safetyLevel = getCellSafetyLevel(nextCell, false);
 				safetyLevelAfter = getCellSafetyLevel(nextCellAfterFire, false);
 				pathLengthAfter = getEnemyPathLengthToFireOnCell(
-					nextCellAfterFire, initialEnemy, false
+					nextCellAfterFire, initialEnemy, false, false
 				);
 				isSafe = safetyLevelAfter >= SAFE_LEVEL;
 				isSafeForPoison = target === initialEnemy &&
