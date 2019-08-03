@@ -21,12 +21,15 @@ function canFireWithChip(chip, target) {
 
 	if (canFire && target !== getLeek()) {
 		var cellToFire = getCellToFireWithChip(chip, target);
-		var pathlength = getPathLength(getCell(), cellToFire);
 
-		canFire = cellToFire !== null && getMP() >= pathlength;
+		if (cellToFire !== null) {
+			var pathlength = getPathLength(getCell(), cellToFire);
 
-		if (canFire) {
-			canFire = shouldFire(target, chip, cellToFire, pathlength);
+			canFire = getMP() >= pathlength;
+
+			if (canFire) {
+				canFire = shouldFire(target, chip, cellToFire, pathlength);
+			}
 		}
 	}
 
@@ -51,11 +54,13 @@ function canFireWithWeapon(weapon, enemy) {
 
 	if (getTP() >= cost) {
 		var cellToFire = getCellToFireWithWeapon(weapon, enemy);
-		var pathlength = getPathLength(getCell(), cellToFire);
 
-		canFire = cellToFire !== null &&
-			getMP() >= pathlength &&
-			shouldFire(enemy, weapon, cellToFire, pathlength);
+		if (cellToFire !== null) {
+			var pathlength = getPathLength(getCell(), cellToFire);
+
+			canFire = getMP() >= pathlength &&
+				shouldFire(enemy, weapon, cellToFire, pathlength);
+		}
 	}
 
 	decreaseLogIndent();
@@ -320,9 +325,15 @@ function getCellToFireWithChip(chip, target) {
 	} else {
 		cellsToFire = getCellsToFireWithChipOnCell(chip, getLeek(), targetCell);
 		logDetail('getCellsToFireWithChip: ' + arrayConcat([], cellsToFire));
-		cellsToFire = getMinPathCells(cellsToFire);
-		logDetail('getMinPathCells: ' + arrayConcat([], cellsToFire));
-		cellToFire = getFarthestCellFrom(cellsToFire, targetCell);
+
+		if (safeCount(cellsToFire) > 0) {
+			cellsToFire = getMinPathCells(cellsToFire);
+			logDetail('getMinPathCells: ' + arrayConcat([], cellsToFire));
+
+			if (safeCount(cellsToFire) > 0) {
+				cellToFire = getFarthestCellFrom(cellsToFire, targetCell);
+			}
+		}
 	}
 
 	logDetail('cellsToFire: ' + arrayConcat([], cellsToFire));
@@ -338,16 +349,22 @@ function getCellToFireWithWeapon(weapon, enemy) {
 
 	var startCell = getCell();
 	var cellToFire = null;
-	var cells = [];
+	var cellsToFire = [];
 
 	if (canUseWeapon(weapon, enemy)) {
 		cellToFire = startCell;
 	} else {
-		cells = getCellsToFireWithWeaponOnCell(weapon, getLeek(), getCell(enemy));
-		logDetail('getCellsToFireWithWeapon: ' + (cells !== null ? arrayConcat([], cells) : null));
-		cells = getMinPathCells(cells);
-		logDetail('getMinPathCells: ' + (cells !== null ? arrayConcat([], cells) : null));
-		cellToFire = getFarthestCellFrom(cells, getCell(enemy));
+		cellsToFire = getCellsToFireWithWeaponOnCell(weapon, getLeek(), getCell(enemy));
+		logDetail('getCellsToFireWithWeapon: ' + (cellsToFire !== null ? arrayConcat([], cellsToFire) : null));
+
+		if (safeCount(cellsToFire) > 0) {
+			cellsToFire = getMinPathCells(cellsToFire);
+			logDetail('getMinPathCells: ' + arrayConcat([], cellsToFire));
+
+			if (safeCount(cellsToFire) > 0) {
+				cellToFire = getFarthestCellFrom(cellsToFire, getCell(enemy));
+			}
+		}
 	}
 
 	logDetail('startCell: ' + startCell);
@@ -415,12 +432,8 @@ function getEnemyPathLengthToFireOnCell(cell, enemy, debug, lightMode) {
 		pushAll(cellsToFire, cellsToFireWithChip);
 	}
 
-	if (refWeapon !== null) {
-		var cellsToFireWithWeapon = lightMode ?
-			getCellsToUseWeaponOnCell(refWeapon, cell) :
-			getCellsToFireWithWeaponOnCell(refWeapon, enemy, cell);
-
-		pushAll(cellsToFire, cellsToFireWithWeapon);
+	if (refWeapon !== null && !lightMode) {
+		pushAll(cellsToFire, getCellsToFireWithWeaponOnCell(refWeapon, enemy, cell));
 	}
 
 	if (safeCount(cellsToFire) === 0) {
