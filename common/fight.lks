@@ -148,6 +148,17 @@ function getArmName(arm) {
 }
 
 function getCellSafetyLevel(cell) {
+	if (cell === null) {
+		debugE('getCellSafetyLevel: called with null cell');
+		return 0;
+	}
+
+	var cacheKey = 'tmp-safety-' + cell;
+
+	if (hasInStore(cacheKey)) {
+		return getInStore(cacheKey);
+	}
+
 	var level = 0;
 	var highlyProtectedAgainstBulbs = true;
 	var highlyProtectedAgainstLeeks = true;
