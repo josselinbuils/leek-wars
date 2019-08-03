@@ -35,19 +35,19 @@ function Skynet() {
 	var minSafeLife = max(600, totalLife / 2);
 
 	var venomCells = getCellsToFireWithChip(
-		CHIP_VENOM, initialEnemy
+		CHIP_VENOM, me, initialEnemy
 	);
 	mark(venomCells, COLOR_GREEN);
 
 	if (getCooldown(CHIP_TOXIN) === 0) {
 		var toxinCells = getCellsToFireWithChip(
-			CHIP_TOXIN, initialEnemy
+			CHIP_TOXIN, me, initialEnemy
 		);
 		mark(toxinCells, COLOR_BLUE);
 	}
 
 	var flameThrowerCells = getCellsToFireWithWeapon(
-		WEAPON_FLAME_THROWER, initialEnemy
+		WEAPON_FLAME_THROWER, me, initialEnemy
 	);
 	mark(flameThrowerCells, COLOR_RED);
 
