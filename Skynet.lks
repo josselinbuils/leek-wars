@@ -4,8 +4,6 @@ include('common/fight');
 include('common/logger');
 include('common/utils');
 
-// TODO use mp steal to increase safety when it would allow to use a weapon
-
 global hasFiredOnce = false;
 
 function isBadlyPoisoned() {
@@ -25,6 +23,7 @@ function Skynet() {
 	var hasFired = false;
 	var enemy = getNearestLeekEnemy();
 	var initialEnemy = enemy;
+	var initialEnemyCell = getCell(initialEnemy);
 	var isEnemyPoisoner = getMagic(enemy) > getStrength(enemy);
 	var shouldProtect = !isEnemyPoisoner || safeCount(getDangerousEnemies()) > 3;
 	var me = getLeek();
@@ -34,22 +33,22 @@ function Skynet() {
 	var totalLife = getTotalLife();
 	var minSafeLife = max(600, totalLife / 2);
 
-	var venomCells = getCellsToFireWithChip(
-		CHIP_VENOM, me, initialEnemy
-	);
-	mark(venomCells, COLOR_GREEN);
+	//var venomCells = getCellsToFireWithChipOnCell(
+		//CHIP_VENOM, me, initialEnemyCell
+	//);
+	//mark(venomCells, COLOR_GREEN);
 
-	if (getCooldown(CHIP_TOXIN) === 0) {
-		var toxinCells = getCellsToFireWithChip(
-			CHIP_TOXIN, me, initialEnemy
-		);
-		mark(toxinCells, COLOR_BLUE);
-	}
+	//if (getCooldown(CHIP_TOXIN) === 0) {
+		//var toxinCells = getCellsToFireWithChipOnCell(
+			//CHIP_TOXIN, me, initialEnemyCell
+		//);
+		//mark(toxinCells, COLOR_BLUE);
+	//}
 
-	var flameThrowerCells = getCellsToFireWithWeapon(
-		WEAPON_FLAME_THROWER, me, initialEnemy
-	);
-	mark(flameThrowerCells, COLOR_RED);
+	//var flameThrowerCells = getCellsToFireWithWeaponOnCell(
+		//WEAPON_FLAME_THROWER, me, initialEnemyCell
+	//);
+	//mark(flameThrowerCells, COLOR_RED);
 
 	debug('turnsWithoutFire: ' + turnsWithoutFire);
 
@@ -129,6 +128,7 @@ function Skynet() {
 			canFireWithChip(CHIP_BALL_AND_CHAIN, enemy)
 		) {
 			arm = CHIP_BALL_AND_CHAIN;
+			optimizer = Optimizer();
 		} else if (
 			shouldTry() &&
 			isInitialEnemy &&
