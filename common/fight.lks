@@ -415,11 +415,12 @@ function getEnemyPathLengthToFireOnCell(cell, enemy, debug, lightMode) {
 		pushAll(cellsToFire, cellsToFireWithChip);
 	}
 
-	if (refWeapon !== null && !lightMode) {
-		pushAll(
-			cellsToFire,
-			getCellsToFireWithWeaponOnCell(refWeapon, enemy, cell)
-		);
+	if (refWeapon !== null) {
+		var cellsToFireWithWeapon = lightMode ?
+			getCellsToUseWeaponOnCell(refWeapon, cell) :
+			getCellsToFireWithWeaponOnCell(refWeapon, enemy, cell);
+
+		pushAll(cellsToFire, cellsToFireWithWeapon);
 	}
 
 	if (safeCount(cellsToFire) === 0) {
