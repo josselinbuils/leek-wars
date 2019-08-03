@@ -779,6 +779,7 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 
 			// We do not want to take summons into account
 			var initialEnemy = getNearestLeekEnemy();
+			var initialEnemyCell = getCell(initialEnemy);
 			var availableMP = getMP() - pathlength;
 			var nextCell = getNextCell(
 				initialEnemy, getCell(), getMP(), false
@@ -798,7 +799,10 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 				safetyLevelAfter >= 60;
 			var isSafeAfterInactivity = turnsWithoutFire >= 1 &&
 				safetyLevelAfter >= 70;
-			var isNotWorst = safetyLevelAfter >= safetyLevel;
+			var enemyDistance = getDistance(initialEnemyCell, nextCell);
+			var enemyDistanceAfter = getDistance(initialEnemyCell, nextCellAfterFire);
+			var isNotWorst = safetyLevelAfter >= safetyLevel &&
+				enemyDistanceAfter >= enemyDistance;
 
 			decreaseLogIndent();
 			logDetail('nextCell: ' + nextCell);
