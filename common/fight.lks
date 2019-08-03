@@ -882,25 +882,43 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 			var nextCell = getNextCell(
 				initialEnemy, getCell(), getMP(), false
 			);
-			var safetyLevel = getCellSafetyLevel(nextCell);
+			var safetyLevel = 'unknown';
 			var nextCellAfterFire = getNextCell(
 				initialEnemy, cellToFire, availableMP, false
 			);
-			var safetyLevelAfter = getCellSafetyLevel(nextCellAfterFire);
-			var pathLengthAfter = getEnemyPathLengthToFireOnCell(
-				nextCellAfterFire, initialEnemy, false
-			);
-			var isSafe = safetyLevelAfter >= SAFE_LEVEL;
-			var isSafeForPoison = target === initialEnemy &&
-				(arm === CHIP_TOXIN || arm === CHIP_VENOM) &&
-				!isPoisoned(initialEnemy) &&
-				safetyLevelAfter >= 60;
-			var isSafeAfterInactivity = turnsWithoutFire >= 1 &&
-				safetyLevelAfter >= 70;
-			var enemyDistance = getDistance(initialEnemyCell, nextCell);
-			var enemyDistanceAfter = getDistance(initialEnemyCell, nextCellAfterFire);
-			var isNotWorst = safetyLevelAfter >= safetyLevel &&
-				enemyDistanceAfter >= enemyDistance;
+			var safetyLevelAfter = 'unknown';
+			var pathLengthAfter = 'unknown';
+			var isSafe = false;
+			var isSafeForPoison = false;
+			var isSafeAfterInactivity = false;
+			var isNotWorst = false;
+
+			if (nextCell !== null && nextCellAfterFire !== null) {
+				var enemyDistance = getDistance(initialEnemyCell, nextCell);
+				var enemyDistanceAfter = getDistance(initialEnemyCell, nextCellAfterFire);
+
+				safetyLevel = getCellSafetyLevel(nextCell);
+				safetyLevelAfter = getCellSafetyLevel(nextCellAfterFire);
+				pathLengthAfter = getEnemyPathLengthToFireOnCell(
+					nextCellAfterFire, initialEnemy, false
+				);
+				isSafe = safetyLevelAfter >= SAFE_LEVEL;
+				isSafeForPoison = target === initialEnemy &&
+					(arm === CHIP_TOXIN || arm === CHIP_VENOM) &&
+					!isPoisoned(initialEnemy) &&
+					safetyLevelAfter >= 60;
+				isSafeAfterInactivity = turnsWithoutFire >= 1 &&
+					safetyLevelAfter >= 70;
+				isNotWorst = safetyLevelAfter >= safetyLevel &&
+					enemyDistanceAfter >= enemyDistance;
+			} else {
+				if (nextCell === null) {
+					debugE('nextCell null');
+				}
+				if (nextCellAfterFire === null) {
+					debugE('nextCellAfterFire null');
+				}
+			}
 
 			decreaseLogIndent();
 			logDetail('nextCell: ' + nextCell);
