@@ -71,6 +71,7 @@ function Once() {
 }
 
 function Optimizer() {
+	var hasShownReachLog = false;
 	var startIndex = 0;
 	var currentIndex;
 
@@ -82,7 +83,10 @@ function Optimizer() {
 			currentIndex++;
 
 			if (getOperations() > (OPERATIONS_LIMIT * 70 / 100)) {
-				debugE('Oparations limit reached');
+				if (!hasShownReachLog) {
+					debugE('Oparations limit reached on turn ' + getTurn());
+					hasShownReachLog = true;
+				}
 				return false;
 			}
 			if (currentIndex >= startIndex) {
