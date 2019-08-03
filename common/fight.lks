@@ -147,7 +147,7 @@ function getArmName(arm) {
 		getWeaponName(arm);
 }
 
-function getCellSafetyLevel(cell) {
+function getCellSafetyLevel(cell, lightMode) {
 	if (cell === null) {
 		debugE('getCellSafetyLevel: called with null cell');
 		return 0;
@@ -167,7 +167,10 @@ function getCellSafetyLevel(cell) {
 	var middlyProtectedAgainstBulbs = true;
 	var middlyProtectedAgainstLeeks = true;
 
-	for (var enemy in getDangerousEnemies()) {
+	var enemies = !lightMode ?
+		getDangerousEnemies() : [getNearestLeekEnemy()];
+
+	for (var enemy in enemies) {
 		var enemyPathLength = getEnemyPathLengthToFireOnCell(
 			cell, enemy, false
 		);
@@ -574,7 +577,7 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 
 		if (
 			shouldMark &&
-			getCellSafetyLevel(nextCell) >= SAFE_LEVEL
+			getCellSafetyLevel(nextCell, false) >= SAFE_LEVEL
 		) {
 			mark([nextCell], getColor(255, 128, 210));
 		}
@@ -587,11 +590,16 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 			'iterates cells safety (' + safeCount(reachableCells) +
 			' entries)'
 		);
+		var lightMode = safeCount(reachableCells) > 50;
 		var maxSafetyLevel = 0;
 		var maxSafetyCells = [];
 
+		if (lightMode) {
+			logDetail('use light mode');
+		}
+
 		for (var cell in reachableCells) {
-			var safetyLevel = getCellSafetyLevel(cell);
+			var safetyLevel = getCellSafetyLevel(cell, lightMode);
 
 			if (safetyLevel > maxSafetyLevel) {
 				maxSafetyLevel = safetyLevel;
@@ -866,7 +874,7 @@ function move(enemy) {
 	decreaseLogIndent();
 	logDetail(
 		'to ' + nextCell +
-		' (safety: ' + getCellSafetyLevel(nextCell) +
+		' (safety: ' + getCellSafetyLevel(nextCell, false) +
 		', path length: ' + enemyPathLength + ')'
 	);
 
@@ -930,8 +938,8 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 				var enemyDistance = getDistance(initialEnemyCell, nextCell);
 				var enemyDistanceAfter = getDistance(initialEnemyCell, nextCellAfterFire);
 
-				safetyLevel = getCellSafetyLevel(nextCell);
-				safetyLevelAfter = getCellSafetyLevel(nextCellAfterFire);
+				safetyLevel = getCellSafetyLevel(nextCell, false);
+				safetyLevelAfter = getCellSafetyLevel(nextCellAfterFire, false);
 				pathLengthAfter = getEnemyPathLengthToFireOnCell(
 					nextCellAfterFire, initialEnemy, false
 				);
