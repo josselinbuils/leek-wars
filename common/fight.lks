@@ -101,8 +101,16 @@ function fire(arm, target) {
 		}
 
 		if (
-			(isChip(arm) && !canUseChip(arm, target)) ||
-			(isWeapon(arm) && !canUseWeapon(arm, target))
+			(
+				isChip(arm) &&
+				!canUseChip(arm, target) &&
+				getChipArea(arm) !== AREA_POINT
+			) || (
+				isWeapon(arm) &&
+				!canUseWeapon(arm, target) &&
+				getChipArea(arm) !== AREA_LASER_LINE &&
+				getChipArea(arm) !== AREA_POINT
+			)
 		) {
 			var targetCell = getCell(target);
 			var targetableDeltaCells = getTargetableDeltaCells(
@@ -156,7 +164,7 @@ function getCellSafetyLevel(cell) {
 
 	for (var enemy in getDangerousEnemies()) {
 		var enemyPathLength = getEnemyPathLengthToFireOnCell(
-			cell, enemy
+			cell, enemy, false
 		);
 
 		if (enemyPathLength !== null) {
@@ -222,8 +230,7 @@ function getCellSafetyLevel(cell) {
 	return level;
 }
 
-function getCellsToFireWithChip(chip, thrower, target) {
-	var targetCell = getCell(target);
+function getCellsToFireWithChipOnCell(chip, thrower, targetCell) {
 	var ignoredCells = [getCell(thrower)];
 	var cellsToFire = ensureArray(
 		getCellsToUseChipOnCell(chip, targetCell, ignoredCells)
@@ -231,7 +238,6 @@ function getCellsToFireWithChip(chip, thrower, target) {
 
 	if (getChipArea(chip) !== AREA_POINT) {
 		var targetableDeltaCells = getTargetableDeltaCells(targetCell, chip);
-		var areaFireCells = [];
 
 		for (var cell in targetableDeltaCells) {
 			var newCellsToFire = ensureArray(
@@ -249,9 +255,8 @@ function getCellsToFireWithChip(chip, thrower, target) {
 	return cellsToFire;
 }
 
-function getCellsToFireWithWeapon(weapon, shooter, target) {
+function getCellsToFireWithWeaponOnCell(weapon, shooter, targetCell) {
 	var startCell = getCell(shooter);
-	var targetCell = getCell(target);
 	var ignoredCells = [startCell];
 	var otherEnemiesCells = [];
 	var weaponArea = getWeaponArea(weapon);
@@ -263,10 +268,7 @@ function getCellsToFireWithWeapon(weapon, shooter, target) {
 			getAliveEnemies() :
 			getAliveAllies();
 
-		var otherAliveEnemies = arrayFilter(aliveEnemies, function(aliveEnemy) {
-			return aliveEnemy !== shooter;
-		});
-		otherEnemiesCells = arrayMap(otherAliveEnemies, function(otherEnemy) {
+		otherEnemiesCells = arrayMap(aliveEnemies, function(otherEnemy) {
 			return getCell(otherEnemy);
 		});
 		pushAll(ignoredCells, ensureArray(otherEnemiesCells));
@@ -279,7 +281,6 @@ function getCellsToFireWithWeapon(weapon, shooter, target) {
 
 	if (weaponArea !== AREA_LASER_LINE && weaponArea !== AREA_POINT) {
 		var targetableDeltaCells = getTargetableDeltaCells(targetCell, weapon);
-		var areaFireCells = [];
 
 		for (var cell in targetableDeltaCells) {
 			var newCellsToFire = ensureArray(
@@ -312,7 +313,7 @@ function getCellToFireWithChip(chip, target) {
 	if (canUseChip(chip, target)) {
 		cellToFire = startCell;
 	} else {
-		cellsToFire = getCellsToFireWithChip(chip, getLeek(), target);
+		cellsToFire = getCellsToFireWithChipOnCell(chip, getLeek(), targetCell);
 		logDetail('getCellsToFireWithChip: ' + arrayConcat([], cellsToFire));
 		cellsToFire = getMinPathCells(cellsToFire);
 		logDetail('getMinPathCells: ' + arrayConcat([], cellsToFire));
@@ -337,7 +338,7 @@ function getCellToFireWithWeapon(weapon, enemy) {
 	if (canUseWeapon(weapon, enemy)) {
 		cellToFire = startCell;
 	} else {
-		cells = getCellsToFireWithWeapon(weapon, getLeek(), enemy);
+		cells = getCellsToFireWithWeaponOnCell(weapon, getLeek(), getCell(enemy));
 		logDetail('getCellsToFireWithWeapon: ' + (cells !== null ? arrayConcat([], cells) : null));
 		cells = getMinPathCells(cells);
 		logDetail('getMinPathCells: ' + (cells !== null ? arrayConcat([], cells) : null));
@@ -382,8 +383,7 @@ function getEnemyName(enemy) {
 		(isSummon(enemy) ? ('_' + enemy) : '');
 }
 
-function getEnemyPathLengthToFireOnCell(cell, enemy) {
-	var me = getLeek();
+function getEnemyPathLengthToFireOnCell(cell, enemy, debug) {
 	var enemyCell = getCell(enemy);
 	var refArms = getEnemyRefArms(enemy);
 	var refChip = refArms['chip'];
@@ -396,11 +396,17 @@ function getEnemyPathLengthToFireOnCell(cell, enemy) {
 	var cellsToFire = [];
 
 	if (refChip !== null) {
-		pushAll(cellsToFire, getCellsToFireWithChip(refChip, enemy, me));
+		pushAll(
+			cellsToFire,
+			getCellsToFireWithChipOnCell(refChip, enemy, cell)
+		);
 	}
 
 	if (refWeapon !== null) {
-		pushAll(cellsToFire, getCellsToFireWithWeapon(refWeapon, enemy, me));
+		pushAll(
+			cellsToFire,
+			getCellsToFireWithWeaponOnCell(refWeapon, enemy, cell)
+		);
 	}
 
 	if (safeCount(cellsToFire) === 0) {
@@ -408,6 +414,18 @@ function getEnemyPathLengthToFireOnCell(cell, enemy) {
 	}
 
 	var cellToFire = getClosestCellTo(cellsToFire, enemyCell);
+
+	if (debug) {
+		mark(cellsToFire, getColor(255, 100, 100));
+
+		var weaponArea = getWeaponArea(refWeapon);
+
+		if (weaponArea !== AREA_LASER_LINE && weaponArea !== AREA_POINT) {
+			mark(getTargetableDeltaCells(cell, refWeapon), COLOR_BLUE);
+		}
+		mark([cellToFire], COLOR_RED);
+	}
+
 	return getPathLength(enemyCell, cellToFire);
 }
 
@@ -447,10 +465,10 @@ function getMaxRangeChip(chips) {
 		return null;
 	}
 
-	var firstChip = shift(chips);
-	var maxRange = getChipMaxRange(firstChip);
+	var maxRangeChip = null;
+	var maxRange = 0;
 
-	return arrayFoldLeft(chips, function(maxRangeChip, chip) {
+	for (var chip in chips) {
 		var chipMaxRange = getChipMaxRange(chip);
 		var chipArea = getChipArea(chip);
 
@@ -463,11 +481,11 @@ function getMaxRangeChip(chips) {
 		}
 
 		if (chipMaxRange > maxRange) {
+			maxRangeChip = chip;
 			maxRange = chipMaxRange;
-			return chip;
 		}
-		return maxRangeChip;
-	}, firstChip);
+	}
+	return maxRangeChip;
 }
 
 function getMaxRangeWeapon(weapons) {
@@ -475,10 +493,10 @@ function getMaxRangeWeapon(weapons) {
 		return null;
 	}
 
-	var firstWeapon = shift(weapons);
-	var maxRange = getWeaponMaxRange(firstWeapon);
+	var maxRangeWeapon = null;
+	var maxRange = 0;
 
-	return arrayFoldLeft(weapons, function(maxRangeWeapon, weapon) {
+	for (var weapon in weapons) {
 		var weaponMaxRange = getWeaponMaxRange(weapon);
 		var weaponArea = getWeaponArea(weapon);
 
@@ -491,11 +509,11 @@ function getMaxRangeWeapon(weapons) {
 		}
 
 		if (weaponMaxRange > maxRange) {
+			maxRangeWeapon = weapon;
 			maxRange = weaponMaxRange;
-			return weapon;
 		}
-		return maxRangeWeapon;
-	}, firstWeapon);
+	}
+	return maxRangeWeapon;
 }
 
 function getNearestLeekEnemy() {
@@ -597,7 +615,7 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 	return nextCell;
 }
 
-function getTargetableDeltaCells(targetCell, arm) {
+function getAreaImpactedCells(targetCell, arm) {
 	var deltas;
 	var x = getCellX(targetCell);
 	var y = getCellY(targetCell);
@@ -665,9 +683,46 @@ function getTargetableDeltaCells(targetCell, arm) {
 
 	return ensureArray(
 		arrayFilter(deltaCells, function(cell) {
-			return cell !== null && !isObstacle(cell);
+			return cell !== null;
 		})
 	);
+}
+
+function getTargetableDeltaCells(targetCell, arm) {
+	var range = 0;
+	var targetableCells = [];
+	var x = getCellX(targetCell);
+	var y = getCellY(targetCell);
+	var area = isChip(arm) ?
+		getChipArea(arm) :
+		getWeaponArea(arm);
+
+	if (area === AREA_CIRCLE_1) {
+		range = 1;
+	} else if (area === AREA_CIRCLE_2) {
+		range = 2;
+	} else if (area === AREA_CIRCLE_3) {
+		range = 3;
+	} else {
+		debugE('Invalid arm area: ' + getArmName(arm) + ' ' + area);
+		return [];
+	}
+
+	for (var i = (x - range); i <= (x + range); i++) {
+		for (var j = (y - range); j <= (y + range); j++) {
+			var cell = getCellFromXY(i, j);
+
+			if (cell !== null && !isObstacle(cell)) {
+				var impactedCells = getAreaImpactedCells(cell, arm);
+
+				if (inArray(impactedCells, targetCell)) {
+					push(targetableCells, cell);
+				}
+			}
+		}
+	}
+
+	return targetableCells;
 }
 
 function getTargetEnemy(weapon, enemy) {
@@ -758,11 +813,15 @@ function move(enemy) {
 		return;
 	}
 
+	var enemyPathLength = getEnemyPathLengthToFireOnCell(
+		nextCell, enemy, true
+	);
+
 	decreaseLogIndent();
 	logDetail(
 		'to ' + nextCell +
 		' (safety: ' + getCellSafetyLevel(nextCell) +
-		', path length: ' + getEnemyPathLengthToFireOnCell(nextCell, enemy) + ')'
+		', path length: ' + enemyPathLength + ')'
 	);
 
 	if (nextCell !== getCell()) {
@@ -816,7 +875,7 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 			);
 			var safetyLevelAfter = getCellSafetyLevel(nextCellAfterFire);
 			var pathLengthAfter = getEnemyPathLengthToFireOnCell(
-				nextCellAfterFire, initialEnemy
+				nextCellAfterFire, initialEnemy, false
 			);
 			var isSafe = safetyLevelAfter >= SAFE_LEVEL;
 			var isSafeForPoison = target === initialEnemy &&
