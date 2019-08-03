@@ -4,7 +4,6 @@ include('store');
 include('utils');
 
 // TODO optimizes area arms management to reach as enemies as possible
-// TODO take into account enmy arm areas when computing enemy path length!
 
 global FIGHT_EFFECTS = [EFFECT_DAMAGE, EFFECT_POISON];
 global MIN_DIRECT_CELLS_AROUND = 2;
@@ -384,12 +383,8 @@ function getEnemyName(enemy) {
 }
 
 function getEnemyPathLengthToFireOnCell(cell, enemy) {
+	var me = getLeek();
 	var enemyCell = getCell(enemy);
-	var alliesCells = ensureArray(
-		arrayMap(getAliveAllies(), function(ally) {
-			return getCell(ally);
-		})
-	);
 	var refArms = getEnemyRefArms(enemy);
 	var refChip = refArms['chip'];
 	var refWeapon = refArms['weapon'];
@@ -401,17 +396,11 @@ function getEnemyPathLengthToFireOnCell(cell, enemy) {
 	var cellsToFire = [];
 
 	if (refChip !== null) {
-		var chipCells = ensureArray(
-			getCellsToUseChipOnCell(refChip, cell, alliesCells)
-		);
-		pushAll(cellsToFire, chipCells);
+		pushAll(cellsToFire, getCellsToFireWithChip(refChip, enemy, me));
 	}
 
 	if (refWeapon !== null) {
-		var weaponCells = ensureArray(
-			getCellsToUseWeaponOnCell(refWeapon, cell, alliesCells)
-		);
-		pushAll(cellsToFire, weaponCells);
+		pushAll(cellsToFire, getCellsToFireWithWeapon(refWeapon, enemy, me));
 	}
 
 	if (safeCount(cellsToFire) === 0) {
