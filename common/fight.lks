@@ -604,9 +604,10 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 				);
 
 				if (nextCell === null) {
-					debugE('Error during nextCell computing (safe)');
-					logDetail('maxSafetyCells: ' + maxSafetyCells);
-					logDetail('enemyCell: ' + enemyCell);
+					debugE(
+						'getNextCell: nextCell null (safe), maxSafetyCells: ' +
+						maxSafetyCells + ', enemyCell: ' + enemyCell
+					);
 					nextCell = startCell;
 				}
 
@@ -619,14 +620,15 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 				);
 
 				if (nextCell === null) {
-					debugE('Error during nextCell computing (not safe)');
-					logDetail('maxSafetyCells: ' + maxSafetyCells);
-					logDetail('enemyCell: ' + enemyCell);
+					debugE(
+						'getNextCell: nextCell null (not safe), maxSafetyCells: ' +
+						maxSafetyCells + ', enemyCell: ' + enemyCell
+					);
 					nextCell = startCell;
 				}
 			}
 		} else {
-			debugW('No cell found');
+			debugW('No cell found, reachableCells: ' + reachableCells);
 		}
 
 		putInStore(cacheKey, nextCell);
