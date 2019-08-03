@@ -215,6 +215,11 @@ function getCellSafetyLevel(cell) {
 	if (safeCount(cellsAround) < MIN_DIRECT_CELLS_AROUND) {
 		level -= 20;
 	}
+
+	if (isBorderCell(cell)) {
+		level -= 20;
+	}
+
 	return level;
 }
 
