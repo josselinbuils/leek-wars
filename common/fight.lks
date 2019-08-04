@@ -479,12 +479,6 @@ function getEnemyPathLengthToFireOnCell(cell, enemy, debug) {
 
 	if (debug) {
 		mark(cellsToFire, getColor(255, 100, 100));
-
-		var weaponArea = getWeaponArea(refWeapon);
-
-		if (weaponArea !== AREA_LASER_LINE && weaponArea !== AREA_POINT) {
-			mark(getTargetableDeltaCells(cell, refWeapon), COLOR_BLUE);
-		}
 		mark([cellToFire], COLOR_RED);
 	}
 
@@ -654,7 +648,9 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 					MAX_CELLS_COUNT + ' farthest'
 				);
 				var sortedReachableCells = sortByDistanceDesc(reachableCells, enemyCell);
+				// TODO optimizes this
 				reachableCells = subArray(sortedReachableCells, 0, MAX_CELLS_COUNT - 1);
+				reachableCells = sortByDistanceAsc(reachableCells, enemyCell);
 			}
 		}
 
@@ -677,10 +673,7 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 				push(maxSafetyCells, cell);
 			}
 
-			if (
-				safetyLevel >= 110 ||
-				(i >= 10 && safetyLevel >= MIN_ACCEPTABLE_SAFE_LEVEL)
-			) {
+			if (i >= 10 && safetyLevel >= MIN_ACCEPTABLE_SAFE_LEVEL) {
 				logDetail('stop after ' + i + ' iterations');
 				break;
 			}
@@ -913,7 +906,7 @@ function move(enemy) {
 	}
 
 	var enemyPathLength = getEnemyPathLengthToFireOnCell(
-		nextCell, enemy, true
+		nextCell, enemy, !isSummon()
 	);
 
 	decreaseLogIndent();
