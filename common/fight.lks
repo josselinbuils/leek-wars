@@ -727,23 +727,41 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 			logWarning('getNextCell', 'no cell found, reachableCells: ' + reachableCells);
 		}
 
+		var summoner = getSummoner();
+
+		if (isSummon()) {
+			var summonerCell = getCell(getSummoner());
+
+			if (summonerCell === null) {
+				var distance = getDistance(summonerCell, startCell);
+				var nextDistance = getDistance(summonerCell, nextCell);
+
+				if (distance >= 2 && nextDistance <= 2) {
+					logDetail('do not move not to block summoner');
+					nextCell = startCell;
+				} else if (distance < 2 && safeCount(reachableCells) > 0) {
+					logDetail('move not to block summoner');
+					nextCell = getFarthestCellFrom(reachableCells, summonerCell);
+
+					if (nextCell === null) {
+						logError(
+							'getNextCell',
+							'nextCell null (summon), reachableCells: ' +
+							reachableCells + ', summonerCell: ' + summonerCell
+						);
+						nextCell = startCell;
+					}
+				}
+			} else {
+				logWarning('getNextCell', 'summuner cell null');
+			}
+		}
+
 		putInStore(cacheKey, nextCell);
 	}
 
 	logDetail('nextCell: ' + nextCell);
 	debugOperations();
-
-	var summoner = getSummoner();
-
-	if (isSummon()) {
-		var summonerCell = getCell(getSummoner());
-
-		if (summonerCell === null || getDistance(summonerCell, startCell) < 2) {
-			logDetail('do not move not to block summoner');
-			// Avoid being blocked by my own bulbs
-			nextCell = startCell;
-		}
-	}
 
 	return nextCell;
 }
