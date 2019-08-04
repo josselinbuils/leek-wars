@@ -13,7 +13,7 @@ function logMonitorData() {
 	logInfo('Monitoring:');
 	increaseLogIndent();
 
-	for (var key : var data in getAllInStore('monitor-')) {
+	for (var key: var data in getAllInStore('monitor-')) {
 		var turn = getTurn();
 		var calls = data['calls'];
 		var callsPerTurn = ceil(calls / turn * 10) / 10;
@@ -37,20 +37,20 @@ function getMonitorLogMethod(@consumedOperations) {
 		return @logDetailE;
 	}
 	if (consumedOperations >= 10) {
-		return  @logDetailW;
+		return @logDetailW;
 	}
 	return @logDetail;
 }
 
 function monitorOperations(id, logResult) {
-	var startOperations = getOperations();
 	var cacheKey = 'monitor-' + id;
+	var startOperations;
 
 	if (!hasInStore(cacheKey)) {
 		putInStore(cacheKey, @['calls': 0, 'ops': 0]);
 	}
 
-	return @(function() {
+	var func = @(function() {
 		var endOperations = getOperations();
 		var consumedOperations = endOperations - startOperations;
 		var consumedOperationsPerc = ceil(consumedOperations / OPERATIONS_LIMIT * 1000) / 10;
@@ -66,18 +66,24 @@ function monitorOperations(id, logResult) {
 			logDetail(remainingOperations + '% ops remaining');
 		}
 	});
+
+	startOperations = getOperations();
+	return @func;
 }
 
 function monitorIntermediateOperations(label) {
 	logDetail(label);
-	var startOperations = getOperations();
+	var startOperations;
 
-	return @(function() {
+	var func = @(function() {
 		var consumedOperations = ceil((getOperations() - startOperations) / OPERATIONS_LIMIT * 1000) / 10;
 		increaseLogIndent();
 		getMonitorLogMethod(consumedOperations)(consumedOperations + '% ops consumed');
 		decreaseLogIndent();
 	});
+
+	startOperations = getOperations();
+	return @func;
 }
 
 function Once() {
