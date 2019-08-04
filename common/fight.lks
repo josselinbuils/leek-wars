@@ -25,7 +25,7 @@ function canFireWithChip(chip, target) {
 		if (cellToFire !== null) {
 			var pathlength = getPathLength(getCell(), cellToFire);
 
-			canFire = getMP() >= pathlength;
+			canFire = pathlength !== null && getMP() >= pathlength;
 
 			if (canFire) {
 				canFire = shouldFire(target, chip, cellToFire, pathlength);
@@ -58,7 +58,8 @@ function canFireWithWeapon(weapon, enemy) {
 		if (cellToFire !== null) {
 			var pathlength = getPathLength(getCell(), cellToFire);
 
-			canFire = getMP() >= pathlength &&
+			canFire = pathlength !== null &&
+				getMP() >= pathlength &&
 				shouldFire(enemy, weapon, cellToFire, pathlength);
 		}
 	}
