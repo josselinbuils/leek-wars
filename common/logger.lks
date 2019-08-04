@@ -8,7 +8,7 @@ function decreaseLogIndent() {
 	logIndent--;
 }
 
-function logDetail(@str) {
+function logDetail(str) {
 	str = '  ↳ ' + str;
 
 	for (var i = 0; i < logIndent; i++) {
@@ -18,7 +18,7 @@ function logDetail(@str) {
 	debug(@str);
 }
 
-function logDetailE(@str) {
+function logDetailE(str) {
 	str = '  ↳ ' + str;
 
 	for (var i = 0; i < logIndent; i++) {
@@ -28,7 +28,7 @@ function logDetailE(@str) {
 	debugC(@str, COLOR_RED);
 }
 
-function logDetailW(@str) {
+function logDetailW(str) {
 	str = '  ↳ ' + str;
 
 	for (var i = 0; i < logIndent; i++) {
@@ -42,7 +42,7 @@ function logError(@method, @str) {
 	debugW(@method + ' on turn ' + @(getTurn()) + ': ' + @str);
 }
 
-function logInfo(@str) {
+function logInfo(str) {
 	if (logIndent > 0) {
 		str = '↳ ' + str;
 	}
