@@ -8,6 +8,17 @@ function clearStore() {
 	}
 }
 
+function getAllInStore(str) {
+	var results = [];
+
+	for (var key : var value in store) {
+		if (contains(key, str)) {
+			results[key] = value;
+		}
+	}
+	return results;
+}
+
 function getInStore(key) {
 	return store[key];
 }

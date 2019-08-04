@@ -18,7 +18,7 @@ function canFireWithChip(chip, target) {
 	logInfo('canFireWithChip(' + getChipName(chip) + ')');
 	increaseLogIndent();
 
-	var debugOperations = monitorOperations();
+	var debugOperations = monitorOperations('canFireWithChip', true);
 	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
 
 	if (canFire && target !== getLeek()) {
@@ -48,7 +48,7 @@ function canFireWithWeapon(weapon, enemy) {
 	logInfo('canFireWithWeapon(' + getWeaponName(weapon) + ')');
 	increaseLogIndent();
 
-	var debugOperations = monitorOperations();
+	var debugOperations = monitorOperations('canFireWithWeapon', true);
 	var cost = getWeaponCost(weapon);
 	var canFire = false;
 
@@ -605,7 +605,7 @@ function getNearestLeekEnemy() {
 }
 
 function getNextCell(enemy, startCell, availableMP, shouldMark) {
-	var debugOperations = monitorOperations();
+	var debugOperations = monitorOperations('getNextCell', true);
 	var nextCell = startCell;
 	var enemyCell = getCell(enemy);
 	var cacheKey = 'tmp-nxtCl-' + enemy + '-' +
@@ -851,6 +851,8 @@ function initTurn() {
 			getEnemyRefArms(enemy);
 		});
 	}
+
+	logMonitorData();
 }
 
 function isAreaArm(arm) {
@@ -877,7 +879,7 @@ function move(enemy) {
 	logInfo('move(' + getEnemyName(enemy) + ')');
 	increaseLogIndent();
 
-	var debugOperations = monitorOperations();
+	var debugOperations = monitorOperations('move', true);
 
 	if (getMP() === 0) {
 		return;
@@ -938,7 +940,7 @@ function preFilterSafeCells(reachableCells, enemyCell) {
 function shouldFire(target, arm, cellToFire, pathlength) {
 	logInfo('shouldFire()');
 
-	var debugOperations = monitorOperations();
+	var debugOperations = monitorOperations('shouldFire', true);
 	var should = false;
 
 	if (pathlength === 0) {
