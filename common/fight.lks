@@ -171,6 +171,7 @@ function getCellSafetyLevel(cell) {
 		return getInStore(cacheKey);
 	}
 
+	var debugOperations = monitorOperations('getCellSafetyLevel', false);
 	var level = 0;
 	var highlyProtectedAgainstBulbs = true;
 	var highlyProtectedAgainstLeeks = true;
@@ -246,6 +247,7 @@ function getCellSafetyLevel(cell) {
 	}
 
 	putInStore(cacheKey, level);
+	debugOperations();
 	return level;
 }
 
@@ -451,12 +453,14 @@ function getEnemyPathLengthToFireOnCell(cell, enemy, debug) {
 		return getInStore(cacheKey);
 	}
 
+	var debugOperations = monitorOperations('getEnemyPathLengthToFireOnCell', false);
 	var enemyCell = getCell(enemy);
 	var refArms = getEnemyRefArms(enemy);
 	var refChip = refArms['chip'];
 	var refWeapon = refArms['weapon'];
 
 	if (refChip === null && refWeapon === null) {
+		debugOperations();
 		return null;
 	}
 
@@ -475,6 +479,7 @@ function getEnemyPathLengthToFireOnCell(cell, enemy, debug) {
 	}
 
 	if (safeCount(cellsToFire) === 0) {
+		debugOperations();
 		return null;
 	}
 
@@ -487,6 +492,7 @@ function getEnemyPathLengthToFireOnCell(cell, enemy, debug) {
 
 	var pathLength = getPathLength(enemyCell, cellToFire);
 	putInStore(cacheKey, pathLength);
+	debugOperations();
 	return pathLength;
 }
 
@@ -605,7 +611,6 @@ function getNearestLeekEnemy() {
 }
 
 function getNextCell(enemy, startCell, availableMP, shouldMark) {
-	var debugOperations = monitorOperations('getNextCell', true);
 	var nextCell = startCell;
 	var enemyCell = getCell(enemy);
 	var cacheKey = 'tmp-nxtCl-' + enemy + '-' +
@@ -626,6 +631,7 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 			mark([nextCell], getColor(255, 128, 210));
 		}
 	} else if (availableMP > 0) {
+		var debugOperations = monitorOperations('getNextCell', true);
 		var reachableCells = getReachableCells(
 			startCell, availableMP
 		);
@@ -737,11 +743,10 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 		}
 
 		putInStore(cacheKey, nextCell);
+		debugOperations();
 	}
 
 	logDetail('nextCell: ' + nextCell);
-	debugOperations();
-
 	return nextCell;
 }
 
@@ -879,12 +884,11 @@ function move(enemy) {
 	logInfo('move(' + getEnemyName(enemy) + ')');
 	increaseLogIndent();
 
-	var debugOperations = monitorOperations('move', true);
-
 	if (getMP() === 0) {
 		return;
 	}
 
+	var debugOperations = monitorOperations('move', true);
 	var nextCell = getNextCell(enemy, getCell(), getMP(), true);
 
 	if (nextCell === null) {
