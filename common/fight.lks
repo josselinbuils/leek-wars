@@ -678,7 +678,7 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 			}
 
 			if (
-				safetyLevel >= SAFE_LEVEL ||
+				safetyLevel >= 110 ||
 				(i >= 10 && safetyLevel >= MIN_ACCEPTABLE_SAFE_LEVEL)
 			) {
 				logDetail('stop after ' + i + ' iterations');
@@ -742,6 +742,7 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 		logDetail('summunerCell: ' + summonerCell);
 
 		if (summonerCell === null || getDistance(summonerCell, startCell) < 2) {
+			logDetail('do not move not to block summoner');
 			// Avoid being blocked by my own bulbs
 			nextCell = startCell;
 		}
