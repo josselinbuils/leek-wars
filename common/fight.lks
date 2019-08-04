@@ -77,7 +77,7 @@ function ensureWearingWeapon(weapon) {
 
 function fire(arm, target) {
 	logInfo('');
-	debug('fire(' + getArmName(arm) + ', ' + getEnemyName(target) + ')');
+	logInfo('fire(' + getArmName(arm) + ', ' + getEnemyName(target) + ')');
 	increaseLogIndent();
 
 	var hasFired = false;
@@ -94,7 +94,7 @@ function fire(arm, target) {
 			result = useWeapon(target);
 			hasFired = true;
 		} else {
-			debugW('Unable to find a target enemy');
+			logWarning('fire', 'unable to find a target enemy');
 		}
 	} else {
 		if (target !== getLeek()) {
@@ -125,7 +125,7 @@ function fire(arm, target) {
 					}
 				}
 			} else {
-				debugE('Cannot use arm ' + getArmName(arm) + ' on cell ' + targetCell);
+				logError('fire', 'Cannot use arm ' + getArmName(arm) + ' on cell ' + targetCell);
 			}
 		} else {
 			result = useChip(arm, target);
@@ -154,7 +154,7 @@ function getArmName(arm) {
 
 function getCellSafetyLevel(cell, lightMode) {
 	if (cell === null) {
-		debugE('getCellSafetyLevel: called with null cell');
+		logError('getCellSafetyLevel', 'called with null cell');
 		return 0;
 	}
 
@@ -482,7 +482,7 @@ function getEnemyRefArms(enemy) {
 
 		logDetail('refArms of ' + getEnemyName(enemy) + ': ' + chipName + ', ' + weaponName);
 	} else if (!isSummon(enemy)) {
-		debugE('Unable to retrieve ' + getEnemyName(enemy) + ' ref arms');
+		logError('getEnemyRefArms', 'unable to retrieve ' + getEnemyName(enemy) + ' ref arms');
 	}
 
 	putInStore(cacheKey, refArms);
@@ -635,8 +635,9 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 				);
 
 				if (nextCell === null) {
-					debugE(
-						'getNextCell: nextCell null (safe), maxSafetyCells: ' +
+					logError(
+						'getNextCell',
+						'nextCell null (safe), maxSafetyCells: ' +
 						maxSafetyCells + ', enemyCell: ' + enemyCell
 					);
 					nextCell = startCell;
@@ -651,15 +652,16 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 				);
 
 				if (nextCell === null) {
-					debugE(
-						'getNextCell: nextCell null (not safe), maxSafetyCells: ' +
+					logError(
+						'getNextCell',
+						'nextCell null (not safe), maxSafetyCells: ' +
 						maxSafetyCells + ', enemyCell: ' + enemyCell
 					);
 					nextCell = startCell;
 				}
 			}
 		} else {
-			debugW('No cell found, reachableCells: ' + reachableCells);
+			logWarning('getNextCell', 'no cell found, reachableCells: ' + reachableCells);
 		}
 
 		putInStore(cacheKey, nextCell);
@@ -729,7 +731,11 @@ function getAreaImpactedCells(targetCell, arm) {
 			[2, 1],
 		];
 	} else {
-		debugE('Invalid arm area: ' + getArmName(arm) + ' ' + area);
+		logError(
+			'getAreaImpactedCells',
+			'invalid arm area: ' + getArmName(arm) +
+			' ' + area
+		);
 		return [];
 	}
 
@@ -760,7 +766,11 @@ function getTargetableDeltaCells(targetCell, arm) {
 	} else if (area === AREA_CIRCLE_3) {
 		range = 3;
 	} else {
-		debugE('Invalid arm area: ' + getArmName(arm) + ' ' + area);
+		logError(
+			'getTargetableDeltaCells',
+			'invalid arm area: ' + getArmName(arm) +
+			' ' + area
+		);
 		return [];
 	}
 
@@ -874,7 +884,7 @@ function move(enemy) {
 	var nextCell = getNextCell(enemy, getCell(), getMP(), true);
 
 	if (nextCell === null) {
-		debugE('Unable to find the next cell, do not move');
+		logError('move', 'unable to find the next cell, do not move');
 		decreaseLogIndent();
 		return;
 	}
@@ -966,10 +976,10 @@ function shouldFire(target, arm, cellToFire, pathlength) {
 					enemyDistanceAfter >= enemyDistance;
 			} else {
 				if (nextCell === null) {
-					debugE('nextCell null');
+					logError('shouldFire', 'nextCell null');
 				}
 				if (nextCellAfterFire === null) {
-					debugE('nextCellAfterFire null');
+					logError('shouldFire', 'nextCellAfterFire null');
 				}
 			}
 
@@ -1059,7 +1069,7 @@ function summonBulb(bulb, ai, enemy) {
 
 		showResult(summon(bulb, targetCell, ai));
 	} else {
-		debugW('No cell available for bulb :(');
+		logWarning('summonBulb', 'no cell available for bulb');
 	}
 }
 

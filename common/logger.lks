@@ -38,6 +38,10 @@ function logDetailW(str) {
 	debugC(str, getColor(255, 110, 0));
 }
 
+function logError(method, str) {
+	debugW(method + ' on  turn ' + getTurn() + ': ' + str);
+}
+
 function logInfo(str) {
 	if (logIndent > 0) {
 		str = '↳ ' + str;
@@ -48,6 +52,10 @@ function logInfo(str) {
 	}
 
 	debug(str);
+}
+
+function logWarning(method, str) {
+	debugW(method + ' on  turn ' + getTurn() + ': ' + str);
 }
 
 function resetLogIndent() {
