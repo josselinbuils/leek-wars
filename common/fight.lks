@@ -6,6 +6,7 @@ include('utils');
 // TODO optimizes area arms management to reach as enemies as possible
 
 global FIGHT_EFFECTS = [EFFECT_DAMAGE, EFFECT_POISON];
+global MAX_CELLS_TO_CHECK_SAFETY = 10;
 global MIN_ACCEPTABLE_SAFE_LEVEL = 80;
 global MIN_DIRECT_CELLS_AROUND = 2;
 global SAFE_LEVEL = 80;
@@ -179,6 +180,7 @@ function getCellSafetyLevel(cell) {
 	var middlyProtectedAgainstLeeks = true;
 
 	for (var enemy in getDangerousEnemies()) {
+		var isEnemySommon = isSummon(enemy);
 		var enemyPathLength = getEnemyPathLengthToFireOnCell(
 			cell, enemy, false
 		);
@@ -187,21 +189,21 @@ function getCellSafetyLevel(cell) {
 			var enemyMP = getTotalMP(enemy);
 
 			if (enemyPathLength <= (enemyMP * 4 / 3)) {
-				if (isSummon(enemy)) {
+				if (isEnemySommon) {
 					highlyProtectedAgainstBulbs = false;
 				} else {
 					highlyProtectedAgainstLeeks = false;
 				}
 
 				if (enemyPathLength <= enemyMP) {
-					if (isSummon(enemy)) {
+					if (isEnemySommon) {
 						protectedAgainstBulbs = false;
 					} else {
 						protectedAgainstLeeks = false;
 					}
 
 					if (enemyPathLength <= (enemyMP * 2 / 3)) {
-						if (isSummon(enemy)) {
+						if (isEnemySommon) {
 							middlyProtectedAgainstBulbs = false;
 						} else {
 							middlyProtectedAgainstLeeks = false;
@@ -243,6 +245,7 @@ function getCellSafetyLevel(cell) {
 		level -= 20;
 	}
 
+	putInStore(cacheKey, level);
 	return level;
 }
 
@@ -614,7 +617,6 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 	logDetail('availableMP: ' + availableMP);
 
 	if (hasInStore(cacheKey)) {
-		logDetail('use cache');
 		nextCell = getInStore(cacheKey);
 
 		if (
@@ -627,36 +629,20 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 		var reachableCells = getReachableCells(
 			startCell, availableMP
 		);
+		logDetail('reachableCells: ' + arrayConcat([], reachableCells));
 		var reachableCellsCount = safeCount(reachableCells);
-		var MAX_CELLS_COUNT = 10;
 
-		if (reachableCellsCount > MAX_CELLS_COUNT) {
+		if (reachableCellsCount > MAX_CELLS_TO_CHECK_SAFETY) {
 			logDetail(
 				reachableCellsCount +
-				' reachable cells found, remove less safe cells'
+				' reachable cells found, pre-filters them'
 			);
-
-			reachableCells = arrayFilter(reachableCells, function(cell) {
-				return !lineOfSight(cell, enemyCell);
-			});
-			reachableCellsCount = safeCount(reachableCells);
-
-			if (reachableCellsCount > MAX_CELLS_COUNT) {
-				logDetail(
-					reachableCellsCount +
-					' reachable cells found, keep the ' +
-					MAX_CELLS_COUNT + ' farthest'
-				);
-				var sortedReachableCells = sortByDistanceDesc(reachableCells, enemyCell);
-				// TODO optimizes this
-				reachableCells = subArray(sortedReachableCells, 0, MAX_CELLS_COUNT - 1);
-				reachableCells = sortByDistanceAsc(reachableCells, enemyCell);
-			}
+			reachableCells = preFilterSafeCells(reachableCells, enemyCell);
 		}
 
 		var debugOperationsInt = monitorIntermediateOperations(
 			'iterates cells safety (' + safeCount(reachableCells) +
-			' entries)'
+			' entries) ' + reachableCells
 		);
 		var maxSafetyLevel = 0;
 		var maxSafetyCells = [];
@@ -920,6 +906,33 @@ function move(enemy) {
 		moveTowardCell(nextCell);
 	}
 	debugOperations();
+}
+
+function preFilterSafeCells(reachableCells, enemyCell) {
+	var nearObstacleCells = [];
+	var nearObstacleCellsCount = 0;
+	var otherCells = [];
+
+	for (var cell in reachableCells) {
+		if (isNearObstacle(cell)) {
+			push(nearObstacleCells, cell);
+			nearObstacleCellsCount++;
+		} else {
+			push(otherCells, cell);
+		}
+	}
+
+	if (nearObstacleCellsCount === MAX_CELLS_TO_CHECK_SAFETY) {
+		return nearObstacleCells;
+	} else if (nearObstacleCellsCount > MAX_CELLS_TO_CHECK_SAFETY) {
+		return subArray(nearObstacleCells, 0, MAX_CELLS_TO_CHECK_SAFETY - 1);
+	}
+
+	otherCells = sortByDistanceDesc(otherCells, enemyCell);
+	otherCells = subArray(otherCells, 0, MAX_CELLS_TO_CHECK_SAFETY - nearObstacleCellsCount - 1);
+	otherCells = sortByDistanceAsc(otherCells, enemyCell);
+
+	return arrayConcat(nearObstacleCells, otherCells);
 }
 
 function shouldFire(target, arm, cellToFire, pathlength) {
