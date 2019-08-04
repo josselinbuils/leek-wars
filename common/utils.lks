@@ -53,7 +53,7 @@ function monitorOperations(@id, @logResult) {
 	var func = @(function() {
 		var endOperations = @(getOperations());
 		var consumedOperations = @endOperations - @startOperations;
-		var consumedOperationsPerc = ceil(@consumedOperations / OPERATIONS_LIMIT * 1000) / 10;
+		var consumedOperationsPerc = ceil(@consumedOperations / OPERATIONS_LIMIT * 10000) / 100;
 		var monitorData = @(getInStore(@cacheKey));
 
 		monitorData['calls'] += 1;
@@ -61,7 +61,7 @@ function monitorOperations(@id, @logResult) {
 		putInStore(@cacheKey, @monitorData);
 
 		if (logResult) {
-			var remainingOperations = floor((OPERATIONS_LIMIT - endOperations) / OPERATIONS_LIMIT * 1000) / 10;
+			var remainingOperations = floor((OPERATIONS_LIMIT - endOperations) / OPERATIONS_LIMIT * 10000) / 100;
 			getMonitorLogMethod(@consumedOperationsPerc)(@consumedOperationsPerc + '% ops consumed');
 			logDetail(@remainingOperations + '% ops remaining');
 		}
@@ -76,7 +76,7 @@ function monitorIntermediateOperations(@label) {
 	var startOperations;
 
 	var func = @(function() {
-		var consumedOperations = ceil((getOperations() - startOperations) / OPERATIONS_LIMIT * 1000) / 10;
+		var consumedOperations = ceil((getOperations() - startOperations) / OPERATIONS_LIMIT * 10000) / 100;
 		increaseLogIndent();
 		getMonitorLogMethod(@consumedOperations)(@consumedOperations + '% ops consumed');
 		decreaseLogIndent();
@@ -145,11 +145,13 @@ function Optimizer() {
 }
 
 function perfLimiter(@percent) {
+	var limit = (OPERATIONS_LIMIT * (isSummon() ? 90 : 70) / 100);
 	var startOperations = @(getOperations());
 
 	return @(function() {
-		var consumedOperations = (getOperations() - @startOperations) / OPERATIONS_LIMIT * 100;
-		return consumedOperations < percent;
+		var operations = @(getOperations());
+		var consumedOperations = (@operations - @startOperations) / OPERATIONS_LIMIT * 100;
+		return consumedOperations < percent && operations < limit;
 	});
 }
 

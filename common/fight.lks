@@ -201,67 +201,28 @@ function getCellSafetyLevel(@cell) {
 
 	var debugOperations = @(monitorOperations('getCellSafetyLevel', false));
 	var level = 0;
-	var highlyProtectedAgainstBulbs = true;
 	var highlyProtectedAgainstLeeks = true;
-	var protectedAgainstBulbs = true;
 	var protectedAgainstLeeks = true;
-	var middlyProtectedAgainstBulbs = true;
 	var middlyProtectedAgainstLeeks = true;
 
-	for (var enemy in @(getDangerousEnemies())) {
-		var isEnemySommon = @(isSummon(@enemy));
-		var enemyPathLength = @(getEnemyPathLengthToFireOnCell(
-			@cell, @enemy, false
-		));
+	var enemy = getNearestLeekEnemy();
+	var isEnemySummon = @(isSummon(@enemy));
+	var enemyPathLength = @(getEnemyPathLengthToFireOnCell(
+		@cell, @enemy, false
+	));
 
-		if (enemyPathLength !== null) {
-			var enemyMP = @(getTotalMP(@enemy));
+	if (enemyPathLength !== null) {
+		var enemyMP = @(getTotalMP(@enemy));
 
-			if (enemyPathLength <= (enemyMP * 4 / 3)) {
-				if (isEnemySommon) {
-					highlyProtectedAgainstBulbs = false;
-				} else {
-					highlyProtectedAgainstLeeks = false;
-				}
-
-				if (enemyPathLength <= enemyMP) {
-					if (isEnemySommon) {
-						protectedAgainstBulbs = false;
-					} else {
-						protectedAgainstLeeks = false;
-					}
-
-					if (enemyPathLength <= (enemyMP * 2 / 3)) {
-						if (isEnemySommon) {
-							middlyProtectedAgainstBulbs = false;
-						} else {
-							middlyProtectedAgainstLeeks = false;
-						}
-
-						if (
-							!middlyProtectedAgainstBulbs &&
-							!middlyProtectedAgainstLeeks
-						) {
-							break;
-						}
-					}
-				}
-			}
+		if (enemyPathLength > (enemyMP * 4 / 3)) {
+			level = 100;
+		} else if (enemyPathLength > enemyMP) {
+			level = 80;
+		} else if (enemyPathLength > (enemyMP * 2 / 3)) {
+			level = 60;
+		} else if (enemyPathLength > (enemyMP * 1 / 3)) {
+			level = 40;
 		}
-	}
-
-	if (highlyProtectedAgainstBulbs && highlyProtectedAgainstLeeks) {
-		level = 120;
-	} else if (protectedAgainstBulbs && highlyProtectedAgainstLeeks) {
-		level = 110;
-	} else if (protectedAgainstBulbs && protectedAgainstLeeks) {
-		level = 100;
-	} else if (middlyProtectedAgainstBulbs && protectedAgainstLeeks) {
-		level = 80;
-	} else if (protectedAgainstLeeks) {
-		level = 70;
-	} else if (middlyProtectedAgainstLeeks) {
-		level = 60;
 	}
 
 	var cellsAround = @(getDirectReachableCellsAround(@cell));
@@ -988,7 +949,12 @@ function shouldFire(@target, @arm, @cellToFire, @pathlength) {
 
 			// We do not want to take summons into account
 			var initialEnemy = getNearestLeekEnemy();
+			var initialEnemyCell = getCell(initialEnemy);
 			var availableMP = getMP() - pathlength;
+			var nextCell = getNextCell(
+				initialEnemy, getCell(), getMP(), false
+			);
+			var safetyLevel = 'unknown';
 			var nextCellAfterFire = getNextCell(
 				initialEnemy, cellToFire, availableMP, false
 			);
@@ -999,7 +965,8 @@ function shouldFire(@target, @arm, @cellToFire, @pathlength) {
 			var isSafeAfterInactivity = false;
 			var isNotWorst = false;
 
-			if (nextCellAfterFire !== null) {
+			if (nextCell !== null && nextCellAfterFire !== null) {
+				safetyLevel = getCellSafetyLevel(nextCell);
 				safetyLevelAfter = getCellSafetyLevel(nextCellAfterFire);
 				pathLengthAfter = getEnemyPathLengthToFireOnCell(
 					nextCellAfterFire, initialEnemy, false
@@ -1011,21 +978,29 @@ function shouldFire(@target, @arm, @cellToFire, @pathlength) {
 					safetyLevelAfter >= 60;
 				isSafeAfterInactivity = turnsWithoutFire >= 1 &&
 					safetyLevelAfter >= 70;
-			} else if (nextCellAfterFire === null) {
-				logError('shouldFire', 'nextCellAfterFire null');
+				isNotWorst = safetyLevelAfter >= safetyLevel;
+			} else {
+				if (nextCell === null) {
+					logError('shouldFire', 'nextCell null');
+				}
+				if (nextCellAfterFire === null) {
+					logError('shouldFire', 'nextCellAfterFire null');
+				}
 			}
 
 			decreaseLogIndent();
+			logDetail('nextCell: ' + nextCell);
 			logDetail('cellToFire: ' + cellToFire);
 			logDetail('availableMP: ' + availableMP);
-			logDetail('nextCellAfterFire: ' + nextCellAfterFire);
+			logDetail('nextCellAfterFire: ' + nextCell);
 			logDetail(
 				(isSafe ? '' : 'not ') + 'safe (' + safetyLevelAfter + ', ' + pathLengthAfter + '), ' +
 				(isSafeForPoison ? '' : 'not ') + 'safe for poison, ' +
-				(isSafeAfterInactivity ? '' : 'not ') + 'safe after inactivity'
+				(isSafeAfterInactivity ? '' : 'not ') + 'safe after inactivity, ' +
+				(isNotWorst ? 'not ' : '') + 'worst'
 			);
 
-			should = isSafe || isSafeForPoison || isSafeAfterInactivity;
+			should = isSafe || isSafeForPoison || isSafeAfterInactivity || isNotWorst;
 		}
 	}
 
