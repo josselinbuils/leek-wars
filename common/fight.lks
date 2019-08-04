@@ -732,7 +732,7 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 		if (isSummon()) {
 			var summonerCell = getCell(getSummoner());
 
-			if (summonerCell === null) {
+			if (summonerCell !== null) {
 				var distance = getDistance(summonerCell, startCell);
 				var nextDistance = getDistance(summonerCell, nextCell);
 
