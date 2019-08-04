@@ -81,12 +81,6 @@ function getClosestCellTo(cells, refCell) {
 	}
 
 	if (closestCell === null) {
-		logWarning(
-			'getClosestCellTo',
-			'unable to find a cell using paths, use distances instead' +
-			',cells: ' + cells + ', refCell: ' + refCell
-		);
-
 		var closestCellDistance = 999;
 
 		for (var cell in cells) {
@@ -101,6 +95,15 @@ function getClosestCellTo(cells, refCell) {
 			}
 		}
 	}
+
+	if (closestCell === null) {
+		logError(
+			'getClosestCellTo',
+			'unable to find a cell' +
+			',cells: ' + cells + ', refCell: ' + refCell
+		);
+	}
+
 	return closestCell;
 }
 
@@ -138,12 +141,6 @@ function getFarthestCellFrom(cells, refCell) {
 	}
 
 	if (farestCell === null) {
-		logWarning(
-			'getFarthestCellFrom',
-			'unable to find a cell using paths, use distances instead' +
-			',cells: ' + cells + ', refCell: ' + refCell
-		);
-
 		var farestCellDistance = 0;
 
 		for (var cell in cells) {
@@ -158,6 +155,15 @@ function getFarthestCellFrom(cells, refCell) {
 			}
 		}
 	}
+
+	if (farestCell === null) {
+		logError(
+			'getFarthestCellFrom',
+			'unable to find a cell' +
+			',cells: ' + cells + ', refCell: ' + refCell
+		);
+	}
+
 	return farestCell;
 }
 
