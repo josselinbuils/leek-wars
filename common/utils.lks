@@ -1,12 +1,12 @@
 include('logger');
 include('store');
 
-function ensureArray(object) {
+function ensureArray(@object) {
 	if (typeOf(object) !== TYPE_ARRAY) {
 		logWarning('ensureArray', object + ' received');
-		return [];
+		return @[];
 	}
-	return object;
+	return @object;
 }
 
 function logMonitorData() {
@@ -32,14 +32,14 @@ function logMonitorData() {
 	decreaseLogIndent();
 }
 
-function getMonitorLogMethod(consumedOperations) {
+function getMonitorLogMethod(@consumedOperations) {
 	if (consumedOperations >= 20) {
-		return logDetailE;
+		return @logDetailE;
 	}
 	if (consumedOperations >= 10) {
-		return logDetailW;
+		return  @logDetailW;
 	}
-	return logDetail;
+	return @logDetail;
 }
 
 function monitorOperations(id, logResult) {
@@ -47,18 +47,18 @@ function monitorOperations(id, logResult) {
 	var cacheKey = 'monitor-' + id;
 
 	if (!hasInStore(cacheKey)) {
-		putInStore(cacheKey, ['calls': 0, 'ops': 0]);
+		putInStore(cacheKey, @['calls': 0, 'ops': 0]);
 	}
 
 	return @(function() {
 		var endOperations = getOperations();
 		var consumedOperations = endOperations - startOperations;
 		var consumedOperationsPerc = ceil(consumedOperations / OPERATIONS_LIMIT * 1000) / 10;
-		var monitorData = getInStore(cacheKey);
+		var monitorData = @getInStore(cacheKey);
 
 		monitorData['calls'] += 1;
 		monitorData['ops'] += consumedOperations;
-		putInStore(cacheKey, monitorData);
+		putInStore(cacheKey, @monitorData);
 
 		if (logResult) {
 			var remainingOperations = floor((OPERATIONS_LIMIT - endOperations) / OPERATIONS_LIMIT * 1000) / 10;
@@ -81,7 +81,7 @@ function monitorIntermediateOperations(label) {
 }
 
 function Once() {
-	var flagArray = [];
+	var flagArray = @[];
 
 	return @(function() {
 		logInfo('reset once');
@@ -138,7 +138,7 @@ function Optimizer() {
 }
 
 function safeCount(array) {
-	return count(ensureArray(array));
+	return count(@(ensureArray(@array)));
 }
 
 function showResult(result) {

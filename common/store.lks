@@ -1,4 +1,4 @@
-global store = [];
+global store = @[];
 
 function clearStore() {
 	for (var key : var value in store) {
@@ -9,18 +9,18 @@ function clearStore() {
 }
 
 function getAllInStore(str) {
-	var results = [];
+	var results = @[];
 
 	for (var key : var value in store) {
 		if (contains(key, str)) {
-			results[key] = value;
+			results[key] = @value;
 		}
 	}
 	return results;
 }
 
 function getInStore(key) {
-	return store[key];
+	return @(store[key]);
 }
 
 function hasInStore(key) {
@@ -36,6 +36,6 @@ function hasInStore(key) {
 	return false;
 }
 
-function putInStore(key, value) {
-	store[key] = value;
+function putInStore(key, @value) {
+	store[key] = @value;
 }
