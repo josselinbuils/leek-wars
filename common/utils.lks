@@ -119,6 +119,7 @@ function Optimizer() {
 	var hasShownReachLog = false;
 	var startIndex = 0;
 	var currentIndex;
+	var limit = (OPERATIONS_LIMIT * (isSummon() ? 90 : 70) / 100);
 
 	return @(function() {
 		logInfo('reset optimizer');
@@ -127,7 +128,7 @@ function Optimizer() {
 		return @(function() {
 			currentIndex++;
 
-			if (getOperations() > (OPERATIONS_LIMIT * 70 / 100)) {
+			if (getOperations() >= limit) {
 				if (!hasShownReachLog) {
 					logError('Optimizer', 'operations limit reached');
 					hasShownReachLog = true;
@@ -140,6 +141,15 @@ function Optimizer() {
 			}
 			return false;
 		});
+	});
+}
+
+function perfLimiter(@percent) {
+	var startOperations = @(getOperations());
+
+	return @(function() {
+		var consumedOperations = (getOperations() - @startOperations) / OPERATIONS_LIMIT * 100;
+		return consumedOperations < percent;
 	});
 }
 

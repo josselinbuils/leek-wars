@@ -29,7 +29,7 @@ function canFireWithChip(@chip, @target) {
 
 			canFire = pathlength !== null && getMP() >= pathlength;
 
-			if (canFire) {
+			if (canFire && !isSummon()) {
 				canFire = shouldFire(target, chip, cellToFire, pathlength) === true;
 			}
 		} else {
