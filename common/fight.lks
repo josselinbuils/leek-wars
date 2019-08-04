@@ -735,11 +735,8 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 
 	var summoner = getSummoner();
 
-	if (summoner !== null) {
-		var summonerCell = getCell(summoner);
-
-		logDetail('summuner: ' + getName(summoner));
-		logDetail('summunerCell: ' + summonerCell);
+	if (isSummon()) {
+		var summonerCell = getCell(getSummoner());
 
 		if (summonerCell === null || getDistance(summonerCell, startCell) < 2) {
 			logDetail('do not move not to block summoner');
