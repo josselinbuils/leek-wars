@@ -29,8 +29,10 @@ function canFireWithChip(chip, target) {
 			canFire = pathlength !== null && getMP() >= pathlength;
 
 			if (canFire) {
-				canFire = shouldFire(target, chip, cellToFire, pathlength);
+				canFire = shouldFire(target, chip, cellToFire, pathlength) === true;
 			}
+		} else {
+			canFire = false;
 		}
 	}
 
@@ -61,7 +63,9 @@ function canFireWithWeapon(weapon, enemy) {
 
 			canFire = pathlength !== null &&
 				getMP() >= pathlength &&
-				shouldFire(enemy, weapon, cellToFire, pathlength);
+				shouldFire(enemy, weapon, cellToFire, pathlength) === true;
+		} else {
+			canFire = false;
 		}
 	}
 
