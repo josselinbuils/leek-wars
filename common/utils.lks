@@ -18,14 +18,15 @@ function logMonitorData() {
 		var calls = data['calls'];
 		var callsPerTurn = ceil(calls / turn * 10) / 10;
 		var ops = data['ops'];
-		var opsPerCall = ceil(ops / calls / OPERATIONS_LIMIT * 1000) / 10;
+		var opsPerCall = ceil(ops / calls);
+		var opsPerCallRel = ceil(opsPerCall / OPERATIONS_LIMIT * 1000) / 10;
 		var opsPerTurn = ceil(ops / turn / OPERATIONS_LIMIT * 1000) / 10;
 
 		logInfo(key);
 		logDetail('calls: ' + calls);
 		logDetail('calls/turn: ' + callsPerTurn);
 		logDetail('ops: ' + ops);
-		logDetail('ops/call: ' + opsPerCall + '%');
+		logDetail('ops/call: ' + opsPerCall + ' (' + opsPerCallRel + '%)');
 		logDetail('ops/turn: ' + opsPerTurn + '%');
 	}
 	decreaseLogIndent();

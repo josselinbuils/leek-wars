@@ -252,6 +252,7 @@ function getCellSafetyLevel(cell) {
 }
 
 function getCellsToFireWithChipOnCell(chip, thrower, targetCell) {
+	var debugOperations = monitorOperations('getCellsToFireWithChipOnCell', false);
 	var cellsToFire = getCellsToUseChipOnCellWithCache(
 		chip, targetCell, thrower
 	);
@@ -272,10 +273,12 @@ function getCellsToFireWithChipOnCell(chip, thrower, targetCell) {
 		}
 	}
 
+	debugOperations();
 	return cellsToFire;
 }
 
 function getCellsToFireWithWeaponOnCell(weapon, shooter, targetCell) {
+	var debugOperations = monitorOperations('getCellsToFireWithWeaponOnCell', false);
 	var startCell = getCell(shooter);
 	var ignoredCells = [startCell];
 	var otherEnemiesCells = [];
@@ -314,11 +317,13 @@ function getCellsToFireWithWeaponOnCell(weapon, shooter, targetCell) {
 		}
 	}
 
-	return ensureArray(
+	var cells = ensureArray(
 		arrayFilter(cellsToFire, function(cell) {
 			return !inArray(otherEnemiesCells, cell);
 		})
 	);
+	debugOperations();
+	return cells;
 }
 
 function getCellsToUseChipOnCellWithCache(chip, targetCell, thrower) {
@@ -331,7 +336,13 @@ function getCellsToUseChipOnCellWithCache(chip, targetCell, thrower) {
 	}
 
 	var cells = ensureArray(
-		getCellsToUseChipOnCell(chip, targetCell, [getCell(thrower)])
+		getCellsToUseChipOnCell(
+			chip,
+			targetCell,
+			isAlly(thrower) ?
+				getAliveAllies() :
+				getAliveEnemies()
+		)
 	);
 	putInStore(cacheKey, cells);
 	return cells;
@@ -347,7 +358,13 @@ function getCellsToUseWeaponOnCellWithCache(weapon, targetCell, shooter) {
 	}
 
 	var cells = ensureArray(
-		getCellsToUseWeaponOnCell(weapon, targetCell, [getCell(shooter)])
+		getCellsToUseWeaponOnCell(
+			weapon,
+			targetCell,
+			isAlly(shooter) ?
+				getAliveAllies() :
+				getAliveEnemies()
+		)
 	);
 	putInStore(cacheKey, cells);
 	return cells;
@@ -468,7 +485,7 @@ function getEnemyPathLengthToFireOnCell(cell, enemy, debug) {
 
 	if (refChip !== null && getCooldown(refChip, enemy) <= 1) {
 		var cellsToFireWithChip = isSummon(enemy) ?
-			getCellsToUseChipOnCell(refChip, cell) :
+			getCellsToUseChipOnCellWithCache(refChip, cell, enemy) :
 			getCellsToFireWithChipOnCell(refChip, enemy, cell);
 
 		pushAll(cellsToFire, cellsToFireWithChip);
