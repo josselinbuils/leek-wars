@@ -90,6 +90,7 @@ function Skynet() {
 		} else if (
 			shouldTry() &&
 			shouldProtect &&
+			getCooldown(CHIP_ARMOR) <= 3 &&
 			canFireWithChip(CHIP_FORTRESS, me)
 		) {
 			arm = CHIP_FORTRESS;

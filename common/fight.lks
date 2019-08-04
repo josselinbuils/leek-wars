@@ -6,7 +6,7 @@ include('utils');
 // TODO optimizes area arms management to reach as enemies as possible
 
 global FIGHT_EFFECTS = @[EFFECT_DAMAGE, EFFECT_POISON];
-global MAX_OPS_PERCENT = 25;
+global MAX_OPS_PERCENT = 30;
 global MIN_ACCEPTABLE_SAFE_LEVEL = 80;
 global MIN_DIRECT_CELLS_AROUND = 2;
 global SAFE_LEVEL = 80;
@@ -26,8 +26,9 @@ function canFireWithChip(@chip, @target) {
 
 		if (cellToFire !== null) {
 			var pathlength = getPathLength(getCell(), cellToFire);
+			var minMP = isSummon() ? pathlength : (pathlength * 1.5);
 
-			canFire = pathlength !== null && getMP() >= pathlength;
+			canFire = pathlength !== null && getMP() >= minMP;
 
 			if (canFire && !isSummon()) {
 				canFire = shouldFire(target, chip, cellToFire, pathlength) === true;
