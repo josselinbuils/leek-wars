@@ -650,8 +650,8 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 			if (reachableCellsCount > MAX_CELLS_COUNT) {
 				logDetail(
 					reachableCellsCount +
-					' reachable cells found, keep the '
-					+ MAX_CELLS_COUNT + ' farthest'
+					' reachable cells found, keep the ' +
+					MAX_CELLS_COUNT + ' farthest'
 				);
 				var sortedReachableCells = sortByDistanceDesc(reachableCells, enemyCell);
 				reachableCells = subArray(sortedReachableCells, 0, MAX_CELLS_COUNT - 1);
@@ -732,6 +732,16 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 
 	logDetail('nextCell: ' + nextCell);
 	debugOperations();
+
+	var summoner = getSummoner();
+
+	if (
+		summoner !== null &&
+		getDistance(getCell(summoner), startCell) < 2
+	) {
+		// Avoid being blocked by my own bulbs
+		nextCell = startCell;
+	}
 
 	return nextCell;
 }
