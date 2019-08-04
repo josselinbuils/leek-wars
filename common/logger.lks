@@ -39,7 +39,7 @@ function logDetailW(str) {
 }
 
 function logError(method, str) {
-	debugW(method + ' on  turn ' + getTurn() + ': ' + str);
+	debugW(method + ' on turn ' + getTurn() + ': ' + str);
 }
 
 function logInfo(str) {
@@ -55,7 +55,7 @@ function logInfo(str) {
 }
 
 function logWarning(method, str) {
-	debugW(method + ' on  turn ' + getTurn() + ': ' + str);
+	debugW(method + ' on turn ' + getTurn() + ': ' + str);
 }
 
 function resetLogIndent() {
