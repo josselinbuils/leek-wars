@@ -735,12 +735,16 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 
 	var summoner = getSummoner();
 
-	if (
-		summoner !== null &&
-		getDistance(getCell(summoner), startCell) < 2
-	) {
-		// Avoid being blocked by my own bulbs
-		nextCell = startCell;
+	if (summoner !== null) {
+		var summonerCell = getCell(summoner);
+
+		logDetail('summuner: ' + getName(summoner));
+		logDetail('summunerCell: ' + summonerCell);
+
+		if (summonerCell === null || getDistance(summonerCell, startCell) < 2) {
+			// Avoid being blocked by my own bulbs
+			nextCell = startCell;
+		}
 	}
 
 	return nextCell;
