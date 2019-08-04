@@ -6,6 +6,7 @@ include('utils');
 // TODO optimizes area arms management to reach as enemies as possible
 
 global FIGHT_EFFECTS = [EFFECT_DAMAGE, EFFECT_POISON];
+global MIN_ACCEPTABLE_SAFE_LEVEL = 80;
 global MIN_DIRECT_CELLS_AROUND = 2;
 global SAFE_LEVEL = 80;
 
@@ -629,26 +630,40 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 			startCell, availableMP
 		);
 		var reachableCellsCount = safeCount(reachableCells);
+		var MAX_CELLS_COUNT = 10;
 
-		if (reachableCellsCount > 20) {
-			logDetail(reachableCellsCount + ' reachable cells found, limit to 20');
-			var sortedReachableCells = sortByDistanceDesc(reachableCells, enemyCell);
-			reachableCells = subArray(sortedReachableCells, 0, 19);
+		if (reachableCellsCount > MAX_CELLS_COUNT) {
+			logDetail(
+				reachableCellsCount +
+				' reachable cells found, remove less safe cells'
+			);
+
+			reachableCells = arrayFilter(reachableCells, function(cell) {
+				return !lineOfSight(cell, enemyCell);
+			});
+			reachableCellsCount = safeCount(reachableCells);
+
+			if (reachableCellsCount > MAX_CELLS_COUNT) {
+				logDetail(
+					reachableCellsCount +
+					' reachable cells found, keep the '
+					+ MAX_CELLS_COUNT + ' farthest'
+				);
+				var sortedReachableCells = sortByDistanceDesc(reachableCells, enemyCell);
+				reachableCells = subArray(sortedReachableCells, 0, MAX_CELLS_COUNT - 1);
+			}
 		}
 
 		var debugOperationsInt = monitorIntermediateOperations(
 			'iterates cells safety (' + safeCount(reachableCells) +
 			' entries)'
 		);
-		var lightMode = safeCount(reachableCells) > 30;
 		var maxSafetyLevel = 0;
 		var maxSafetyCells = [];
-
-		if (lightMode) {
-			logDetailW('use light mode');
-		}
+		var i = 0;
 
 		for (var cell in reachableCells) {
+			i++;
 			var safetyLevel = getCellSafetyLevel(cell);
 
 			if (safetyLevel > maxSafetyLevel) {
@@ -656,6 +671,14 @@ function getNextCell(enemy, startCell, availableMP, shouldMark) {
 				maxSafetyCells = [cell];
 			} else if (safetyLevel === maxSafetyLevel) {
 				push(maxSafetyCells, cell);
+			}
+
+			if (
+				safetyLevel >= SAFE_LEVEL ||
+				(i >= 10 && safetyLevel >= MIN_ACCEPTABLE_SAFE_LEVEL)
+			) {
+				logDetail('stop after ' + i + ' iterations');
+				break;
 			}
 		}
 		debugOperationsInt();
