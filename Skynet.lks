@@ -33,22 +33,22 @@ function Skynet() {
 	var totalLife = getTotalLife();
 	var minSafeLife = max(600, totalLife / 2);
 
-	//var venomCells = getCellsToFireWithChipOnCell(
-		//CHIP_VENOM, me, initialEnemyCell
-	//);
-	//mark(venomCells, COLOR_GREEN);
+	var venomCells = getCellsToFireWithChipOnCell(
+		CHIP_VENOM, me, initialEnemyCell
+	);
+	mark(venomCells, COLOR_GREEN);
 
-	//if (getCooldown(CHIP_TOXIN) === 0) {
-		//var toxinCells = getCellsToFireWithChipOnCell(
-			//CHIP_TOXIN, me, initialEnemyCell
-		//);
-		//mark(toxinCells, COLOR_BLUE);
-	//}
+	if (getCooldown(CHIP_TOXIN) === 0) {
+		var toxinCells = getCellsToFireWithChipOnCell(
+			CHIP_TOXIN, me, initialEnemyCell
+		);
+		mark(toxinCells, COLOR_BLUE);
+	}
 
-	//var flameThrowerCells = getCellsToFireWithWeaponOnCell(
-		//WEAPON_FLAME_THROWER, me, initialEnemyCell
-	//);
-	//mark(flameThrowerCells, COLOR_RED);
+	var flameThrowerCells = getCellsToFireWithWeaponOnCell(
+		WEAPON_FLAME_THROWER, me, initialEnemyCell
+	);
+	mark(flameThrowerCells, COLOR_RED);
 
 	debug('turnsWithoutFire: ' + turnsWithoutFire);
 
@@ -90,16 +90,16 @@ function Skynet() {
 		} else if (
 			shouldTry() &&
 			shouldProtect &&
-			canFireWithChip(CHIP_ARMOR, me)
+			canFireWithChip(CHIP_FORTRESS, me)
 		) {
-			arm = CHIP_ARMOR;
+			arm = CHIP_FORTRESS;
 			target = me;
 		} else if (
 			shouldTry() &&
 			shouldProtect &&
-			canFireWithChip(CHIP_SHIELD, me)
+			canFireWithChip(CHIP_ARMOR, me)
 		) {
-			arm = CHIP_SHIELD;
+			arm = CHIP_ARMOR;
 			target = me;
 		} else if (
 			shouldTry() &&
