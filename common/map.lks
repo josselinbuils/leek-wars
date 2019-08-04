@@ -61,7 +61,7 @@ function getClosestCell(cells) {
 
 function getClosestCellTo(cells, refCell) {
 	if (safeCount(cells) === 0) {
-		debugW('getClosestCellTo: no cell provided');
+		logWarning('getClosestCellTo', 'no cell provided');
 		return null;
 	}
 
@@ -81,8 +81,9 @@ function getClosestCellTo(cells, refCell) {
 	}
 
 	if (closestCell === null) {
-		debugW(
-			'getClosestCellTo: unable to find a cell using paths, use distances instead' +
+		logWarning(
+			'getClosestCellTo',
+			'unable to find a cell using paths, use distances instead' +
 			',cells: ' + cells + ', refCell: ' + refCell
 		);
 
@@ -113,7 +114,7 @@ function getDirectReachableCellsAround(cell) {
 
 function getFarthestCellFrom(cells, refCell) {
 	if (safeCount(cells) === 0) {
-		debugW('getFarthestCellFrom: no cell provided');
+		logWarning('getFarthestCellFrom', 'no cell provided');
 		return null;
 	}
 
@@ -133,8 +134,9 @@ function getFarthestCellFrom(cells, refCell) {
 	}
 
 	if (farestCell === null) {
-		debugW(
-			'getFarthestCellFrom: unable to find a cell using paths, use distances instead' +
+		logWarning(
+			'getFarthestCellFrom',
+			'unable to find a cell using paths, use distances instead' +
 			',cells: ' + cells + ', refCell: ' + refCell
 		);
 
