@@ -1,9 +1,9 @@
 global store = @[];
 
 function clearStore() {
-	for (var key : var value in store) {
-		if (contains(key, 'tmp-')) {
-			removeKey(store, key);
+	for (var key : var value in @store) {
+		if (contains(@key, 'tmp-')) {
+			removeKey(@store, @key);
 		}
 	}
 }
@@ -11,24 +11,24 @@ function clearStore() {
 function getAllInStore(str) {
 	var results = @[];
 
-	for (var key : var value in store) {
-		if (contains(key, str)) {
-			results[key] = @value;
+	for (var key : var value in @store) {
+		if (contains(@key, @str)) {
+			results[@key] = @value;
 		}
 	}
-	return results;
+	return @results;
 }
 
-function getInStore(key) {
-	return @(store[key]);
+function getInStore(@key) {
+	return @(store[@key]);
 }
 
-function hasInStore(key) {
-	if (store[key] !== null) {
+function hasInStore(@key) {
+	if (store[@key] !== null) {
 		return true;
 	}
 	// if in store but with null value
-	for (var k: var v in store) {
+	for (var k: var v in @store) {
 		if (k === key) {
 			return true;
 		}
@@ -36,6 +36,6 @@ function hasInStore(key) {
 	return false;
 }
 
-function putInStore(key, @value) {
-	store[key] = @value;
+function putInStore(@key, @value) {
+	store[@key] = @value;
 }

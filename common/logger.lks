@@ -8,41 +8,41 @@ function decreaseLogIndent() {
 	logIndent--;
 }
 
-function logDetail(str) {
+function logDetail(@str) {
 	str = '  ↳ ' + str;
 
 	for (var i = 0; i < logIndent; i++) {
 		str = '  ' + str;
 	}
 
-	debug(str);
+	debug(@str);
 }
 
-function logDetailE(str) {
+function logDetailE(@str) {
 	str = '  ↳ ' + str;
 
 	for (var i = 0; i < logIndent; i++) {
 		str = '  ' + str;
 	}
 
-	debugC(str, COLOR_RED);
+	debugC(@str, COLOR_RED);
 }
 
-function logDetailW(str) {
+function logDetailW(@str) {
 	str = '  ↳ ' + str;
 
 	for (var i = 0; i < logIndent; i++) {
 		str = '  ' + str;
 	}
 
-	debugC(str, getColor(255, 110, 0));
+	debugC(@str, getColor(255, 110, 0));
 }
 
-function logError(method, str) {
-	debugW(method + ' on turn ' + getTurn() + ': ' + str);
+function logError(@method, @str) {
+	debugW(@method + ' on turn ' + @(getTurn()) + ': ' + @str);
 }
 
-function logInfo(str) {
+function logInfo(@str) {
 	if (logIndent > 0) {
 		str = '↳ ' + str;
 	}
@@ -51,11 +51,11 @@ function logInfo(str) {
 		str = '  ' + str;
 	}
 
-	debug(str);
+	debug(@str);
 }
 
-function logWarning(method, str) {
-	debugW(method + ' on turn ' + getTurn() + ': ' + str);
+function logWarning(@method, @str) {
+	debugW(@method + ' on turn ' + @(getTurn()) + ': ' + @str);
 }
 
 function resetLogIndent() {
