@@ -442,10 +442,6 @@ function getEnemyPathLengthToFireOnCell(cell, enemy, debug) {
 		return getInStore(cacheKey);
 	}
 
-	increaseLogIndent();
-	logInfo('getEnemyPathLengthToFireOnCell(' + cell + ', ' + getEnemyName(enemy) + ')');
-	var debugOperations = monitorOperations();
-
 	var enemyCell = getCell(enemy);
 	var refArms = getEnemyRefArms(enemy);
 	var refChip = refArms['chip'];
@@ -458,19 +454,15 @@ function getEnemyPathLengthToFireOnCell(cell, enemy, debug) {
 	var cellsToFire = [];
 
 	if (refChip !== null && getCooldown(refChip, enemy) <= 1) {
-		var debugIOperations = monitorIntermediateOperations('refChip');
 		var cellsToFireWithChip = isSummon(enemy) ?
 			getCellsToUseChipOnCell(refChip, cell) :
 			getCellsToFireWithChipOnCell(refChip, enemy, cell);
 
 		pushAll(cellsToFire, cellsToFireWithChip);
-		debugIOperations();
 	}
 
 	if (refWeapon !== null) {
-		var debugIOperations = monitorIntermediateOperations('refWeapon');
 		pushAll(cellsToFire, getCellsToFireWithWeaponOnCell(refWeapon, enemy, cell));
-		debugIOperations();
 	}
 
 	if (safeCount(cellsToFire) === 0) {
@@ -492,8 +484,6 @@ function getEnemyPathLengthToFireOnCell(cell, enemy, debug) {
 
 	var pathLength = getPathLength(enemyCell, cellToFire);
 	putInStore(cacheKey, pathLength);
-	debugOperations();
-	decreaseLogIndent();
 	return pathLength;
 }
 
