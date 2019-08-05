@@ -284,7 +284,9 @@ function getCellSafetyLevel(@cell) {
 	if (enemyPathLength !== null) {
 		var enemyMP = @(getTotalMP(@enemy));
 
-		if (enemyPathLength > enemyMP) {
+		if (enemyPathLength > (enemyMP * 4 / 3)) {
+			level = 100;
+		} else if (enemyPathLength > enemyMP) {
 			level = 80;
 		} else if (enemyPathLength > (enemyMP * 2 / 3)) {
 			level = 60;
@@ -353,7 +355,7 @@ function getCellsToFireWithWeaponOnCell(@weapon, @shooter, @targetCell) {
 
 			for (var newCellToFire in @newCellsToFire) {
 				if (!inArray(@cellsToFire, @newCellToFire)) {
-					push(@cellsToFire, @newCellToFire);
+					push(cellsToFire, @newCellToFire);
 				}
 			}
 		}
