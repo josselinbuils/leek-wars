@@ -17,10 +17,6 @@ function HealerBulb() {
 			me :
 			summoner;
 
-		debug('life: ' + getLife());
-		debug('MP: ' + getMP());
-		debug('TP: ' + getTP());
-
 		if (
 			shouldTry() && canFireWithChip(CHIP_VACCINE, target)
 		) {
@@ -44,7 +40,7 @@ function HealerBulb() {
 				var targetCell = getCellToFireWithChip(
 					CHIP_CURE, summoner
 				);
-				debug('move: ' + moveTowardCell(targetCell));
+				moveTowardCell(targetCell);
 			}
 			break;
 		}

@@ -1,9 +1,83 @@
 include('../common/fight');
 
+global HEALER_MODE = 'HEALER_MODE';
+global KILLER_MODE = 'KILLER_MODE';
+global ponyBulbMode = HEALER_MODE;
+
 function PonyBulb() {
-	var summoner = getSummoner();
-	var targetCell = getCellToFireWithChip(CHIP_BANDAGE, summoner);
-	debug('move: ' + moveTowardCell(targetCell));
-	useChip(CHIP_BANDAGE, summoner);
-	useChip(CHIP_BANDAGE, summoner);
+	var alliesCount = safeCount(getAliveAllies());
+
+	if (ponyBulbMode === HEALER_MODE) {
+		if (alliesCount > 5) {
+			ponyBulbMode = KILLER_MODE;
+		}
+	} else if (alliesCount < 3) {
+		ponyBulbMode = HEALER_MODE;
+	}
+
+	if (ponyBulbMode === KILLER_MODE) {
+		var enemy = getNearestLeekEnemy();
+		var initialEnemy = enemy;
+		var me = getLeek();
+		var optimizer = Optimizer();
+		var summoner = getSummoner();
+
+		while (getAliveEnemiesCount() > 0) {
+			resetLogIndent();
+			logInfo('');
+
+			var arm = null;
+			var shouldTry = optimizer();
+			var target = enemy;
+
+			if (shouldTry() && canFireWithChip(CHIP_HELMET, me)) {
+				arm = CHIP_HELMET;
+				target = me;
+			} else if (shouldTry() && canFireWithChip(CHIP_PEBBLE, enemy)) {
+				arm = CHIP_PEBBLE;
+			} else if (shouldTry() && getNearestEnemy() !== enemy) {
+				enemy = getNearestEnemy();
+				optimizer = Optimizer();
+				continue;
+			} else if (
+				shouldTry() && getLife() > 150 && canFireWithChip(CHIP_PROTEIN, me)
+			) {
+				arm = CHIP_PROTEIN;
+				target = me;
+			} else if (
+				shouldTry() && canFireWithChip(CHIP_BANDAGE, me)
+			) {
+				arm = CHIP_BANDAGE;
+				target = me;
+			} else {
+				if (getMP() > 0) {
+					var targetCell = getCellToFireWithChip(
+						CHIP_PEBBLE, initialEnemy
+					);
+					moveTowardCell(targetCell);
+				}
+				break;
+			}
+
+			if (arm !== null) {
+				var result = fire(arm, target);
+				var hasError = result[1];
+
+				if (hasError) {
+					break;
+				}
+			}
+
+			if (!isAlive(initialEnemy)) {
+				enemy = getNearestLeekEnemy();
+				initialEnemy = enemy;
+			}
+		}
+	} else {
+		var summoner = getSummoner();
+		var targetCell = getCellToFireWithChip(CHIP_BANDAGE, summoner);
+		debug('move: ' + moveTowardCell(targetCell));
+		useChip(CHIP_BANDAGE, summoner);
+		useChip(CHIP_BANDAGE, summoner);
+	}
 }

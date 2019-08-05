@@ -14,10 +14,15 @@ global SAFE_LEVEL = 80;
 global turnsWithoutFire = 0;
 
 function canFireWithChip(@chip, @target) {
-	logInfo('canFireWithChip(' + getChipName(chip) + ')');
-	increaseLogIndent();
+	var doLog = !isSummon();
+	var debugOperations;
 
-	var debugOperations = monitorOperations('canFireWithChip', true);
+	if (doLog) {
+		logInfo('canFireWithChip(' + getChipName(chip) + ')');
+		increaseLogIndent();
+		debugOperations = monitorOperations('canFireWithChip', true);
+	}
+
 	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
 
 	if (canFire && target !== getLeek()) {
@@ -37,9 +42,11 @@ function canFireWithChip(@chip, @target) {
 		}
 	}
 
-	decreaseLogIndent();
-	logDetail(canFire);
-	debugOperations();
+	if (doLog) {
+		decreaseLogIndent();
+		logDetail(canFire);
+		debugOperations();
+	}
 	return canFire;
 }
 
@@ -375,9 +382,10 @@ function getCellsToUseChipOnCellWithCache(@chip, @targetCell, @thrower) {
 		@(getCellsToUseChipOnCell(
 			@chip,
 			@targetCell,
-			isAlly(@thrower) ?
-			@(getAliveAlliesCells()) :
-			@(getAliveEnemiesCells())
+			// do not ignore allies as an ally could be on fire line otherwise
+			//isAlly(@thrower) ?
+				//@(getAliveAlliesCells()) :
+				//@(getAliveEnemiesCells())
 		))
 	));
 	//putInStore(@cacheKey, @cells);
@@ -394,9 +402,11 @@ function getCellsToUseWeaponOnCellWithCache(@weapon, @targetCell, @shooter) {
 	//}
 
 	var shooterCell = @(getCell(@shooter));
-	var ignoredCells = isAlly(@shooter) ?
-		@(getAliveAlliesCells()) :
-		@(getAliveEnemiesCells());
+	var ignoredCells = @[];
+
+	//isAlly(@shooter) ?
+		//@(getAliveAlliesCells()) :
+		//@(getAliveEnemiesCells());
 
 	// The getCellsToUseWeapon function does not take into acount that
 	// the laser weapons can cross enemies
@@ -424,7 +434,11 @@ function getCellsToUseWeaponOnCellWithCache(@weapon, @targetCell, @shooter) {
 }
 
 function getCellToFireWithChip(@chip, @target) {
-	logInfo('getCellToFireWithChip(' + getChipName(chip) + ', ' + getEnemyName(target) + ')');
+	var doLog = !isSummon();
+
+	if (doLog) {
+		logInfo('getCellToFireWithChip(' + getChipName(chip) + ', ' + getEnemyName(target) + ')');
+	}
 
 	var startCell = getCell();
 	var cellToFire = null;
@@ -451,9 +465,11 @@ function getCellToFireWithChip(@chip, @target) {
 		putInStore(cacheKey, cellToFire);
 	}
 
-	logDetail('startCell: ' + startCell);
-	logDetail('cellToFire: ' + cellToFire);
-	logDetail('pathLength: ' + getPathLength(startCell, cellToFire));
+	if (doLog) {
+		logDetail('startCell: ' + startCell);
+		logDetail('cellToFire: ' + cellToFire);
+		logDetail('pathLength: ' + getPathLength(startCell, cellToFire));
+	}
 
 	return cellToFire;
 }

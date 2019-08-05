@@ -17,10 +17,6 @@ function IcedBulb() {
 		var shouldTry = optimizer();
 		var target = enemy;
 
-		debug('life: ' + getLife());
-		debug('MP: ' + getMP());
-		debug('TP: ' + getTP());
-
 		if (shouldTry() && canFireWithChip(CHIP_ICEBERG, enemy)) {
 			arm = CHIP_ICEBERG;
 		} else if (
@@ -30,7 +26,6 @@ function IcedBulb() {
 		} else if (shouldTry() && canFireWithChip(CHIP_ICE, enemy)) {
 			arm = CHIP_ICE;
 		} else if (shouldTry() && getNearestEnemy() !== enemy) {
-			debug('change target');
 			enemy = getNearestEnemy();
 			optimizer = Optimizer();
 			continue;
@@ -55,8 +50,7 @@ function IcedBulb() {
 				var targetCell = getCellToFireWithChip(
 					preferredChip, initialEnemy
 				);
-				debug('move to fire cell');
-				debug('move: ' + moveTowardCell(targetCell));
+				moveTowardCell(targetCell);
 			}
 			break;
 		}
