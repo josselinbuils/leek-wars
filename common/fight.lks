@@ -442,11 +442,9 @@ function getCellToFireWithChip(@chip, @target) {
 			cellToFire = startCell;
 		} else {
 			var cellsToFire = @(getCellsToFireWithChipOnCell(chip, getLeek(), targetCell));
-			logDetail('getCellsToFireWithChip: ' + arrayConcat(@[], @cellsToFire));
 
 			if (safeCount(@cellsToFire) > 0) {
 				cellsToFire = @(getMinPathCells(@cellsToFire));
-				logDetail('getMinPathCells: ' + arrayConcat(@[], @cellsToFire));
 
 				if (safeCount(@cellsToFire) > 0) {
 					cellToFire = getFarthestCellFrom(@cellsToFire, targetCell);
@@ -919,7 +917,7 @@ function initTurn() {
 		});
 	}
 
-	logMonitorData();
+	//logMonitorData();
 }
 
 function isAreaArm(@arm) {
