@@ -14,7 +14,6 @@ global SAFE_LEVEL = 80;
 global turnsWithoutFire = 0;
 
 function canFireWithChip(@chip, @target) {
-	logInfo('');
 	logInfo('canFireWithChip(' + getChipName(chip) + ')');
 	increaseLogIndent();
 
@@ -45,7 +44,6 @@ function canFireWithChip(@chip, @target) {
 }
 
 function canFireWithWeapon(@weapon, @enemy) {
-	logInfo('');
 	logInfo('canFireWithWeapon(' + getWeaponName(weapon) + ')');
 	increaseLogIndent();
 
@@ -84,7 +82,6 @@ function ensureWearingWeapon(@weapon) {
 }
 
 function fire(@arm, @target) {
-	logInfo('');
 	logInfo('fire(' + getArmName(arm) + ', ' + getEnemyName(target) + ')');
 	increaseLogIndent();
 
@@ -953,7 +950,6 @@ function isPoisoner(@leek) {
 }
 
 function move(@enemy) {
-	logInfo('');
 	logInfo('move(' + getEnemyName(enemy) + ')');
 	increaseLogIndent();
 
