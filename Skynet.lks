@@ -24,8 +24,8 @@ function Skynet() {
 	var enemy = getNearestLeekEnemy();
 	var initialEnemy = enemy;
 	var initialEnemyCell = getCell(initialEnemy);
-	var isEnemyPoisoner = getMagic(enemy) > getStrength(enemy);
-	var shouldProtect = !isEnemyPoisoner || safeCount(getDangerousEnemies()) > 3;
+	var isEnemyPoisoner = isPoisoner(initialEnemy);
+	var shouldProtect = !isEnemyPoisoner || safeCount(getDangerousEnemies()) > 2;
 	var me = getLeek();
 	var once = Once();
 	var optimizer = Optimizer();
@@ -33,22 +33,22 @@ function Skynet() {
 	var totalLife = getTotalLife();
 	var minSafeLife = max(600, totalLife / 2);
 
-	var venomCells = getCellsToFireWithChipOnCell(
-		CHIP_VENOM, me, initialEnemyCell
-	);
-	mark(venomCells, COLOR_GREEN);
+	//var venomCells = getCellsToFireWithChipOnCell(
+		//CHIP_VENOM, me, initialEnemyCell
+	//);
+	//mark(venomCells, COLOR_GREEN);
 
-	if (getCooldown(CHIP_TOXIN) === 0) {
-		var toxinCells = getCellsToFireWithChipOnCell(
-			CHIP_TOXIN, me, initialEnemyCell
-		);
-		mark(toxinCells, COLOR_BLUE);
-	}
+	//if (getCooldown(CHIP_TOXIN) === 0) {
+		//var toxinCells = getCellsToFireWithChipOnCell(
+			//CHIP_TOXIN, me, initialEnemyCell
+		//);
+		//mark(toxinCells, COLOR_BLUE);
+	//}
 
-	var flameThrowerCells = getCellsToFireWithWeaponOnCell(
-		WEAPON_FLAME_THROWER, me, initialEnemyCell
-	);
-	mark(flameThrowerCells, COLOR_RED);
+	//var flameThrowerCells = getCellsToFireWithWeaponOnCell(
+		//WEAPON_FLAME_THROWER, me, initialEnemyCell
+	//);
+	//mark(flameThrowerCells, COLOR_RED);
 
 	debug('turnsWithoutFire: ' + turnsWithoutFire);
 
