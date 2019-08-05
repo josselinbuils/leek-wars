@@ -34,19 +34,19 @@ function Skynet() {
 	var minSafeLife = max(600, totalLife / 2);
 
 	//var venomCells = getCellsToFireWithChipOnCell(
-		//CHIP_VENOM, me, initialEnemyCell
+	//CHIP_VENOM, me, initialEnemyCell
 	//);
 	//mark(venomCells, COLOR_GREEN);
 
 	//if (getCooldown(CHIP_TOXIN) === 0) {
-		//var toxinCells = getCellsToFireWithChipOnCell(
-			//CHIP_TOXIN, me, initialEnemyCell
-		//);
-		//mark(toxinCells, COLOR_BLUE);
+	//var toxinCells = getCellsToFireWithChipOnCell(
+	//CHIP_TOXIN, me, initialEnemyCell
+	//);
+	//mark(toxinCells, COLOR_BLUE);
 	//}
 
 	//var flameThrowerCells = getCellsToFireWithWeaponOnCell(
-		//WEAPON_FLAME_THROWER, me, initialEnemyCell
+	//WEAPON_FLAME_THROWER, me, initialEnemyCell
 	//);
 	//mark(flameThrowerCells, COLOR_RED);
 
@@ -129,7 +129,6 @@ function Skynet() {
 			canFireWithChip(CHIP_BALL_AND_CHAIN, enemy)
 		) {
 			arm = CHIP_BALL_AND_CHAIN;
-			optimizer = Optimizer();
 		} else if (
 			shouldTry() &&
 			isInitialEnemy &&
