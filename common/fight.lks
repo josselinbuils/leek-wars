@@ -155,7 +155,7 @@ function fire(@arm, @target) {
 }
 
 function getAliveAlliesCells() {
-	var cacheKey = 'alv-ally-cells';
+	var cacheKey = 'tmp-alv-ally-cells';
 
 	if (hasInStore(cacheKey)) {
 		return @(getInStore(cacheKey));
@@ -169,7 +169,7 @@ function getAliveAlliesCells() {
 }
 
 function getAliveEnemiesCells() {
-	var cacheKey = 'alv-enmy-cells';
+	var cacheKey = 'tmp-alv-enmy-cells';
 
 	if (hasInStore(cacheKey)) {
 		return @(getInStore(cacheKey));
@@ -480,12 +480,8 @@ function getEnemyPathLengthToFireOnCell(@cell, @enemy, @debug) {
 
 	var cellsToFire = @[];
 
-	if (refChip !== null && getCooldown(@refChip, @enemy) <= 1) {
-		var cellsToFireWithChip = isSummon(@enemy) ?
-			@(getCellsToUseChipOnCellWithCache(@refChip, @cell, @enemy)) :
-			@(getCellsToFireWithChipOnCell(@refChip, @enemy, @cell));
-
-		pushAll(cellsToFire, @cellsToFireWithChip);
+	if (refChip !== null) {
+		pushAll(cellsToFire, @(getCellsToFireWithChipOnCell(@refChip, @enemy, @cell)));
 	}
 
 	if (refWeapon !== null) {
@@ -500,7 +496,7 @@ function getEnemyPathLengthToFireOnCell(@cell, @enemy, @debug) {
 	var cellToFire = @(getClosestCellTo(@cellsToFire, @enemyCell));
 
 	if (debug) {
-		//mark(@cellsToFire, getColor(255, 100, 100));
+		mark(@cellsToFire, getColor(255, 100, 100));
 		mark(@[cellToFire], COLOR_RED);
 	}
 
@@ -636,6 +632,7 @@ function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
 	logDetail('availableMP: ' + @availableMP);
 
 	if (hasInStore(@cacheKey)) {
+		logDetail('use cache');
 		nextCell = @(getInStore(@cacheKey));
 
 		if (
