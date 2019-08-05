@@ -445,11 +445,9 @@ function getCellToFireWithChip(@chip, @target) {
 			cellToFire = startCell;
 		} else {
 			var cellsToFire = @(getCellsToFireWithChipOnCell(chip, getLeek(), targetCell));
-			logDetail('getCellsToFireWithChip: ' + arrayConcat(@[], @cellsToFire));
 
 			if (safeCount(@cellsToFire) > 0) {
 				cellsToFire = @(getMinPathCells(@cellsToFire));
-				logDetail('getMinPathCells: ' + arrayConcat(@[], @cellsToFire));
 
 				if (safeCount(@cellsToFire) > 0) {
 					cellToFire = getFarthestCellFrom(@cellsToFire, targetCell);
@@ -724,7 +722,8 @@ function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
 		logDetail(safeCount(reachableCells) + ' reachable cells found');
 
 		var nonEnemyReachableCells = @(arrayFilter(@reachableCells, function(cell) {
-			return getPathLength(@enemyCell, @cell) > totalEnemyMP;
+			var pathLength = getPathLength(@enemyCell, @cell);
+			return pathLength === null || pathLength > totalEnemyMP;
 		}));
 
 		var debugOperationsInt = @(monitorIntermediateOperations(

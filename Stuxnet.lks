@@ -11,7 +11,7 @@ function Stuxnet() {
 	var initialEnemy = enemy;
 	var isInitialEnemy = enemy === initialEnemy;
 	var isEnemyPoisoner = isPoisoner(initialEnemy);
-	var shouldProtect = !isEnemyPoisoner || safeCount(getDangerousEnemies()) > 2;
+	var shouldProtect = !isEnemyPoisoner || safeCount(getDangerousEnemies()) > 1;
 	var me = getLeek();
 	var once = Once();
 	var optimizer = Optimizer();
