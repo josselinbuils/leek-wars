@@ -293,6 +293,11 @@ function getCellSafetyLevel(@cell) {
 		} else if (enemyPathLength > (enemyMP * 1 / 3)) {
 			level = 40;
 		}
+
+		// Poisoners do not want to come too close
+		if (isPoisoner(@enemy)) {
+			level += 20;
+		}
 	}
 
 	var cellsAround = @(getDirectReachableCellsAround(@cell));
@@ -442,9 +447,11 @@ function getCellToFireWithChip(@chip, @target) {
 			cellToFire = startCell;
 		} else {
 			var cellsToFire = @(getCellsToFireWithChipOnCell(chip, getLeek(), targetCell));
+			logDetail('getCellsToFireWithChip: ' + arrayConcat(@[], @cellsToFire));
 
 			if (safeCount(@cellsToFire) > 0) {
 				cellsToFire = @(getMinPathCells(@cellsToFire));
+				logDetail('getMinPathCells: ' + arrayConcat(@[], @cellsToFire));
 
 				if (safeCount(@cellsToFire) > 0) {
 					cellToFire = getFarthestCellFrom(@cellsToFire, targetCell);
@@ -719,8 +726,7 @@ function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
 		logDetail(safeCount(reachableCells) + ' reachable cells found');
 
 		var nonEnemyReachableCells = @(arrayFilter(@reachableCells, function(cell) {
-			var pathLength = getPathLength(@enemyCell, @cell);
-			return pathLength === null || pathLength > totalEnemyMP;
+			return getPathLength(@enemyCell, @cell) > totalEnemyMP;
 		}));
 
 		var debugOperationsInt = @(monitorIntermediateOperations(
@@ -938,6 +944,18 @@ function isPoisoned(@leek) {
 		}
 	}
 	return false;
+}
+
+function isPoisoner(@leek) {
+	var cacheKey = 'psnr-' + leek;
+
+	if (hasInStore(@cacheKey)) {
+		return @(getInStore(@cacheKey));
+	}
+
+	var isLeekPoisoner = getMagic(@leek) > getStrength(@leek);
+	putInStore(@cacheKey, @isLeekPoisoner);
+	return @isLeekPoisoner;
 }
 
 function move(@enemy) {
