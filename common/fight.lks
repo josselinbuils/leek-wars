@@ -291,11 +291,6 @@ function getCellSafetyLevel(@cell) {
 		} else if (enemyPathLength > (enemyMP * 1 / 3)) {
 			level = 40;
 		}
-
-		// Poisoners do not want to come too close
-		if (isPoisoner(@enemy)) {
-			level += 20;
-		}
 	}
 
 	var cellsAround = @(getDirectReachableCellsAround(@cell));
@@ -370,14 +365,14 @@ function getCellsToFireWithWeaponOnCell(@weapon, @shooter, @targetCell) {
 
 function getCellsToUseChipOnCellWithCache(@chip, @targetCell, @thrower) {
 	// Use enemy name to have common cache for bulbs
-	var cacheKey = 'tmp-clsChp-' + @chip +
-		'-' + @targetCell + '-' + @getName(@thrower);
+	//var cacheKey = 'tmp-clsChp-' + @chip +
+	//'-' + @targetCell + '-' + @getName(@thrower);
 
-	if (hasInStore(@cacheKey)) {
-		return @(getInStore(@cacheKey));
-	}
+	//if (hasInStore(@cacheKey)) {
+	//return @(getInStore(@cacheKey));
+	//}
 
-	var cells = @(ensureArray(
+	return @(ensureArray(
 		@(getCellsToUseChipOnCell(
 			@chip,
 			@targetCell,
@@ -386,18 +381,18 @@ function getCellsToUseChipOnCellWithCache(@chip, @targetCell, @thrower) {
 			@(getAliveEnemiesCells())
 		))
 	));
-	putInStore(@cacheKey, @cells);
-	return @cells;
+	//putInStore(@cacheKey, @cells);
+	//return @cells;
 }
 
 function getCellsToUseWeaponOnCellWithCache(@weapon, @targetCell, @shooter) {
 	// Use enemy name to have common cache for bulbs
-	var cacheKey = 'tmp-clsWpn-' + @weapon +
-		'-' + @targetCell + '-' + @(getName(shooter));
+	//var cacheKey = 'tmp-clsWpn-' + @weapon +
+	//'-' + @targetCell + '-' + @(getName(shooter));
 
-	if (hasInStore(@cacheKey)) {
-		return @(getInStore(@cacheKey));
-	}
+	//if (hasInStore(@cacheKey)) {
+	//return @(getInStore(@cacheKey));
+	//}
 
 	var shooterCell = @(getCell(@shooter));
 	var ignoredCells = isAlly(@shooter) ?
@@ -415,7 +410,7 @@ function getCellsToUseWeaponOnCellWithCache(@weapon, @targetCell, @shooter) {
 		);
 	}
 
-	var cells = @(ensureArray(
+	return @(ensureArray(
 		@(arrayFilter(
 			@(getCellsToUseWeaponOnCell(
 				@weapon, @targetCell, @ignoredCells
@@ -425,8 +420,8 @@ function getCellsToUseWeaponOnCellWithCache(@weapon, @targetCell, @shooter) {
 			}
 		))
 	));
-	putInStore(@cacheKey, @cells);
-	return @cells;
+	//putInStore(@cacheKey, @cells);
+	//return @cells;
 }
 
 function getCellToFireWithChip(@chip, @target) {
@@ -999,6 +994,12 @@ function shouldFire(@target, @arm, @cellToFire, @pathlength) {
 	if (pathlength === 0) {
 		should = true;
 		logDetail('can fire without moving');
+	} else if (
+		getLife() > (getTotalLife() * 2 / 3) &&
+		getLife(target) < (getTotalLife(target) * 1 / 3)
+	) {
+		should = true;
+		logDetail('finishes him');
 	} else {
 		var armEffects = isWeapon(arm) ?
 			@(getWeaponEffects(arm)) :

@@ -60,7 +60,7 @@ function monitorOperations(@id, @logResult) {
 		monitorData['ops'] += @consumedOperations;
 		putInStore(@cacheKey, @monitorData);
 
-		if (logResult) {
+		if (logResult && consumedOperationsPerc > 0.1) {
 			var remainingOperations = floor((OPERATIONS_LIMIT - endOperations) / OPERATIONS_LIMIT * 10000) / 100;
 			getMonitorLogMethod(@consumedOperationsPerc)(@consumedOperationsPerc + '% ops consumed');
 			logDetail(@remainingOperations + '% ops remaining');
@@ -90,7 +90,6 @@ function Once() {
 	var flagArray = @[];
 
 	return @(function() {
-		logInfo('reset once');
 		var currentIndex = -1;
 
 		return @(function(willBeUsed) {
@@ -122,7 +121,6 @@ function Optimizer() {
 	var limit = (OPERATIONS_LIMIT * (isSummon() ? 90 : 70) / 100);
 
 	return @(function() {
-		logInfo('reset optimizer');
 		currentIndex = -1;
 
 		return @(function() {
