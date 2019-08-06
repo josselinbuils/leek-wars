@@ -340,6 +340,7 @@ function getCellsToFireWithChipOnCell(@chip, @thrower, @targetCell) {
 function getCellsToFireWithWeaponOnCell(@weapon, @shooter, @targetCell) {
 	var debugOperations = @(monitorOperations('getCellsToFireWithWeaponOnCell', false));
 	var startCell = @(getCell(@shooter));
+	var weaponArea = @(getWeaponArea(@weapon));
 
 	var cellsToFire = @(getCellsToUseWeaponOnCellWithCache(
 		@weapon, @targetCell, @shooter
