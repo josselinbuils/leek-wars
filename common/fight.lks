@@ -485,11 +485,9 @@ function getCellToFireWithWeapon(@weapon, @enemy) {
 			cellToFire = startCell;
 		} else {
 			var cellsToFire = @(getCellsToFireWithWeaponOnCell(weapon, getLeek(), getCell(enemy)));
-			logDetail('getCellsToFireWithWeapon: ' + arrayConcat(@[], @cellsToFire));
 
 			if (safeCount(@cellsToFire) > 0) {
 				cellsToFire = @(getMinPathCells(@cellsToFire));
-				logDetail('getMinPathCells: ' + arrayConcat(@[], @cellsToFire));
 
 				if (safeCount(@cellsToFire) > 0) {
 					cellToFire = getFarthestCellFrom(@cellsToFire, getCell(enemy));
