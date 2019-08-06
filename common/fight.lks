@@ -120,7 +120,7 @@ function getCellsToAreaFireWithChipOnCell(@chip, @thrower, @targetCell) {
 	for (var cell in @targetableDeltaCells) {
 		// Do not ignore allies as an ally could be on fire line otherwise
 		var newCellsToFire = @(getCellsToUseChipOnCell(
-			@chip, @targetCell,
+			@chip, @cell,
 		));
 
 		for (var newCellToFire in @newCellsToFire) {
@@ -196,7 +196,7 @@ function getCellToAreaFireWithChip(@chip, @target) {
 	var cellToFire = null;
 	var targetCell = getCell(target);
 	var cellsToFire = @(getCellsToAreaFireWithChipOnCell(
-		@chip,  @(getLeek()),  @targetCell
+		@chip, @(getLeek()), @targetCell
 	));
 
 	if (safeCount(@cellsToFire) > 0) {
@@ -233,7 +233,7 @@ function getCellToDirectFireWithChip(@chip, @target) {
 		cellToFire = startCell;
 	} else {
 		var cellsToFire = @(getCellsToDirectFireWithChipOnCell(
-			@chip, @(getLeek()),@targetCell,
+			@chip, @(getLeek()), @targetCell,
 		));
 
 		if (safeCount(@cellsToFire) > 0) {
@@ -342,7 +342,7 @@ function getEnemyPathLengthToFireOnCell(@cell, @enemy, @debug) {
 
 	if (refChip !== null) {
 		var chipCellsToFire = isAreaArm(@refChip) ?
-			@(getCellsToAreaFireWithChipOnCell(@refChip, @enemy, @cell)):
+			@(getCellsToAreaFireWithChipOnCell(@refChip, @enemy, @cell)) :
 			@(getCellsToDirectFireWithChipOnCell(@refChip, @enemy, @cell));
 
 		pushAll(@cellsToFire, @chipCellsToFire);

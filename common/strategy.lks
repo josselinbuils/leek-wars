@@ -20,31 +20,34 @@ function canFireWithChip(@chip, @target) {
 	var debugOperations;
 
 	if (doLog) {
-		logInfo('canFireWithChip(' + getChipName(chip) + ')');
+		logInfo('canFireWithChip(' + getChipName(@chip) + ')');
 		increaseLogIndent();
 		debugOperations = monitorOperations('canFireWithChip', true);
 	}
 
-	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
+	var canFire = getTP() >= getChipCost(@chip) && getCooldown(@chip) === 0;
 
 	if (
 		canFire &&
 		target !== getLeek() &&
 		getCellToFire(@chip, @target) === null
 	) {
-		var cellToFire = getCellToDirectFireWithChip(chip, target);
+		var cellToDirectFire = @(getCellToDirectFireWithChip(@chip, @target));
 
-		if (cellToFire !== null) {
-			var pathlength = getPathLength(getCell(), cellToFire);
+		if (canFireWithChipFromCell(@chip, @target, @cellToDirectFire)) {
+			canFire = true;
+			setCellToFire(@chip, @target, @cellToDirectFire);
+		} else if (isAreaArm(@chip)) {
+			var cellToAreaFire = @(getCellToAreaFireWithChip(@chip, @target));
 
-			canFire = pathlength !== null && getMP() >= pathlength;
-
-			if (canFire && !isSummon()) {
-				canFire = shouldFire(target, chip, cellToFire, pathlength) === true;
-			}
-
-			if (canFire) {
-				setCellToFire(@chip,  @target,  @cellToFire);
+			if (
+				cellToAreaFire !== cellToDirectFire &&
+				canFireWithChipFromCell(@chip, @target, @cellToAreaFire)
+			) {
+				canFire = true;
+				setCellToFire(@chip, @target, @cellToAreaFire);
+			} else {
+				canFire = false;
 			}
 		} else {
 			canFire = false;
@@ -55,6 +58,20 @@ function canFireWithChip(@chip, @target) {
 		decreaseLogIndent();
 		logDetail(canFire);
 		debugOperations();
+	}
+	return canFire;
+}
+
+function canFireWithChipFromCell(@chip, @target, @cell) {
+	if (cell === null) {
+		return false;
+	}
+
+	var pathlength = @(getPathLength(@(getCell()), @cell));
+	var canFire = pathlength !== null && getMP() >= pathlength;
+
+	if (canFire && !isSummon()) {
+		canFire = shouldFire(@target, @chip, @cell, @pathlength) === true;
 	}
 	return canFire;
 }
@@ -73,17 +90,17 @@ function canFireWithWeapon(@weapon, @enemy) {
 	var canFire = getTP() >= cost;
 
 	if (canFire && getCellToFire(@weapon, @enemy) === null) {
-		var cellToFire = getCellToDirectFireWithWeapon(weapon, enemy);
+		var cellToDirectFire = getCellToDirectFireWithWeapon(weapon, enemy);
 
-		if (cellToFire !== null) {
-			var pathlength = getPathLength(getCell(), cellToFire);
+		if (cellToDirectFire !== null) {
+			var pathlength = getPathLength(getCell(), cellToDirectFire);
 
 			canFire = pathlength !== null &&
 				getMP() >= pathlength &&
-				shouldFire(enemy, weapon, cellToFire, pathlength) === true;
+				shouldFire(enemy, weapon, cellToDirectFire, pathlength) === true;
 
 			if (canFire) {
-				setCellToFire(@weapon,  @enemy,  @cellToFire);
+				setCellToFire(@weapon, @enemy, @cellToDirectFire);
 			}
 		} else {
 			canFire = false;
@@ -106,7 +123,7 @@ function fire(@arm, @target) {
 
 	if (isWeapon(arm)) {
 		// Has to be done before calling getTargetEnemy
-		moveTowardCell(@(getCellToFire(@arm,  @target)));
+		moveTowardCell(@(getCellToFire(@arm, @target)));
 		target = getTargetEnemy(arm, target);
 
 		if (target !== null) {
@@ -118,7 +135,7 @@ function fire(@arm, @target) {
 		}
 	} else {
 		if (target !== getLeek()) {
-			moveTowardCell(@(getCellToFire(@arm,  @target)));
+			moveTowardCell(@(getCellToFire(@arm, @target)));
 
 			if (!isAlly(target)) {
 				hasFired = true;
@@ -456,6 +473,7 @@ function shouldFire(@target, @arm, @cellToFire, @pathlength) {
 		should = true;
 		logDetail('can fire without moving');
 	} else if (
+		!isSummon(target) &&
 		getLife() > (getTotalLife() * 2 / 3) &&
 		getLife(target) < (getTotalLife(target) * 1 / 3)
 	) {
