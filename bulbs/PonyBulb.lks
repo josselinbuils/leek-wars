@@ -51,7 +51,7 @@ function PonyBulb() {
 				target = me;
 			} else {
 				if (getMP() > 0) {
-					var targetCell = getCellToFireWithChip(
+					var targetCell = getCellToDirectFireWithChip(
 						CHIP_PEBBLE, initialEnemy
 					);
 					moveTowardCell(targetCell);
@@ -75,7 +75,7 @@ function PonyBulb() {
 		}
 	} else {
 		var summoner = getSummoner();
-		var targetCell = getCellToFireWithChip(CHIP_BANDAGE, summoner);
+		var targetCell = getCellToDirectFireWithChip(CHIP_BANDAGE, summoner);
 		debug('move: ' + moveTowardCell(targetCell));
 		useChip(CHIP_BANDAGE, summoner);
 		useChip(CHIP_BANDAGE, summoner);

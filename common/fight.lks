@@ -113,98 +113,54 @@ function getArmName(@arm) {
 		getWeaponName(@arm);
 }
 
-function getCellsToFireWithChipOnCell(@chip, @thrower, @targetCell) {
-	var debugOperations = @(monitorOperations('getCellsToFireWithChipOnCell', false));
-	var cellsToFire = @(getCellsToUseChipOnCellWithCache(
-		@chip, @targetCell, @thrower
-	));
+function getCellsToAreaFireWithChipOnCell(@chip, @thrower, @targetCell) {
+	var cellsToFire = @[];
+	var targetableDeltaCells = @(getTargetableDeltaCells(@targetCell, @chip));
 
-	if (isAreaArm(@chip)) {
-		var targetableDeltaCells = @(getTargetableDeltaCells(@targetCell, @chip));
+	for (var cell in @targetableDeltaCells) {
+		// Do not ignore allies as an ally could be on fire line otherwise
+		var newCellsToFire = @(getCellsToUseChipOnCell(
+			@chip, @targetCell,
+		));
 
-		for (var cell in @targetableDeltaCells) {
-			var newCellsToFire = @(getCellsToUseChipOnCellWithCache(
-				@chip, @cell, @thrower
-			));
-
-			for (var newCellToFire in @newCellsToFire) {
-				if (!inArray(@cellsToFire, @newCellToFire)) {
-					push(cellsToFire, @newCellToFire);
-				}
+		for (var newCellToFire in @newCellsToFire) {
+			if (!inArray(@cellsToFire, @newCellToFire)) {
+				push(cellsToFire, @newCellToFire);
 			}
 		}
 	}
 
-	debugOperations();
 	return @cellsToFire;
 }
 
-function getCellsToFireWithWeaponOnCell(@weapon, @shooter, @targetCell) {
-	var debugOperations = @(monitorOperations('getCellsToFireWithWeaponOnCell', false));
-	var startCell = @(getCell(@shooter));
+function getCellsToAreaFireWithWeaponOnCell(@weapon, @shooter, @targetCell) {
+	var cellsToFire = @[];
+	var targetableDeltaCells = @(getTargetableDeltaCells(@targetCell, @weapon));
 
-	var cellsToFire = @(getCellsToUseWeaponOnCellWithCache(
-		@weapon, @targetCell, @shooter
-	));
+	for (var cell in @targetableDeltaCells) {
+		// Do not ignore allies as an ally could be on fire line otherwise
+		var newCellsToFire = @(getCellsToUseWeaponOnCell(
+			@weapon, @cell, @shooter
+		));
 
-	if (isAreaArm(weapon)) {
-		var targetableDeltaCells = @(getTargetableDeltaCells(@targetCell, @weapon));
-
-		for (var cell in @targetableDeltaCells) {
-			var newCellsToFire = @(getCellsToUseWeaponOnCellWithCache(
-				@weapon, @cell, @shooter
-			));
-
-			for (var newCellToFire in @newCellsToFire) {
-				if (!inArray(@cellsToFire, @newCellToFire)) {
-					push(cellsToFire, @newCellToFire);
-				}
+		for (var newCellToFire in @newCellsToFire) {
+			if (!inArray(@cellsToFire, @newCellToFire)) {
+				push(cellsToFire, @newCellToFire);
 			}
 		}
 	}
 
-	debugOperations();
 	return @cellsToFire;
 }
 
-function getCellsToUseChipOnCellWithCache(@chip, @targetCell, @thrower) {
-	// Use enemy name to have common cache for bulbs
-	//var cacheKey = 'tmp-clsChp-' + @chip +
-	//'-' + @targetCell + '-' + @getName(@thrower);
-
-	//if (hasInStore(@cacheKey)) {
-	//return @(getInStore(@cacheKey));
-	//}
-
-	return @(ensureArray(
-		@(getCellsToUseChipOnCell(
-			@chip,
-			@targetCell,
-			// do not ignore allies as an ally could be on fire line otherwise
-			//isAlly(@thrower) ?
-			//@(getAliveAlliesCells()) :
-			//@(getAliveEnemiesCells())
-		))
-	));
-	//putInStore(@cacheKey, @cells);
-	//return @cells;
+function getCellsToDirectFireWithChipOnCell(@chip, @thrower, @targetCell) {
+	// Do not ignore allies as an ally could be on fire line otherwise
+	return @(getCellsToUseChipOnCell(@chip, @targetCell));
 }
 
-function getCellsToUseWeaponOnCellWithCache(@weapon, @targetCell, @shooter) {
-	// Use enemy name to have common cache for bulbs
-	//var cacheKey = 'tmp-clsWpn-' + @weapon +
-	//'-' + @targetCell + '-' + @(getName(shooter));
-
-	//if (hasInStore(@cacheKey)) {
-	//return @(getInStore(@cacheKey));
-	//}
-
+function getCellsToDirectFireWithWeaponOnCell(@weapon, @shooter, @targetCell) {
 	var shooterCell = @(getCell(@shooter));
 	var ignoredCells = @[];
-
-	//isAlly(@shooter) ?
-	//@(getAliveAlliesCells()) :
-	//@(getAliveEnemiesCells());
 
 	// The getCellsToUseWeapon function does not take into acount that
 	// the laser weapons can cross enemies
@@ -219,6 +175,7 @@ function getCellsToUseWeaponOnCellWithCache(@weapon, @targetCell, @shooter) {
 
 	return @(ensureArray(
 		@(arrayFilter(
+			// Do not ignore allies as an ally could be on fire line otherwise
 			@(getCellsToUseWeaponOnCell(
 				@weapon, @targetCell, @ignoredCells
 			)),
@@ -227,40 +184,65 @@ function getCellsToUseWeaponOnCellWithCache(@weapon, @targetCell, @shooter) {
 			}
 		))
 	));
-	//putInStore(@cacheKey, @cells);
-	//return @cells;
 }
 
-function getCellToFireWithChip(@chip, @target) {
+function getCellToAreaFireWithChip(@chip, @target) {
 	var doLog = !isSummon();
 
 	if (doLog) {
-		logInfo('getCellToFireWithChip(' + getChipName(chip) + ', ' + getEnemyName(target) + ')');
+		logInfo('getCellToAreaFireWithChip(' + getChipName(chip) + ', ' + getEnemyName(target) + ')');
+	}
+
+	var cellToFire = null;
+	var targetCell = getCell(target);
+	var cellsToFire = @(getCellsToAreaFireWithChipOnCell(
+		@chip,  @(getLeek()),  @targetCell
+	));
+
+	if (safeCount(@cellsToFire) > 0) {
+		cellsToFire = @(getMinPathCells(@cellsToFire));
+
+		if (safeCount(@cellsToFire) > 0) {
+			cellToFire = getFarthestCellFrom(@cellsToFire, targetCell);
+		}
+	}
+
+	if (doLog) {
+		var startCell = getCell();
+
+		logDetail('startCell: ' + startCell);
+		logDetail('cellToFire: ' + cellToFire);
+		logDetail('pathLength: ' + getPathLength(startCell, cellToFire));
+	}
+
+	return cellToFire;
+}
+
+function getCellToDirectFireWithChip(@chip, @target) {
+	var doLog = !isSummon();
+
+	if (doLog) {
+		logInfo('getCellToDirectFireWithChip(' + getChipName(chip) + ', ' + getEnemyName(target) + ')');
 	}
 
 	var startCell = getCell();
 	var cellToFire = null;
-	var cacheKey = 'tmp-fireCellChip-' + chip + '-' + target + '-' + startCell;
+	var targetCell = getCell(target);
 
-	if (hasInStore(cacheKey)) {
-		cellToFire = getInStore(cacheKey);
+	if (canUseChip(chip, target)) {
+		cellToFire = startCell;
 	} else {
-		var targetCell = getCell(target);
+		var cellsToFire = @(getCellsToDirectFireWithChipOnCell(
+			@chip, @(getLeek()),@targetCell,
+		));
 
-		if (canUseChip(chip, target)) {
-			cellToFire = startCell;
-		} else {
-			var cellsToFire = @(getCellsToFireWithChipOnCell(chip, getLeek(), targetCell));
+		if (safeCount(@cellsToFire) > 0) {
+			cellsToFire = @(getMinPathCells(@cellsToFire));
 
 			if (safeCount(@cellsToFire) > 0) {
-				cellsToFire = @(getMinPathCells(@cellsToFire));
-
-				if (safeCount(@cellsToFire) > 0) {
-					cellToFire = getFarthestCellFrom(@cellsToFire, targetCell);
-				}
+				cellToFire = getFarthestCellFrom(@cellsToFire, targetCell);
 			}
 		}
-		putInStore(cacheKey, cellToFire);
 	}
 
 	if (doLog) {
@@ -272,8 +254,8 @@ function getCellToFireWithChip(@chip, @target) {
 	return cellToFire;
 }
 
-function getCellToFireWithWeapon(@weapon, @enemy) {
-	logInfo('getCellToFireWithWeapon(' + getWeaponName(weapon) + ')');
+function getCellToDirectFireWithWeapon(@weapon, @enemy) {
+	logInfo('getCellToDirectFireWithWeapon(' + getWeaponName(weapon) + ')');
 
 	var startCell = getCell();
 	var cellToFire = null;
@@ -285,7 +267,9 @@ function getCellToFireWithWeapon(@weapon, @enemy) {
 		if (canUseWeapon(weapon, enemy)) {
 			cellToFire = startCell;
 		} else {
-			var cellsToFire = @(getCellsToFireWithWeaponOnCell(weapon, getLeek(), getCell(enemy)));
+			var cellsToFire = getCellsToDirectFireWithWeaponOnCell(
+				@weapon, @(getLeek()), @(getCell(@enemy))
+			);
 
 			if (safeCount(@cellsToFire) > 0) {
 				cellsToFire = @(getMinPathCells(@cellsToFire));
@@ -357,11 +341,19 @@ function getEnemyPathLengthToFireOnCell(@cell, @enemy, @debug) {
 	var cellsToFire = @[];
 
 	if (refChip !== null) {
-		pushAll(cellsToFire, @(getCellsToFireWithChipOnCell(@refChip, @enemy, @cell)));
+		var chipCellsToFire = isAreaArm(@refChip) ?
+			@(getCellsToAreaFireWithChipOnCell(@refChip, @enemy, @cell)):
+			@(getCellsToDirectFireWithChipOnCell(@refChip, @enemy, @cell));
+
+		pushAll(@cellsToFire, @chipCellsToFire);
 	}
 
 	if (refWeapon !== null) {
-		pushAll(cellsToFire, @(getCellsToFireWithWeaponOnCell(@refWeapon, @enemy, @cell)));
+		var weaponCellsToFire = isAreaArm(@refWeapon) ?
+			@(getCellsToAreaFireWithWeaponOnCell(@refWeapon, @enemy, @cell)) :
+			@(getCellsToDirectFireWithWeaponOnCell(@refWeapon, @enemy, @cell));
+
+		pushAll(@cellsToFire, @weaponCellsToFire);
 	}
 
 	if (safeCount(@cellsToFire) === 0) {

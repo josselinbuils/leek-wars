@@ -32,7 +32,7 @@ function canFireWithChip(@chip, @target) {
 		target !== getLeek() &&
 		getCellToFire(@chip, @target) === null
 	) {
-		var cellToFire = getCellToFireWithChip(chip, target);
+		var cellToFire = getCellToDirectFireWithChip(chip, target);
 
 		if (cellToFire !== null) {
 			var pathlength = getPathLength(getCell(), cellToFire);
@@ -73,7 +73,7 @@ function canFireWithWeapon(@weapon, @enemy) {
 	var canFire = getTP() >= cost;
 
 	if (canFire && getCellToFire(@weapon, @enemy) === null) {
-		var cellToFire = getCellToFireWithWeapon(weapon, enemy);
+		var cellToFire = getCellToDirectFireWithWeapon(weapon, enemy);
 
 		if (cellToFire !== null) {
 			var pathlength = getPathLength(getCell(), cellToFire);

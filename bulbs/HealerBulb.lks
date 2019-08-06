@@ -37,7 +37,7 @@ function HealerBulb() {
 			chip = CHIP_BANDAGE;
 		} else {
 			if (getMP() > 0) {
-				var targetCell = getCellToFireWithChip(
+				var targetCell = getCellToDirectFireWithChip(
 					CHIP_CURE, summoner
 				);
 				moveTowardCell(targetCell);

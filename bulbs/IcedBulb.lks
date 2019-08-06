@@ -47,7 +47,7 @@ function IcedBulb() {
 					preferredChip = CHIP_STALACTITE;
 				}
 
-				var targetCell = getCellToFireWithChip(
+				var targetCell = getCellToDirectFireWithChip(
 					preferredChip, initialEnemy
 				);
 				moveTowardCell(targetCell);
