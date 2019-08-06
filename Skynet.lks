@@ -104,15 +104,15 @@ function Skynet() {
 			target = me;
 		} else if (
 			shouldTry() &&
+			canFireWithWeapon(WEAPON_FLAME_THROWER, enemy)
+		) {
+			arm = WEAPON_FLAME_THROWER;
+		} else if (
+			shouldTry() &&
 			isInitialEnemy &&
 			canFireWithChip(CHIP_TOXIN, enemy)
 		) {
 			arm = CHIP_TOXIN;
-		} else if (
-			shouldTry() &&
-			canFireWithWeapon(WEAPON_FLAME_THROWER, enemy)
-		) {
-			arm = WEAPON_FLAME_THROWER;
 		} else if (
 			shouldTry() && canFireWithChip(CHIP_VENOM, enemy)
 		) {
