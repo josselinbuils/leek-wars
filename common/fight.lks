@@ -30,9 +30,8 @@ function canFireWithChip(@chip, @target) {
 
 		if (cellToFire !== null) {
 			var pathlength = getPathLength(getCell(), cellToFire);
-			var minMP = isSummon() ? pathlength : (pathlength * 1.5);
 
-			canFire = pathlength !== null && getMP() >= minMP;
+			canFire = pathlength !== null && getMP() >= pathlength;
 
 			if (canFire && !isSummon()) {
 				canFire = shouldFire(target, chip, cellToFire, pathlength) === true;
@@ -382,8 +381,8 @@ function getCellsToUseChipOnCellWithCache(@chip, @targetCell, @thrower) {
 			@targetCell,
 			// do not ignore allies as an ally could be on fire line otherwise
 			//isAlly(@thrower) ?
-				//@(getAliveAlliesCells()) :
-				//@(getAliveEnemiesCells())
+			//@(getAliveAlliesCells()) :
+			//@(getAliveEnemiesCells())
 		))
 	));
 	//putInStore(@cacheKey, @cells);
@@ -403,8 +402,8 @@ function getCellsToUseWeaponOnCellWithCache(@weapon, @targetCell, @shooter) {
 	var ignoredCells = @[];
 
 	//isAlly(@shooter) ?
-		//@(getAliveAlliesCells()) :
-		//@(getAliveEnemiesCells());
+	//@(getAliveAlliesCells()) :
+	//@(getAliveEnemiesCells());
 
 	// The getCellsToUseWeapon function does not take into acount that
 	// the laser weapons can cross enemies
