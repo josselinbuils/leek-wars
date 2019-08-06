@@ -1,7 +1,7 @@
 include('bulbs/HealerBulb');
 include('bulbs/IcedBulb');
-include('common/fight');
 include('common/logger');
+include('common/strategy');
 include('common/utils');
 
 global hasFiredOnce = false;

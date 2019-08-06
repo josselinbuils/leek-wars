@@ -1,4 +1,4 @@
-include('../common/fight');
+include('../common/strategy');
 
 global HEALER_MODE = 'HEALER_MODE';
 global KILLER_MODE = 'KILLER_MODE';

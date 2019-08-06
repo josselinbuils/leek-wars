@@ -1,6 +1,6 @@
 include('bulbs/PonyBulb');
-include('common/fight');
 include('common/logger');
+include('common/strategy');
 include('common/utils');
 
 function Stuxnet() {
