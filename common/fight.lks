@@ -3,7 +3,9 @@ include('map');
 include('store');
 include('utils');
 
-// TODO optimizes area arms management to reach as enemies as possible
+// TODO do not use area cells when possible as less efficient
+// TODO manage area weapon in fire
+// TODO optimize area arms management to reach as enemies as possible
 
 global FIGHT_EFFECTS = @[EFFECT_DAMAGE, EFFECT_POISON];
 global MAX_OPS_PERCENT = 30;
@@ -93,7 +95,7 @@ function fire(@arm, @target) {
 
 	var hasFired = false;
 	var hasError = false;
-	var result;
+	var result = null;
 
 	if (isWeapon(arm)) {
 		// Has to be done before calling getTargetEnemy
@@ -116,12 +118,9 @@ function fire(@arm, @target) {
 			}
 		}
 
-		if (
-			isAreaArm(arm) && (
-				(isChip(arm) && !canUseChip(arm, target)) ||
-				(isWeapon(arm) && !canUseWeapon(arm, target))
-			)
-		) {
+		if (canUseChip(arm, target)) {
+			result = useChip(arm, target);
+		} else if (isAreaArm(arm)) {
 			var targetCell = getCell(target);
 			var targetableDeltaCells = @(getTargetableDeltaCells(
 				targetCell, arm
@@ -136,10 +135,10 @@ function fire(@arm, @target) {
 					}
 				}
 			} else {
-				logError('fire', 'Cannot use arm ' + getArmName(arm) + ' on cell ' + targetCell);
+				logError('fire', 'Cannot use chip ' + getChipName(arm) + ' on cell ' + targetCell);
 			}
 		} else {
-			result = useChip(arm, target);
+			logError('fire', 'Cannot use chip ' + getChipName(arm) + ' on target ' + getEnemyName(@target));
 		}
 	}
 
