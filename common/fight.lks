@@ -340,7 +340,6 @@ function getCellsToFireWithChipOnCell(@chip, @thrower, @targetCell) {
 function getCellsToFireWithWeaponOnCell(@weapon, @shooter, @targetCell) {
 	var debugOperations = @(monitorOperations('getCellsToFireWithWeaponOnCell', false));
 	var startCell = @(getCell(@shooter));
-	var weaponArea = @(getWeaponArea(@weapon));
 
 	var cellsToFire = @(getCellsToUseWeaponOnCellWithCache(
 		@weapon, @targetCell, @shooter
@@ -502,16 +501,6 @@ function getCellToFireWithWeapon(@weapon, @enemy) {
 	logDetail('pathLength: ' + getPathLength(startCell, cellToFire));
 
 	return cellToFire;
-}
-
-function getDangerousEnemies() {
-	return @(ensureArray(
-		@(arrayFilter(@(getAliveEnemies()), function(@enemy) {
-			var refArms = @(getEnemyRefArms(enemy));
-			return refArms['chip'] !== null ||
-				refArms['weapon'] !== null;
-		}))
-	));
 }
 
 function getEnemyFightChips(@enemy) {
