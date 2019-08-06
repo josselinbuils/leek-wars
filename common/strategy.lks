@@ -27,7 +27,11 @@ function canFireWithChip(@chip, @target) {
 
 	var canFire = getTP() >= getChipCost(chip) && getCooldown(chip) === 0;
 
-	if (canFire && target !== getLeek()) {
+	if (
+		canFire &&
+		target !== getLeek() &&
+		getCellToFire(@chip, @target) === null
+	) {
 		var cellToFire = getCellToFireWithChip(chip, target);
 
 		if (cellToFire !== null) {
@@ -38,7 +42,6 @@ function canFireWithChip(@chip, @target) {
 			if (canFire && !isSummon()) {
 				canFire = shouldFire(target, chip, cellToFire, pathlength) === true;
 			}
-
 
 			if (canFire) {
 				setCellToFire(@chip,  @target,  @cellToFire);
@@ -62,13 +65,14 @@ function canFireWithWeapon(@weapon, @enemy) {
 
 	var debugOperations = monitorOperations('canFireWithWeapon', true);
 	var cost = getWeaponCost(weapon);
-	var canFire = false;
 
 	if (getWeapon() !== weapon) {
 		cost = cost + 1;
 	}
 
-	if (getTP() >= cost) {
+	var canFire = getTP() >= cost;
+
+	if (canFire && getCellToFire(@weapon, @enemy) === null) {
 		var cellToFire = getCellToFireWithWeapon(weapon, enemy);
 
 		if (cellToFire !== null) {
