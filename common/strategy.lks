@@ -38,6 +38,11 @@ function canFireWithChip(@chip, @target) {
 			if (canFire && !isSummon()) {
 				canFire = shouldFire(target, chip, cellToFire, pathlength) === true;
 			}
+
+
+			if (canFire) {
+				setCellToFire(@chip,  @target,  @cellToFire);
+			}
 		} else {
 			canFire = false;
 		}
@@ -72,6 +77,10 @@ function canFireWithWeapon(@weapon, @enemy) {
 			canFire = pathlength !== null &&
 				getMP() >= pathlength &&
 				shouldFire(enemy, weapon, cellToFire, pathlength) === true;
+
+			if (canFire) {
+				setCellToFire(@weapon,  @enemy,  @cellToFire);
+			}
 		} else {
 			canFire = false;
 		}
@@ -93,7 +102,7 @@ function fire(@arm, @target) {
 
 	if (isWeapon(arm)) {
 		// Has to be done before calling getTargetEnemy
-		moveTowardCell(getCellToFireWithWeapon(arm, target));
+		moveTowardCell(@(getCellToFire(@arm,  @target)));
 		target = getTargetEnemy(arm, target);
 
 		if (target !== null) {
@@ -105,7 +114,7 @@ function fire(@arm, @target) {
 		}
 	} else {
 		if (target !== getLeek()) {
-			moveTowardCell(getCellToFireWithChip(arm, target));
+			moveTowardCell(@(getCellToFire(@arm,  @target)));
 
 			if (!isAlly(target)) {
 				hasFired = true;
@@ -199,6 +208,10 @@ function getCellSafetyLevel(@cell) {
 	putInStore(@cacheKey, @level);
 	debugOperations();
 	return @level;
+}
+
+function getCellToFire(@arm, @target) {
+	return @(getInStore('tmp-fire-cell-' + arm + '-' + target));
 }
 
 function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
@@ -423,6 +436,10 @@ function move(@enemy) {
 		moveTowardCell(nextCell);
 	}
 	debugOperations();
+}
+
+function setCellToFire(@arm, @target, @cellToFire) {
+	putInStore('tmp-fire-cell-' + arm + '-' + target, @cellToFire);
 }
 
 function shouldFire(@target, @arm, @cellToFire, @pathlength) {
