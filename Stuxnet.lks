@@ -3,6 +3,8 @@ include('common/logger');
 include('common/strategy');
 include('common/utils');
 
+global hasFiredOnce = false;
+
 function Stuxnet() {
 	initTurn();
 
@@ -53,13 +55,6 @@ function Stuxnet() {
 			target = me;
 		} else if (
 			shouldTry() &&
-			shouldProtect &&
-			canFireWithChip(CHIP_WALL, me)
-		) {
-			arm = CHIP_WALL;
-			target = me;
-		} else if (
-			shouldTry() &&
 			isInitialEnemy &&
 			canFireWithChip(CHIP_TOXIN, enemy)
 		) {
@@ -73,6 +68,13 @@ function Stuxnet() {
 			enemy = getNearestEnemy();
 			optimizer = Optimizer();
 			continue;
+		} else if (
+			shouldTry() &&
+			(hasFiredOnce || getLife() < totalLife) &&
+			canFireWithChip(CHIP_VACCINE, me)
+		) {
+			arm = CHIP_VACCINE;
+			target = me;
 		} else if (
 			shouldTry() &&
 			getLife() < totalLife &&
@@ -92,6 +94,18 @@ function Stuxnet() {
 		) {
 			summonBulb(CHIP_PUNY_BULB, PonyBulb, initialEnemy);
 		} else if (
+			shouldTry() &&
+			canFireWithChip(CHIP_TRANQUILIZER, initialEnemy)
+		) {
+			arm = CHIP_TRANQUILIZER;
+			target = initialEnemy;
+		} else if (
+			shouldTry() &&
+			!isInitialEnemy &&
+			canFireWithChip(CHIP_TRANQUILIZER, enemy)
+		) {
+			arm = CHIP_TRANQUILIZER;
+		} else if (
 			shouldTry() && canFireWithWeapon(WEAPON_BROADSWORD, enemy)
 		) {
 			arm = WEAPON_BROADSWORD;
@@ -110,6 +124,10 @@ function Stuxnet() {
 
 			if (hasError) {
 				break;
+			}
+
+			if (hasFired && !hasFiredOnce) {
+				hasFiredOnce = true;
 			}
 		}
 
