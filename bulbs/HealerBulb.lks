@@ -7,6 +7,10 @@ function HealerBulb() {
 	var optimizer = Optimizer();
 	var summoner = getSummoner();
 
+	debug('life: ' + getLife());
+	debug('MP: ' + getMP());
+	debug('TP: ' + getTP());
+
 	while (true) {
 		resetLogIndent();
 		logInfo('');
@@ -35,6 +39,14 @@ function HealerBulb() {
 			shouldTry() && canFireWithChip(CHIP_BANDAGE, target)
 		) {
 			chip = CHIP_BANDAGE;
+		} else if (target !== summoner) {
+			target = summoner;
+			optimizer = Optimizer();
+			continue;
+		} else if (target !== getNearestAlly()) {
+			target = getNearestAlly();
+			optimizer = Optimizer();
+			continue;
 		} else {
 			if (getMP() > 0) {
 				var targetCell = getCellToDirectFireWithChip(
