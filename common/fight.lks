@@ -490,6 +490,10 @@ function getNearestLeekEnemy() {
 			nearestEnemyPathLength = @enemyPathLength;
 		}
 	}
+
+	if (nearestEnemy === null) {
+		logError('getNearestLeekEnemy', 'unable to find nearest enemy: ' + enemies);
+	}
 	return @nearestEnemy;
 }
 
