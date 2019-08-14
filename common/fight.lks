@@ -203,7 +203,8 @@ function getCellToAreaFireWithChip(@chip, @target) {
 		cellsToFire = @(getMinPathCells(@cellsToFire));
 
 		if (safeCount(@cellsToFire) > 0) {
-			cellToFire = getFarthestCellFrom(@cellsToFire, targetCell);
+			// cellsToFire are ordered by efficiency
+			cellToFire = shift(@cellsToFire);
 		}
 	}
 
@@ -476,8 +477,8 @@ function getNearestLeekEnemy() {
 			return !isSummon(@enemy);
 		}
 	));
-	var nearestEnemy = null;
-	var nearestEnemyPathLength = 999;
+	var nearestEnemy = shift(enemies);
+	var nearestEnemyPathLength = @(getPathLength(@startCell, @(getCell(@nearestEnemy))));
 
 	for (var enemy in enemies) {
 		var enemyPathLength = @(getPathLength(@startCell, @(getCell(@enemy))));
@@ -489,10 +490,6 @@ function getNearestLeekEnemy() {
 			nearestEnemy = @enemy;
 			nearestEnemyPathLength = @enemyPathLength;
 		}
-	}
-
-	if (nearestEnemy === null) {
-		logError('getNearestLeekEnemy', 'unable to find nearest enemy: ' + enemies);
 	}
 	return @nearestEnemy;
 }
@@ -563,7 +560,11 @@ function getTargetableDeltaCells(@targetCell, @arm) {
 		}
 	}
 
-	return @targetableCells;
+	return arraySort(@targetableCells, function (a, b) {
+		var distA = getDistance(@a, @targetCell);
+		var distB = getDistance(@b, @targetCell);
+		return distA < distB ? -1 : (distA === distB ? 0 : 1);
+	});
 }
 
 function isAreaArm(@arm) {
@@ -611,7 +612,11 @@ function summonBulb(@bulb, @ai, @enemy) {
 			[-2, 0],
 			[2, 0],
 		];
-	} else if (bulb === CHIP_PUNY_BULB || bulb === CHIP_ROCKY_BULB) {
+	} else if (
+		bulb === CHIP_FIRE_BULB ||
+		bulb === CHIP_PUNY_BULB ||
+		bulb === CHIP_ROCKY_BULB
+	) {
 		deltas = @[
 			[0, -3],
 			[0, -2],

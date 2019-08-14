@@ -4,9 +4,7 @@ include('map');
 include('store');
 include('utils');
 
-// TODO priorize most efficient cells when area fire
 // TODO manage area weapon in fire
-// TODO optimize area arms management to reach as enemies as possible
 
 global MAX_OPS_PERCENT = 30;
 global MIN_ACCEPTABLE_SAFE_LEVEL = 80;

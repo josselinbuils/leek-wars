@@ -1,0 +1,80 @@
+include('../common/strategy');
+
+function FireBulb() {
+	var hasFired = false;
+	var enemy = getNearestLeekEnemy();
+	var initialEnemy = enemy;
+	var me = getLeek();
+	var optimizer = Optimizer();
+	var summoner = getSummoner();
+	var totalTP = getTotalTP();
+
+	debug('life: ' + getLife());
+	debug('MP: ' + getMP());
+	debug('TP: ' + getTP());
+
+	while (getAliveEnemiesCount() > 0) {
+		resetLogIndent();
+		logInfo('');
+
+		var arm = null;
+		var shouldTry = optimizer();
+		var target = enemy;
+
+		if (shouldTry() && canFireWithChip(CHIP_METEORITE, enemy)) {
+			arm = CHIP_METEORITE;
+		} else if (
+			shouldTry() &&
+			!isSummon(target) &&
+			canFireWithChip(CHIP_DEVIL_STRIKE, enemy)
+		) {
+			arm = CHIP_DEVIL_STRIKE;
+		} else if (shouldTry() && canFireWithChip(CHIP_FLAME, enemy)) {
+			arm = CHIP_FLAME;
+		} else if (shouldTry() && canFireWithChip(CHIP_SPARK, enemy)) {
+			arm = CHIP_SPARK;
+		} else if (shouldTry() && getNearestEnemy() !== enemy) {
+			enemy = getNearestEnemy();
+			optimizer = Optimizer();
+			continue;
+		} else {
+			if (getMP() > 0) {
+				var preferredChip = CHIP_FLAME;
+
+				if (totalTP >= 8) {
+					preferredChip = CHIP_METEORITE;
+				} else if (totalTP >= 6) {
+					preferredChip = CHIP_DEVIL_STRIKE;
+				}
+
+				var targetCell = preferredChip === CHIP_DEVIL_STRIKE ?
+					getCellToAreaFireWithChip(
+						preferredChip, initialEnemy
+					) :
+					getCellToDirectFireWithChip(
+						preferredChip, initialEnemy
+					);
+				moveTowardCell(targetCell);
+			}
+			break;
+		}
+
+		if (arm !== null) {
+			var result = fire(arm, target);
+			hasFired = result[0];
+			var hasError = result[1];
+
+			if (hasError) {
+				break;
+			}
+		}
+
+		if (!isAlive(initialEnemy)) {
+			enemy = getNearestLeekEnemy();
+			initialEnemy = enemy;
+		} else if (!isAlive(enemy)) {
+			enemy = getNearestEnemy();
+			optimizer = Optimizer();
+		}
+	}
+}
