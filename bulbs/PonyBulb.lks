@@ -71,6 +71,9 @@ function PonyBulb() {
 			if (!isAlive(initialEnemy)) {
 				enemy = getNearestLeekEnemy();
 				initialEnemy = enemy;
+			} else if (!isAlive(enemy)) {
+				enemy = getNearestEnemy();
+				optimizer = Optimizer();
 			}
 		}
 	} else {
