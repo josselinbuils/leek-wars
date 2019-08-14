@@ -4,8 +4,6 @@ include('common/logger');
 include('common/strategy');
 include('common/utils');
 
-global hasFiredOnce = false;
-
 function isBadlyPoisoned() {
 	var poisonDammages = 0;
 
@@ -158,7 +156,7 @@ function Skynet() {
 			target = me;
 		} else if (
 			shouldTry() &&
-			getLife() < totalLife &&
+			getLife() < (totalLife * 3 / 4) &&
 			canFireWithChip(CHIP_REMISSION, me)
 		) {
 			arm = CHIP_REMISSION;
@@ -167,6 +165,25 @@ function Skynet() {
 			doOnce(shouldTry() && canFireWithChip(CHIP_ICED_BULB, me))
 		) {
 			summonBulb(CHIP_ICED_BULB, IcedBulb, initialEnemy);
+		} else if (
+			shouldTry() &&
+			!isInitialEnemy &&
+			canFireWithChip(CHIP_SLOW_DOWN, initialEnemy)
+		) {
+			arm = CHIP_SLOW_DOWN;
+			target = initialEnemy;
+		} else if (
+			shouldTry() &&
+			canFireWithChip(CHIP_SLOW_DOWN, enemy)
+		) {
+			arm = CHIP_SLOW_DOWN;
+		} else if (
+			shouldTry() &&
+			getLife() < totalLife &&
+			canFireWithChip(CHIP_REMISSION, me)
+		) {
+			arm = CHIP_REMISSION;
+			target = me;
 		} else if (
 			shouldTry() &&
 			getLife(getNearestAlly()) < getTotalLife(getNearestAlly()) &&
@@ -194,19 +211,19 @@ function Skynet() {
 			if (hasError) {
 				break;
 			}
-
-			if (hasFired && !hasFiredOnce) {
-				hasFiredOnce = true;
-			}
 		}
 
 		if (!isAlive(initialEnemy)) {
 			if (getAliveEnemiesCount() === 0) {
-				say("Encore une victoire de canard !");
+				say('Encore une victoire de canard !');
 			} else {
 				enemy = getNearestLeekEnemy();
 				initialEnemy = enemy;
 			}
+		} else if (!isAlive(enemy)) {
+			debug('change target');
+			enemy = getNearestEnemy();
+			optimizer = Optimizer();
 		}
 	}
 }
