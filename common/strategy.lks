@@ -4,7 +4,7 @@ include('map');
 include('store');
 include('utils');
 
-// TODO do not use area cells when possible as less efficient
+// TODO priorize most efficient cells when area fire
 // TODO manage area weapon in fire
 // TODO optimize area arms management to reach as enemies as possible
 
