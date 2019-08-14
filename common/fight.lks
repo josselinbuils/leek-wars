@@ -416,16 +416,23 @@ function getMaxRangeChip(@chips) {
 	for (var chip in @chips) {
 		var chipMaxRange = getChipMaxRange(chip);
 		var chipArea = getChipArea(chip);
+		var isAreaChip = false;
 
 		if (chipArea === AREA_CIRCLE_1) {
-			chipMaxRange += 1;
-		} else if (chipArea === AREA_CIRCLE_2) {
 			chipMaxRange += 2;
-		} else if (chipArea === AREA_CIRCLE_3) {
+			isAreaChip = true;
+		} else if (chipArea === AREA_CIRCLE_2) {
 			chipMaxRange += 3;
+			isAreaChip = true;
+		} else if (chipArea === AREA_CIRCLE_3) {
+			chipMaxRange += 4;
+			isAreaChip = true;
 		}
 
-		if (chipMaxRange > maxRange) {
+		if (
+			chipMaxRange > maxRange ||
+			(chipMaxRange === maxRange && isAreaChip)
+		) {
 			maxRangeChip = chip;
 			maxRange = chipMaxRange;
 		}
@@ -462,30 +469,53 @@ function getMaxRangeWeapon(@weapons) {
 }
 
 function getNearestLeekEnemy() {
-	var enemies = @(getAliveEnemies());
-	var startCell = getCell();
+	var startCell = @(getCell());
+	var enemies = @(arrayFilter(
+		@(getAliveEnemies()),
+		function(@enemy) {
+			return !isSummon(@enemy);
+		}
+	));
+	var nearestEnemy = null;
+	var nearestEnemyPathLength = 999;
 
-	enemies = @(arrayFilter(@enemies, function(@enemy) {
-		return !isSummon(enemy);
-	}));
-
-	var firstEnemy = shift(@enemies);
-	var nearestEnemyPathLength = getPathLength(
-		startCell, getCell(firstEnemy)
-	);
-
-	return arrayFoldLeft(@enemies, function(@nearestEnemy, @enemy) {
-		var enemyPathLength = getPathLength(startCell, getCell(enemy));
+	for (var enemy in enemies) {
+		var enemyPathLength = @(getPathLength(@startCell, @(getCell(@enemy))));
 
 		if (
 			enemyPathLength !== null &&
 			enemyPathLength < nearestEnemyPathLength
 		) {
-			nearestEnemyPathLength = enemyPathLength;
-			return enemy;
+			nearestEnemy = @enemy;
+			nearestEnemyPathLength = @enemyPathLength;
 		}
-		return nearestEnemy;
-	}, firstEnemy);
+	}
+	return @nearestEnemy;
+}
+
+function getNearestDangerousSummonEnemy() {
+	var startCell = @(getCell());
+	var enemies = @(arrayFilter(
+		@(getDangerousEnemies()),
+		function(@enemy) {
+			return isSummon(@enemy);
+		}
+	));
+	var nearestEnemy = null;
+	var nearestEnemyPathLength = 999;
+
+	for (var enemy in enemies) {
+		var enemyPathLength = @(getPathLength(@startCell, @(getCell(@enemy))));
+
+		if (
+			enemyPathLength !== null &&
+			enemyPathLength < nearestEnemyPathLength
+		) {
+			nearestEnemy = @enemy;
+			nearestEnemyPathLength = @enemyPathLength;
+		}
+	}
+	return @nearestEnemy;
 }
 
 function getTargetableDeltaCells(@targetCell, @arm) {

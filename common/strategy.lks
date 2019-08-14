@@ -195,25 +195,67 @@ function getCellSafetyLevel(@cell) {
 	var debugOperations = @(monitorOperations('getCellSafetyLevel', false));
 	var level = 0;
 	var highlyProtectedAgainstLeeks = true;
+	var protectedAgainstBulbs = true;
 	var protectedAgainstLeeks = true;
+	var middlyProtectedAgainstBulbs = true;
 	var middlyProtectedAgainstLeeks = true;
+	var littleProtectedAgainstLeeks = true;
 
-	var enemy = getNearestLeekEnemy();
-	var isEnemySummon = @(isSummon(@enemy));
-	var enemyPathLength = @(getEnemyPathLengthToFireOnCell(
-		@cell, @enemy, false
+	var nearestLeekEnemy = getNearestLeekEnemy();
+	var nearestLeekEnemyPathLength = @(getEnemyPathLengthToFireOnCell(
+		@cell, @nearestLeekEnemy, false
 	));
 
-	if (enemyPathLength !== null) {
-		var enemyMP = @(getTotalMP(@enemy));
+	if (nearestLeekEnemyPathLength !== null) {
+		var nearestLeekEnemyMP = @(getTotalMP(@nearestLeekEnemy));
 
-		if (enemyPathLength > enemyMP) {
-			level = 80;
-		} else if (enemyPathLength > (enemyMP * 2 / 3)) {
-			level = 60;
-		} else if (enemyPathLength > (enemyMP * 1 / 3)) {
-			level = 40;
+		highlyProtectedAgainstLeeks = false;
+
+		if (nearestLeekEnemyPathLength <= (nearestLeekEnemyMP * 1 / 3)) {
+			protectedAgainstLeeks = false;
+			middlyProtectedAgainstLeeks = false;
+			littleProtectedAgainstLeeks = false;
+		} else if (nearestLeekEnemyPathLength <= (nearestLeekEnemyMP * 2 / 3)) {
+			protectedAgainstLeeks = false;
+			middlyProtectedAgainstLeeks = false;
+		} else if (nearestLeekEnemyPathLength <= nearestLeekEnemyMP) {
+			protectedAgainstLeeks = false;
 		}
+	}
+
+	var nearestBulbEnemy = getNearestDangerousSummonEnemy();
+
+	if (nearestBulbEnemy !== null) {
+		var nearestBulbEnemyPathLength = @(getEnemyPathLengthToFireOnCell(
+			@cell, @nearestBulbEnemy, false
+		));
+
+		if (nearestBulbEnemyPathLength !== null) {
+			var nearestBulbEnemyMP = @(getTotalMP(@nearestBulbEnemy));
+
+			if (nearestBulbEnemyPathLength <= (nearestBulbEnemyMP * 2 / 3)) {
+				protectedAgainstBulbs = false;
+				middlyProtectedAgainstBulbs = false;
+			} else if (nearestBulbEnemyPathLength <= nearestBulbEnemyMP) {
+				protectedAgainstBulbs = false;
+			}
+		}
+	}
+
+	if (protectedAgainstBulbs && highlyProtectedAgainstLeeks) {
+		level = 120;
+	} else if (middlyProtectedAgainstBulbs && highlyProtectedAgainstLeeks) {
+		level = 110;
+	} else if (protectedAgainstBulbs && protectedAgainstLeeks) {
+		level = 100;
+	} else if (middlyProtectedAgainstBulbs && protectedAgainstLeeks) {
+		level = 80;
+	} else if (protectedAgainstLeeks) {
+		level = 70;
+	} else if (middlyProtectedAgainstLeeks) {
+		level = 60;
+	} else if (littleProtectedAgainstLeeks) {
+		level = 40;
 	}
 
 	var cellsAround = @(getDirectReachableCellsAround(@cell));
@@ -266,13 +308,8 @@ function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
 		));
 		logDetail(safeCount(reachableCells) + ' reachable cells found');
 
-		var nonEnemyReachableCells = @(arrayFilter(@reachableCells, function(cell) {
-			var pathLength = getPathLength(@enemyCell, @cell);
-			return pathLength === null || pathLength > totalEnemyMP;
-		}));
-
 		var debugOperationsInt = @(monitorIntermediateOperations(
-			'iterates cells safety (' + @(safeCount(@nonEnemyReachableCells)) +
+			'iterates cells safety (' + @(safeCount(@reachableCells)) +
 			' entries)'
 		));
 		var maxSafetyLevel = 0;
@@ -280,7 +317,7 @@ function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
 		var shouldContinue = perfLimiter(MAX_OPS_PERCENT);
 		var i = 0;
 
-		for (var cell in @nonEnemyReachableCells) {
+		for (var cell in @reachableCells) {
 			if (!shouldContinue()) {
 				logDetail('stopped by limiter after ' + @i + ' iterations');
 				break;
