@@ -26,24 +26,35 @@ function HealerBulb() {
 		) {
 			chip = CHIP_VACCINE;
 		} else if (
-			shouldTry() && canFireWithChip(CHIP_CURE, target)
+			shouldTry() &&
+			getLife(target) < getTotalLife(target) &&
+			canFireWithChip(CHIP_CURE, target)
 		) {
 			chip = CHIP_CURE;
 		} else if (
 			shouldTry() &&
-			target === summoner &&
+			target !== me &&
+			getLife(target) < getTotalLife(target) &&
 			canFireWithChip(CHIP_DRIP, target)
 		) {
 			chip = CHIP_DRIP;
 		} else if (
-			shouldTry() && canFireWithChip(CHIP_BANDAGE, target)
+			shouldTry() &&
+			getLife(target) < getTotalLife(target) &&
+			canFireWithChip(CHIP_BANDAGE, target)
 		) {
 			chip = CHIP_BANDAGE;
-		} else if (target !== summoner) {
+		} else if (
+			shouldTry() &&
+			target !== summoner
+		) {
 			target = summoner;
 			optimizer = Optimizer();
 			continue;
-		} else if (target !== getNearestAlly()) {
+		} else if (
+			shouldTry() &&
+			target !== getNearestAlly()
+		) {
 			target = getNearestAlly();
 			optimizer = Optimizer();
 			continue;
