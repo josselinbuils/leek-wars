@@ -50,6 +50,13 @@ function Stuxnet() {
 		} else if (
 			shouldTry() &&
 			shouldProtect &&
+			canFireWithChip(CHIP_ARMOR, me)
+		) {
+			arm = CHIP_ARMOR;
+			target = me;
+		} else if (
+			shouldTry() &&
+			shouldProtect &&
 			canFireWithChip(CHIP_SHIELD, me)
 		) {
 			arm = CHIP_SHIELD;
