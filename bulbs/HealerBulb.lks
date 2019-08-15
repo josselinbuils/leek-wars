@@ -6,6 +6,9 @@ function HealerBulb() {
 	var me = getLeek();
 	var optimizer = Optimizer();
 	var summoner = getSummoner();
+	var target = getLife(me) < (getTotalLife(me) / 2) ?
+		me :
+		summoner;
 
 	debug('life: ' + getLife());
 	debug('MP: ' + getMP());
@@ -17,9 +20,6 @@ function HealerBulb() {
 
 		var chip = null;
 		var shouldTry = optimizer();
-		var target = getLife(me) < (getTotalLife(me) / 2) ?
-			me :
-			summoner;
 
 		if (
 			shouldTry() && canFireWithChip(CHIP_VACCINE, target)
@@ -46,7 +46,8 @@ function HealerBulb() {
 			chip = CHIP_BANDAGE;
 		} else if (
 			shouldTry() &&
-			target !== summoner
+			target !== summoner &&
+			target !== getNearestAlly()
 		) {
 			target = summoner;
 			optimizer = Optimizer();
