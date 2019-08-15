@@ -315,7 +315,6 @@ function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
 			mark(@[@nextCell], getColor(255, 128, 210));
 		}
 	} else if (availableMP > 0) {
-		var totalEnemyMP = @(getTotalMP(@enemy));
 		var debugOperations = @(monitorOperations('getNextCell', true));
 
 		var reachableCells = @(sortByDistanceAsc(
@@ -324,8 +323,14 @@ function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
 		));
 		logDetail(safeCount(reachableCells) + ' reachable cells found');
 
+		var significantEnemyMP = getTotalMP(@enemy) * 1 / 3;
+		var nonEasilyReachableCells = @(arrayFilter(@reachableCells, function(cell) {
+			var pathLength = getPathLength(@enemyCell, @cell);
+			return pathLength === null || pathLength > significantEnemyMP;
+		}));
+
 		var debugOperationsInt = @(monitorIntermediateOperations(
-			'iterates cells safety (' + @(safeCount(@reachableCells)) +
+			'iterates cells safety (' + @(safeCount(@nonEasilyReachableCells)) +
 			' entries)'
 		));
 		var maxSafetyLevel = 0;
@@ -333,7 +338,7 @@ function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
 		var shouldContinue = perfLimiter(MAX_OPS_PERCENT);
 		var i = 0;
 
-		for (var cell in @reachableCells) {
+		for (var cell in @nonEasilyReachableCells) {
 			if (!shouldContinue()) {
 				logDetail('stopped by limiter after ' + @i + ' iterations');
 				break;
