@@ -186,15 +186,42 @@ function getCellsToDirectFireWithWeaponOnCell(@weapon, @shooter, @targetCell) {
 	));
 }
 
+function getCellToAreaFireOn(@arm, @target) {
+	var cacheKey = 'tmp-fire-on-cell-' + arm + '-' + target;
+
+	if (hasInStore(@cacheKey)) {
+		return @(getInStore(@cacheKey));
+	}
+
+	var targetCell = @(getCell(@target));
+	var targetableDeltaCells = @(getTargetableDeltaCells(
+		@targetCell, @arm
+	));
+	var canUseArmOnCell = isChip(@arm) ?
+		@canUseChipOnCell :
+		@canUseWeaponOnCell;
+
+	if (safeCount(@targetableDeltaCells) > 0) {
+		for (var cell in @targetableDeltaCells) {
+			if (canUseArmOnCell(@arm, @cell)) {
+				putInStore(@cacheKey, @cell);
+				return @cell;
+			}
+		}
+	}
+
+	return null;
+}
+
 function getCellToAreaFireWithChip(@chip, @target) {
 	var doLog = !isSummon();
 
 	if (doLog) {
-		logInfo('getCellToAreaFireWithChip(' + getChipName(chip) + ', ' + getEnemyName(target) + ')');
+		logInfo('getCellToAreaFireWithChip(' + getChipName(@chip) + ', ' + getLeekName(@target) + ')');
 	}
 
 	var cellToFire = null;
-	var targetCell = getCell(target);
+	var targetCell = @(getCell(target));
 	var cellsToFire = @(getCellsToAreaFireWithChipOnCell(
 		@chip, @(getLeek()), @targetCell
 	));
@@ -203,8 +230,39 @@ function getCellToAreaFireWithChip(@chip, @target) {
 		cellsToFire = @(getMinPathCells(@cellsToFire));
 
 		if (safeCount(@cellsToFire) > 0) {
-			// cellsToFire are ordered by efficiency
-			cellToFire = shift(@cellsToFire);
+			cellToFire = getFarthestCellFrom(@cellsToFire, targetCell);
+		}
+	}
+
+	if (doLog) {
+		var startCell = @(getCell());
+
+		logDetail('startCell: ' + startCell);
+		logDetail('cellToFire: ' + cellToFire);
+		logDetail('pathLength: ' + getPathLength(@startCell, @cellToFire));
+	}
+
+	return @cellToFire;
+}
+
+function getCellToAreaFireWithWeapon(@weapon, @target) {
+	var doLog = !isSummon();
+
+	if (doLog) {
+		logInfo('getCellToAreaFireWithWeapon(' + getWeaponName(@weapon) + ', ' + getLeekName(@target) + ')');
+	}
+
+	var cellToFire = null;
+	var targetCell = @(getCell(@target));
+	var cellsToFire = @(getCellsToAreaFireWithWeaponOnCell(
+		@weapon, @(getLeek()), @targetCell
+	));
+
+	if (safeCount(@cellsToFire) > 0) {
+		cellsToFire = @(getMinPathCells(@cellsToFire));
+
+		if (safeCount(@cellsToFire) > 0) {
+			cellToFire = getFarthestCellFrom(@cellsToFire, targetCell);
 		}
 	}
 
@@ -213,17 +271,17 @@ function getCellToAreaFireWithChip(@chip, @target) {
 
 		logDetail('startCell: ' + startCell);
 		logDetail('cellToFire: ' + cellToFire);
-		logDetail('pathLength: ' + getPathLength(startCell, cellToFire));
+		logDetail('pathLength: ' + getPathLength(@startCell, @cellToFire));
 	}
 
-	return cellToFire;
+	return @cellToFire;
 }
 
 function getCellToDirectFireWithChip(@chip, @target) {
 	var doLog = !isSummon();
 
 	if (doLog) {
-		logInfo('getCellToDirectFireWithChip(' + getChipName(chip) + ', ' + getEnemyName(target) + ')');
+		logInfo('getCellToDirectFireWithChip(' + getChipName(chip) + ', ' + getLeekName(target) + ')');
 	}
 
 	var startCell = getCell();
@@ -313,14 +371,6 @@ function getEnemyFightChips(@enemy) {
 	));
 }
 
-function getEnemyName(@enemy) {
-	if (enemy === null) {
-		return null;
-	}
-	return getName(@enemy) +
-		(isSummon(@enemy) ? ('_' + @enemy) : '');
-}
-
 function getEnemyPathLengthToFireOnCell(@cell, @enemy, @debug) {
 	var cacheKey = @('tmp-enmyPth-' + @cell + '-' + @enemy);
 
@@ -397,13 +447,21 @@ function getEnemyRefArms(@enemy) {
 			@(getWeaponName(@refWeapon)) :
 			null;
 
-		logDetail('refArms of ' + @(getEnemyName(enemy)) + ': ' + @chipName + ', ' + @weaponName);
+		logDetail('refArms of ' + @(getLeekName(enemy)) + ': ' + @chipName + ', ' + @weaponName);
 	} else if (!isSummon(enemy)) {
-		logError('getEnemyRefArms', 'unable to retrieve ' + @(getEnemyName(enemy)) + ' ref arms');
+		logError('getEnemyRefArms', 'unable to retrieve ' + @(getLeekName(enemy)) + ' ref arms');
 	}
 
 	putInStore(@cacheKey, @refArms);
 	return @refArms;
+}
+
+function getLeekName(@leek) {
+	if (leek === null) {
+		return null;
+	}
+	return getName(@leek) +
+		(isSummon(@leek) ? ('_' + leek) : '');
 }
 
 function getMaxRangeChip(@chips) {
@@ -560,7 +618,7 @@ function getTargetableDeltaCells(@targetCell, @arm) {
 		}
 	}
 
-	return arraySort(@targetableCells, function (a, b) {
+	return arraySort(@targetableCells, function(a, b) {
 		var distA = getDistance(@a, @targetCell);
 		var distB = getDistance(@b, @targetCell);
 		return distA < distB ? -1 : (distA === distB ? 0 : 1);

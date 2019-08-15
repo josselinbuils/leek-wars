@@ -4,6 +4,7 @@ include('map');
 include('store');
 include('utils');
 
+// TODO priorize most efficient cells when area fire
 // TODO manage area weapon in fire
 
 global MAX_OPS_PERCENT = 30;
@@ -33,7 +34,6 @@ function canFireWithChip(@chip, @target) {
 		var cellToDirectFire = @(getCellToDirectFireWithChip(@chip, @target));
 
 		if (canFireWithChipFromCell(@chip, @target, @cellToDirectFire)) {
-			canFire = true;
 			setCellToFire(@chip, @target, @cellToDirectFire);
 		} else if (isAreaArm(@chip)) {
 			var cellToAreaFire = @(getCellToAreaFireWithChip(@chip, @target));
@@ -42,7 +42,6 @@ function canFireWithChip(@chip, @target) {
 				cellToAreaFire !== cellToDirectFire &&
 				canFireWithChipFromCell(@chip, @target, @cellToAreaFire)
 			) {
-				canFire = true;
 				setCellToFire(@chip, @target, @cellToAreaFire);
 			} else {
 				canFire = false;
@@ -57,7 +56,7 @@ function canFireWithChip(@chip, @target) {
 		logDetail(canFire);
 		debugOperations();
 	}
-	return canFire;
+	return @canFire;
 }
 
 function canFireWithChipFromCell(@chip, @target, @cell) {
@@ -71,7 +70,7 @@ function canFireWithChipFromCell(@chip, @target, @cell) {
 	if (canFire && !isSummon()) {
 		canFire = shouldFire(@target, @chip, @cell, @pathlength) === true;
 	}
-	return canFire;
+	return @canFire;
 }
 
 function canFireWithWeapon(@weapon, @enemy) {
@@ -90,15 +89,18 @@ function canFireWithWeapon(@weapon, @enemy) {
 	if (canFire && getCellToFire(@weapon, @enemy) === null) {
 		var cellToDirectFire = getCellToDirectFireWithWeapon(weapon, enemy);
 
-		if (cellToDirectFire !== null) {
-			var pathlength = getPathLength(getCell(), cellToDirectFire);
+		if (canFireWithWeaponFromCell(@weapon, @enemy, @cellToDirectFire)) {
+			setCellToFire(@weapon, @enemy, @cellToDirectFire);
+		} else if (isAreaArm(@weapon)) {
+			var cellToAreaFire = @(getCellToAreaFireWithWeapon(@weapon, @enemy));
 
-			canFire = pathlength !== null &&
-				getMP() >= pathlength &&
-				shouldFire(enemy, weapon, cellToDirectFire, pathlength) === true;
-
-			if (canFire) {
-				setCellToFire(@weapon, @enemy, @cellToDirectFire);
+			if (
+				cellToAreaFire !== cellToDirectFire &&
+				canFireWithWeaponFromCell(@weapon, @enemy, @cellToAreaFire)
+			) {
+				setCellToFire(@weapon, @enemy, @cellToAreaFire);
+			} else {
+				canFire = false;
 			}
 		} else {
 			canFire = false;
@@ -111,23 +113,47 @@ function canFireWithWeapon(@weapon, @enemy) {
 	return canFire;
 }
 
+function canFireWithWeaponFromCell(@weapon, @enemy, @cell) {
+	if (cell === null) {
+		return false;
+	}
+
+	var pathlength = @(getPathLength(@(getCell()), @cell));
+
+	return pathlength !== null &&
+		getMP() >= pathlength &&
+		shouldFire(@enemy, @weapon, @cell, @pathlength) === true;
+}
+
 function fire(@arm, @target) {
-	logInfo('fire(' + getArmName(arm) + ', ' + getEnemyName(target) + ')');
-	increaseLogIndent();
+	logInfo('fire(' + getArmName(@arm) + ', ' + getLeekName(@target) + ')');
 
 	var hasFired = false;
 	var hasError = false;
 	var result = null;
 
-	if (isWeapon(arm)) {
+	if (isWeapon(@arm)) {
 		// Has to be done before calling getTargetEnemy
 		moveTowardCell(@(getCellToFire(@arm, @target)));
-		target = getTargetEnemy(arm, target);
+		increaseLogIndent();
+		var newTarget = @(getTargetEnemy(@arm, @target));
+		decreaseLogIndent();
 
-		if (target !== null) {
-			ensureWearingWeapon(arm);
-			result = useWeapon(target);
+		if (newTarget !== null) {
+			ensureWearingWeapon(@arm);
+			result = @(useWeapon(@newTarget));
 			hasFired = true;
+		} else if (isAreaArm(@arm)) {
+			var targetCell = getCellToAreaFireOn(@arm, @target);
+
+			if (targetCell !== null) {
+				logDetail('fire on delta cell: ' + targetCell);
+				ensureWearingWeapon(@arm);
+				result = @(useWeaponOnCell(@targetCell));
+				hasFired = true;
+			} else {
+				logError('fire', 'Cannot use weapon ' + getWeaponName(@arm) + ' on cell ' + targetCell);
+			}
 		} else {
 			logWarning('fire', 'unable to find a target enemy');
 		}
@@ -143,28 +169,20 @@ function fire(@arm, @target) {
 		if (canUseChip(arm, target)) {
 			result = useChip(arm, target);
 		} else if (isAreaArm(arm)) {
-			var targetCell = getCell(target);
-			var targetableDeltaCells = @(getTargetableDeltaCells(
-				targetCell, arm
-			));
+			var targetCell = getCellToAreaFireOn(@arm, @target);
 
-			if (safeCount(@targetableDeltaCells) > 0) {
-				for (var cell in @targetableDeltaCells) {
-					if (canUseChipOnCell(arm, cell)) {
-						logDetail('fire on delta cell: ' + cell);
-						result = useChipOnCell(arm, cell);
-						break;
-					}
-				}
+			if (targetCell !== null) {
+				logDetail('fire on delta cell: ' + targetCell);
+				result = @(useChipOnCell(@arm, @targetCell));
+				hasFired = true;
 			} else {
 				logError('fire', 'Cannot use chip ' + getChipName(arm) + ' on cell ' + targetCell);
 			}
 		} else {
-			logError('fire', 'Cannot use chip ' + getChipName(arm) + ' on target ' + getEnemyName(@target));
+			logError('fire', 'Cannot use chip ' + getChipName(arm) + ' on target ' + getLeekName(@target));
 		}
 	}
 
-	decreaseLogIndent();
 	showResult(result);
 
 	if (
@@ -282,7 +300,7 @@ function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
 		@startCell + '-' + @availableMP;
 
 	logInfo('getNextCell()');
-	logDetail('enemy: ' + @(getEnemyName(@enemy)));
+	logDetail('enemy: ' + @(getLeekName(@enemy)));
 	logDetail('startCell: ' + @startCell);
 	logDetail('availableMP: ' + @availableMP);
 
@@ -439,7 +457,7 @@ function getTargetEnemy(@weapon, @enemy) {
 	}
 
 	logInfo(
-		'getTargetEnemy(): ' + getEnemyName(targetEnemy) +
+		'getTargetEnemy(): ' + getLeekName(targetEnemy) +
 		(targetEnemy !== null ? (' on cell ' + getCell(targetEnemy)) : '')
 	);
 
@@ -461,7 +479,7 @@ function initTurn() {
 }
 
 function move(@enemy) {
-	logInfo('move(' + getEnemyName(enemy) + ')');
+	logInfo('move(' + getLeekName(enemy) + ')');
 	increaseLogIndent();
 
 	if (getMP() === 0) {
@@ -503,74 +521,89 @@ function shouldFire(@target, @arm, @cellToFire, @pathlength) {
 
 	var debugOperations = monitorOperations('shouldFire', true);
 	var should = false;
+	var willBadlyImpactAlly = false;
 
-	if (pathlength === 0) {
-		should = true;
-		logDetail('can fire without moving');
-	} else if (
-		!isSummon(target) &&
-		getLife() > (getTotalLife() * 2 / 3) &&
-		getLife(target) < (getTotalLife(target) * 1 / 3)
-	) {
-		should = true;
-		logDetail('finish him');
-	} else {
-		var armEffects = isWeapon(arm) ?
-			@(getWeaponEffects(arm)) :
-			@(getChipEffects(arm));
+	if (!isAlly(target) && isAreaArm(@arm)) {
+		var cellToFireOn = getCellToAreaFireOn(@arm, @target);
+		var impactedLeeks = isChip(@arm) ?
+			@(getChipTargets(@arm, @cellToFireOn)) :
+			@(getWeaponTargets(@arm, @cellToFireOn));
 
-		increaseLogIndent();
-
-		// We do not want to take summons into account
-		var initialEnemy = getNearestLeekEnemy();
-		var safetyLevel = 'unknown';
-		var nextCellAfterFire = getNextCell(
-			initialEnemy, cellToFire, getMP() - pathlength, false
-		);
-		var safetyLevelAfter = 'unknown';
-		var pathLengthAfter = 'unknown';
-		var isSafe = false;
-		var isSafeForPoison = false;
-		var isSafeAfterInactivity = false;
-		var isNotWorst = false;
-
-		if (nextCellAfterFire !== null) {
-			safetyLevelAfter = getCellSafetyLevel(nextCellAfterFire);
-			pathLengthAfter = getEnemyPathLengthToFireOnCell(
-				nextCellAfterFire, initialEnemy, false
-			);
-			isSafe = safetyLevelAfter >= SAFE_LEVEL;
-			isSafeForPoison = target === initialEnemy &&
-				(arm === CHIP_TOXIN || arm === CHIP_VENOM) &&
-				!isPoisoned(initialEnemy) &&
-				safetyLevelAfter >= 60;
-			isSafeAfterInactivity = turnsWithoutFire >= 1 &&
-				safetyLevelAfter >= 70;
-
-			if (!isSafe && !isSafeForPoison && !isSafeAfterInactivity) {
-				var nextCell = getNextCell(
-					initialEnemy, getCell(), getMP(), false
-				);
-
-				if (nextCell !== null) {
-					isNotWorst = safetyLevelAfter >= getCellSafetyLevel(nextCell);
-				} else {
-					logError('shouldFire', 'nextCell null');
-				}
+		// getAliveAllies returns also me
+		for (var ally in getAliveAllies()) {
+			if (inArray(impactedLeeks, ally)) {
+				logDetail('will badly impact ' + getLeekName(ally));
+				willBadlyImpactAlly = true;
+				break;
 			}
-		} else {
-			logError('shouldFire', 'nextCellAfterFire null');
 		}
+	}
 
-		decreaseLogIndent();
-		logDetail(
-			(isSafe ? '' : 'not ') + 'safe (' + safetyLevelAfter + ', ' + pathLengthAfter + '), ' +
-			(isSafeForPoison ? '' : 'not ') + 'safe for poison, ' +
-			(isSafeAfterInactivity ? '' : 'not ') + 'safe after inactivity, ' +
-			(isNotWorst ? 'not ' : '') + 'worst'
-		);
+	if (!willBadlyImpactAlly) {
+		if (pathlength === 0) {
+			should = true;
+			logDetail('can fire without moving');
+		} else if (
+			!isSummon(target) &&
+			getLife() > (getTotalLife() * 2 / 3) &&
+			getLife(target) < (getTotalLife(target) * 1 / 3)
+		) {
+			should = true;
+			logDetail('finish him');
+		} else {
+			increaseLogIndent();
 
-		should = isSafe || isSafeForPoison || isSafeAfterInactivity || isNotWorst;
+			// We do not want to take summons into account
+			var initialEnemy = getNearestLeekEnemy();
+			var safetyLevel = 'unknown';
+			var nextCellAfterFire = getNextCell(
+				initialEnemy, cellToFire, getMP() - pathlength, false
+			);
+			var safetyLevelAfter = 'unknown';
+			var pathLengthAfter = 'unknown';
+			var isSafe = false;
+			var isSafeForPoison = false;
+			var isSafeAfterInactivity = false;
+			var isNotWorst = false;
+
+			if (nextCellAfterFire !== null) {
+				safetyLevelAfter = getCellSafetyLevel(nextCellAfterFire);
+				pathLengthAfter = getEnemyPathLengthToFireOnCell(
+					nextCellAfterFire, initialEnemy, false
+				);
+				isSafe = safetyLevelAfter >= SAFE_LEVEL;
+				isSafeForPoison = target === initialEnemy &&
+					(arm === CHIP_TOXIN || arm === CHIP_VENOM) &&
+					!isPoisoned(initialEnemy) &&
+					safetyLevelAfter >= 60;
+				isSafeAfterInactivity = turnsWithoutFire >= 1 &&
+					safetyLevelAfter >= 70;
+
+				if (!isSafe && !isSafeForPoison && !isSafeAfterInactivity) {
+					var nextCell = getNextCell(
+						initialEnemy, getCell(), getMP(), false
+					);
+
+					if (nextCell !== null) {
+						isNotWorst = safetyLevelAfter >= getCellSafetyLevel(nextCell);
+					} else {
+						logError('shouldFire', 'nextCell null');
+					}
+				}
+			} else {
+				logError('shouldFire', 'nextCellAfterFire null');
+			}
+
+			decreaseLogIndent();
+			logDetail(
+				(isSafe ? '' : 'not ') + 'safe (' + safetyLevelAfter + ', ' + pathLengthAfter + '), ' +
+				(isSafeForPoison ? '' : 'not ') + 'safe for poison, ' +
+				(isSafeAfterInactivity ? '' : 'not ') + 'safe after inactivity, ' +
+				(isNotWorst ? 'not ' : '') + 'worst'
+			);
+
+			should = isSafe || isSafeForPoison || isSafeAfterInactivity || isNotWorst;
+		}
 	}
 
 	debugOperations();

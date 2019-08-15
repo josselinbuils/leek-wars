@@ -23,6 +23,7 @@ function Stuxnet() {
 		say('Hello ' + getName(enemy) + ' :)');
 	}
 
+	debug('initialEnemy: ' + getName(initialEnemy));
 	debug('turnsWithoutFire: ' + turnsWithoutFire);
 
 	while (isAlive(initialEnemy)) {
@@ -34,6 +35,7 @@ function Stuxnet() {
 		var shouldTry = optimizer();
 		var target = enemy;
 
+		debug('enemy: ' + getLeekName(enemy));
 		debug('life: ' + getLife());
 		debug('MP: ' + getMP());
 		debug('TP: ' + getTP());
@@ -146,13 +148,12 @@ function Stuxnet() {
 			}
 		}
 
-		if (!isAlive(initialEnemy)) {
-			if (getAliveEnemiesCount() === 0) {
-				say('Oups ^^');
-			} else {
-				enemy = getNearestLeekEnemy();
-				initialEnemy = enemy;
-			}
+		if (getAliveEnemiesCount() === 0) {
+			say('Oups ^^');
+		} else if (!isAlive(initialEnemy)) {
+			debug('change target');
+			enemy = getNearestLeekEnemy();
+			initialEnemy = enemy;
 		} else if (!isAlive(enemy)) {
 			debug('change target');
 			enemy = getNearestEnemy();
