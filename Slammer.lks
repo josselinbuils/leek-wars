@@ -1,0 +1,64 @@
+include('../common/strategy');
+
+function Slammer() {
+	initTurn();
+
+	var hasFired = false;
+	var enemy = getNearestLeekEnemy();
+	var me = getLeek();
+	var optimizer = Optimizer();
+	var summoner = getSummoner();
+
+	debug('life: ' + getLife());
+	debug('MP: ' + getMP());
+	debug('TP: ' + getTP());
+
+	if (getTurn() === 1) {
+		say('Yop ' + getName(enemy) + ' :)');
+		setWeapon(WEAPON_PISTOL);
+	}
+
+	while (getAliveEnemiesCount() > 0) {
+		resetLogIndent();
+		logInfo('');
+
+		var arm = null;
+		var shouldTry = optimizer();
+		var target = enemy;
+
+		if (
+			shouldTry() &&
+			canFireWithWeapon(WEAPON_MACHINE_GUN, enemy)
+		) {
+			arm = WEAPON_MACHINE_GUN;
+		} else if (
+			shouldTry() &&
+			canFireWithWeapon(WEAPON_PISTOL, enemy)
+		) {
+			arm = WEAPON_PISTOL;
+		} else if (
+			shouldTry() &&
+			canFireWithChip(CHIP_SPARK, enemy)
+		) {
+			arm = CHIP_SPARK;
+		} else {
+			if (getMP() > 0) {
+				move(enemy);
+			}
+			updateTurnsWithoutFire(hasFired);
+			break;
+		}
+
+		if (arm !== null) {
+			var result = fire(arm, target);
+			hasFired = result[0];
+			var hasError = result[1];
+
+			if (hasError) {
+				break;
+			}
+		}
+	}
+}
+
+Slammer();
