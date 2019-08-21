@@ -4,6 +4,8 @@ include('map');
 include('store');
 include('utils');
 
+// Instead of braking turn loop, do not retry in shouldTry when error
+// TODO take into accout distance from healer bulb in cell safety computing
 // TODO priorize most efficient cells when area fire
 // TODO manage area weapon in fire
 
@@ -188,7 +190,8 @@ function fire(@arm, @target) {
 	if (
 		result !== USE_SUCCESS &&
 		result !== USE_FAILED &&
-		result !== USE_CRITICAL
+		result !== USE_CRITICAL &&
+		result !== USE_INVALID_COOLDOWN
 	) {
 		hasError = true;
 	}
@@ -258,13 +261,25 @@ function getCellSafetyLevel(@cell) {
 		}
 	}
 
-	if (protectedAgainstBulbs && highlyProtectedAgainstLeeks) {
+	if (
+		protectedAgainstBulbs &&
+		highlyProtectedAgainstLeeks
+	) {
 		level = 120;
-	} else if (middlyProtectedAgainstBulbs && highlyProtectedAgainstLeeks) {
+	} else if (
+		middlyProtectedAgainstBulbs &&
+		highlyProtectedAgainstLeeks
+	) {
 		level = 110;
-	} else if (protectedAgainstBulbs && protectedAgainstLeeks) {
+	} else if (
+		protectedAgainstBulbs &&
+		protectedAgainstLeeks
+	) {
 		level = 100;
-	} else if (middlyProtectedAgainstBulbs && protectedAgainstLeeks) {
+	} else if (
+		middlyProtectedAgainstBulbs &&
+		protectedAgainstLeeks
+	) {
 		level = 80;
 	} else if (protectedAgainstLeeks) {
 		level = 70;
@@ -326,7 +341,8 @@ function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
 		var significantEnemyMP = getTotalMP(@enemy) * 1 / 3;
 		var nonEasilyReachableCells = @(arrayFilter(@reachableCells, function(cell) {
 			var pathLength = getPathLength(@enemyCell, @cell);
-			return pathLength === null || pathLength > significantEnemyMP;
+			return pathLength === null ||
+				pathLength > significantEnemyMP;
 		}));
 
 		var debugOperationsInt = @(monitorIntermediateOperations(
@@ -530,17 +546,26 @@ function shouldFire(@target, @arm, @cellToFire, @pathlength) {
 
 	if (!isAlly(target) && isAreaArm(@arm)) {
 		var cellToFireOn = getCellToAreaFireOn(@arm, @target);
-		var impactedLeeks = isChip(@arm) ?
-			@(getChipTargets(@arm, @cellToFireOn)) :
-			@(getWeaponTargets(@arm, @cellToFireOn));
 
-		// getAliveAllies returns also me
-		for (var ally in getAliveAllies()) {
-			if (inArray(impactedLeeks, ally)) {
-				logDetail('will badly impact ' + getLeekName(ally));
-				willBadlyImpactAlly = true;
-				break;
+		if (cellToFireOn !== null) {
+			var impactedLeeks = isChip(@arm) ?
+				@(getChipTargets(@arm, @cellToFireOn)) :
+				@(getWeaponTargets(@arm, @cellToFireOn));
+
+			// getAliveAllies returns also me
+			for (var ally in getAliveAllies()) {
+				if (inArray(impactedLeeks, ally)) {
+					logDetail('will badly impact ' + getLeekName(ally));
+					willBadlyImpactAlly = true;
+					break;
+				}
 			}
+		} else {
+			logError(
+				'shouldFire',
+				'unable to find cell to area fire with ' +
+				getArmName(@arm) + ' on ' + getLeekName(@target)
+			);
 		}
 	}
 
