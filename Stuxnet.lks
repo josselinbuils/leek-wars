@@ -151,10 +151,8 @@ function Stuxnet() {
 			var hasError = result[1];
 
 			if (hasError) {
-				break;
-			}
-
-			if (hasFired && !hasFiredOnce) {
+				shouldTry();
+			} else if (hasFired && !hasFiredOnce) {
 				hasFiredOnce = true;
 			}
 		}

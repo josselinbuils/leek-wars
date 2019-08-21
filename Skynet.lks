@@ -219,7 +219,7 @@ function Skynet() {
 			var hasError = result[1];
 
 			if (hasError) {
-				break;
+				shouldTry();
 			}
 		}
 

@@ -4,7 +4,6 @@ include('map');
 include('store');
 include('utils');
 
-// Instead of braking turn loop, do not retry in shouldTry when error
 // TODO take into accout distance from healer bulb in cell safety computing
 // TODO priorize most efficient cells when area fire
 // TODO manage area weapon in fire
@@ -190,8 +189,7 @@ function fire(@arm, @target) {
 	if (
 		result !== USE_SUCCESS &&
 		result !== USE_FAILED &&
-		result !== USE_CRITICAL &&
-		result !== USE_INVALID_COOLDOWN
+		result !== USE_CRITICAL
 	) {
 		hasError = true;
 	}
