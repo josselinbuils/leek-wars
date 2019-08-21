@@ -9,10 +9,11 @@ function IcedBulb() {
 	var summoner = getSummoner();
 	var totalTP = getTotalTP();
 
-	while (getAliveEnemiesCount() > 0) {
-		resetLogIndent();
-		logInfo('');
+	debug('life: ' + getLife());
+	debug('MP: ' + getMP());
+	debug('TP: ' + getTP());
 
+	while (getAliveEnemiesCount() > 0) {
 		var arm = null;
 		var shouldTry = optimizer();
 		var target = enemy;

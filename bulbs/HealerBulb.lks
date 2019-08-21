@@ -15,9 +15,6 @@ function HealerBulb() {
 	debug('TP: ' + getTP());
 
 	while (true) {
-		resetLogIndent();
-		logInfo('');
-
 		var chip = null;
 		var shouldTry = optimizer();
 
