@@ -15,7 +15,7 @@ function Slammer() {
 
 	if (getTurn() === 1) {
 		say('Yop ' + getName(enemy) + ' :)');
-		setWeapon(WEAPON_PISTOL);
+		setWeapon(WEAPON_DOUBLE_GUN);
 	}
 
 	while (getAliveEnemiesCount() > 0) {
@@ -33,9 +33,14 @@ function Slammer() {
 			arm = WEAPON_MACHINE_GUN;
 		} else if (
 			shouldTry() &&
-			canFireWithWeapon(WEAPON_PISTOL, enemy)
+			canFireWithWeapon(WEAPON_DOUBLE_GUN, enemy)
 		) {
-			arm = WEAPON_PISTOL;
+			arm = WEAPON_DOUBLE_GUN;
+		} else if (
+			shouldTry() &&
+			canFireWithChip(CHIP_ICE, enemy)
+		) {
+			arm = CHIP_ICE;
 		} else if (
 			shouldTry() &&
 			canFireWithChip(CHIP_SPARK, enemy)
