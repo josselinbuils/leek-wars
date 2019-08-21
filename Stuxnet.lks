@@ -1,4 +1,5 @@
 include('bulbs/PonyBulb');
+include('bulbs/RockyBulb');
 include('common/logger');
 include('common/strategy');
 include('common/utils');
@@ -13,7 +14,7 @@ function Stuxnet() {
 	var initialEnemy = enemy;
 	var isInitialEnemy = enemy === initialEnemy;
 	var isEnemyPoisoner = isPoisoner(initialEnemy);
-	var shouldProtect = !isEnemyPoisoner || safeCount(getDangerousEnemies()) > 3;
+	var shouldProtect = !isEnemyPoisoner || safeCount(getDangerousEnemies()) > 1;
 	var me = getLeek();
 	var once = Once();
 	var optimizer = Optimizer();
@@ -63,13 +64,6 @@ function Stuxnet() {
 			target = me;
 		} else if (
 			shouldTry() &&
-			shouldProtect &&
-			canFireWithChip(CHIP_HELMET, me)
-		) {
-			arm = CHIP_HELMET;
-			target = me;
-		} else if (
-			shouldTry() &&
 			isInitialEnemy &&
 			canFireWithChip(CHIP_TOXIN, enemy)
 		) {
@@ -108,6 +102,13 @@ function Stuxnet() {
 			arm = CHIP_VACCINE;
 			target = me;
 		} else if (
+			doOnce(
+				shouldTry() &&
+				canFireWithChip(CHIP_ROCKY_BULB, me)
+			)
+		) {
+			summonBulb(CHIP_ROCKY_BULB, RockyBulb, initialEnemy);
+		} else if (
 			shouldTry() && canFireWithChip(CHIP_ARMORING, me)
 		) {
 			arm = CHIP_ARMORING;
@@ -120,7 +121,10 @@ function Stuxnet() {
 			arm = CHIP_CURE;
 			target = me;
 		} else if (
-			doOnce(shouldTry() && canFireWithChip(CHIP_PUNY_BULB, me))
+			doOnce(
+				shouldTry() &&
+				canFireWithChip(CHIP_PUNY_BULB, me)
+			)
 		) {
 			summonBulb(CHIP_PUNY_BULB, PonyBulb, initialEnemy);
 		} else if (

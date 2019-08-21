@@ -23,7 +23,7 @@ function Skynet() {
 	var initialEnemy = enemy;
 	var initialEnemyCell = getCell(initialEnemy);
 	var isEnemyPoisoner = isPoisoner(initialEnemy);
-	var shouldProtect = !isEnemyPoisoner || safeCount(getDangerousEnemies()) > 3;
+	var shouldProtect = !isEnemyPoisoner || safeCount(getDangerousEnemies()) > 1;
 	var me = getLeek();
 	var once = Once();
 	var optimizer = Optimizer();
@@ -113,14 +113,14 @@ function Skynet() {
 		) {
 			arm = CHIP_TOXIN;
 		} else if (
+			shouldTry() && canFireWithChip(CHIP_VENOM, enemy)
+		) {
+			arm = CHIP_VENOM;
+		} else if (
 			shouldTry() &&
 			canFireWithWeapon(WEAPON_GAZOR, enemy)
 		) {
 			arm = WEAPON_GAZOR;
-		} else if (
-			shouldTry() && canFireWithChip(CHIP_VENOM, enemy)
-		) {
-			arm = CHIP_VENOM;
 		} else if (
 			shouldTry() &&
 			isInitialEnemy &&
@@ -140,16 +140,20 @@ function Skynet() {
 		) {
 			arm = CHIP_FRACTURE;
 		} else if (
-			doOnce(shouldTry() &&
-				canFireWithChip(CHIP_HEALER_BULB, me))
-		) {
-			summonBulb(CHIP_HEALER_BULB, HealerBulb, initialEnemy);
-		} else if (
-			doOnce(shouldTry() &&
+			doOnce(
+				shouldTry() &&
 				getLife() > minSafeLife &&
-				canFireWithChip(CHIP_FIRE_BULB, me))
+				canFireWithChip(CHIP_FIRE_BULB, me)
+			)
 		) {
 			summonBulb(CHIP_FIRE_BULB, FireBulb, initialEnemy);
+		} else if (
+			doOnce(
+				shouldTry() &&
+				canFireWithChip(CHIP_HEALER_BULB, me)
+			)
+		) {
+			summonBulb(CHIP_HEALER_BULB, HealerBulb, initialEnemy);
 		} else if (shouldTry() && getNearestEnemy() !== enemy) {
 			debug('change target');
 			enemy = getNearestEnemy();
