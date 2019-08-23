@@ -4,9 +4,10 @@ include('map');
 include('store');
 include('utils');
 
+// TODO prioritize ref arms by dammages
+// Move anyway if I can kill him
 // TODO take into accout distance from healer bulb in cell safety computing
 // TODO priorize most efficient cells when area fire
-// TODO manage area weapon in fire
 
 global MAX_OPS_PERCENT = 30;
 global MIN_ACCEPTABLE_SAFE_LEVEL = 80;
@@ -287,14 +288,15 @@ function getCellSafetyLevel(@cell) {
 		level = 40;
 	}
 
-	var cellsAround = @(getDirectReachableCellsAround(@cell));
-
-	if (safeCount(@cellsAround) < MIN_DIRECT_CELLS_AROUND) {
-		level -= 20;
+	if (!lineOfSight(
+			@(getCell(@nearestLeekEnemy)),
+			@cell
+		)) {
+		level += 10;
 	}
 
 	if (isBorderCell(@cell)) {
-		level -= 20;
+		level -= 10;
 	}
 
 	putInStore(@cacheKey, @level);
