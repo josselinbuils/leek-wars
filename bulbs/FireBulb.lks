@@ -18,18 +18,18 @@ function FireBulb() {
 		var shouldTry = optimizer();
 		var target = enemy;
 
-		if (shouldTry() && canFireWithChip(CHIP_METEORITE, enemy)) {
+		if (shouldTry() && canFire(CHIP_METEORITE, enemy)) {
 			arm = CHIP_METEORITE;
 		} else if (
 			shouldTry() &&
 			!isSummon(target) &&
 			getLife(target) < (getTotalLife(target) / 4) &&
-			canFireWithChip(CHIP_DEVIL_STRIKE, enemy)
+			canFire(CHIP_DEVIL_STRIKE, enemy)
 		) {
 			arm = CHIP_DEVIL_STRIKE;
-		} else if (shouldTry() && canFireWithChip(CHIP_FLAME, enemy)) {
+		} else if (shouldTry() && canFire(CHIP_FLAME, enemy)) {
 			arm = CHIP_FLAME;
-		} else if (shouldTry() && canFireWithChip(CHIP_SPARK, enemy)) {
+		} else if (shouldTry() && canFire(CHIP_SPARK, enemy)) {
 			arm = CHIP_SPARK;
 		} else if (shouldTry() && getNearestEnemy() !== enemy) {
 			enemy = getNearestEnemy();
@@ -46,10 +46,10 @@ function FireBulb() {
 				}
 
 				var targetCell = preferredChip === CHIP_DEVIL_STRIKE ?
-					getCellToAreaFireWithChip(
+					getCellToAreaFire(
 						preferredChip, initialEnemy
 					) :
-					getCellToDirectFireWithChip(
+					getCellToDirectFire(
 						preferredChip, initialEnemy
 					);
 				moveTowardCell(targetCell);

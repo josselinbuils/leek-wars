@@ -20,23 +20,23 @@ function RockyBulb() {
 
 		if (
 			shouldTry() &&
-			canFireWithChip(CHIP_HELMET, me)
+			canFire(CHIP_HELMET, me)
 		) {
 			arm = CHIP_HELMET;
 			target = me;
 		} else if (
 			shouldTry() &&
-			canFireWithChip(CHIP_ROCKFALL, enemy)
+			canFire(CHIP_ROCKFALL, enemy)
 		) {
 			arm = CHIP_ROCKFALL;
 		} else if (
 			shouldTry() &&
-			canFireWithChip(CHIP_ROCK, enemy)
+			canFire(CHIP_ROCK, enemy)
 		) {
 			arm = CHIP_ROCK;
 		} else if (
 			shouldTry() &&
-			canFireWithChip(CHIP_PEBBLE, enemy)
+			canFire(CHIP_PEBBLE, enemy)
 		) {
 			arm = CHIP_PEBBLE;
 		} else if (
@@ -48,7 +48,7 @@ function RockyBulb() {
 			continue;
 		} else {
 			if (getMP() > 0) {
-				var targetCell = getCellToDirectFireWithChip(
+				var targetCell = getCellToDirectFire(
 					totalTP >= 5 ? CHIP_ROCKFALL : CHIP_PEBBLE,
 					initialEnemy
 				);

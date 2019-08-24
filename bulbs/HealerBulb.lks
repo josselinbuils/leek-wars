@@ -19,26 +19,26 @@ function HealerBulb() {
 		var shouldTry = optimizer();
 
 		if (
-			shouldTry() && canFireWithChip(CHIP_VACCINE, target)
+			shouldTry() && canFire(CHIP_VACCINE, target)
 		) {
 			chip = CHIP_VACCINE;
 		} else if (
 			shouldTry() &&
 			getLife(target) < getTotalLife(target) &&
-			canFireWithChip(CHIP_CURE, target)
+			canFire(CHIP_CURE, target)
 		) {
 			chip = CHIP_CURE;
 		} else if (
 			shouldTry() &&
 			target !== me &&
 			getLife(target) < getTotalLife(target) &&
-			canFireWithChip(CHIP_DRIP, target)
+			canFire(CHIP_DRIP, target)
 		) {
 			chip = CHIP_DRIP;
 		} else if (
 			shouldTry() &&
 			getLife(target) < getTotalLife(target) &&
-			canFireWithChip(CHIP_BANDAGE, target)
+			canFire(CHIP_BANDAGE, target)
 		) {
 			chip = CHIP_BANDAGE;
 		} else if (
@@ -58,7 +58,7 @@ function HealerBulb() {
 			continue;
 		} else {
 			if (getMP() > 0) {
-				var targetCell = getCellToDirectFireWithChip(
+				var targetCell = getCellToDirectFire(
 					CHIP_CURE, summoner
 				);
 				moveTowardCell(targetCell);

@@ -18,24 +18,24 @@ function IcedBulb() {
 		var shouldTry = optimizer();
 		var target = enemy;
 
-		if (shouldTry() && canFireWithChip(CHIP_ICEBERG, enemy)) {
+		if (shouldTry() && canFire(CHIP_ICEBERG, enemy)) {
 			arm = CHIP_ICEBERG;
 		} else if (
-			shouldTry() && canFireWithChip(CHIP_STALACTITE, enemy)
+			shouldTry() && canFire(CHIP_STALACTITE, enemy)
 		) {
 			arm = CHIP_STALACTITE;
-		} else if (shouldTry() && canFireWithChip(CHIP_ICE, enemy)) {
+		} else if (shouldTry() && canFire(CHIP_ICE, enemy)) {
 			arm = CHIP_ICE;
 		} else if (shouldTry() && getNearestEnemy() !== enemy) {
 			enemy = getNearestEnemy();
 			optimizer = Optimizer();
 			continue;
 		} else if (
-			shouldTry() && canFireWithChip(CHIP_REFLEXES, summoner)
+			shouldTry() && canFire(CHIP_REFLEXES, summoner)
 		) {
 			arm = CHIP_REFLEXES;
 			target = summoner;
-		} else if (shouldTry() && canFireWithChip(CHIP_REFLEXES, me)) {
+		} else if (shouldTry() && canFire(CHIP_REFLEXES, me)) {
 			arm = CHIP_REFLEXES;
 			target = me;
 		} else {
@@ -48,7 +48,7 @@ function IcedBulb() {
 					preferredChip = CHIP_STALACTITE;
 				}
 
-				var targetCell = getCellToDirectFireWithChip(
+				var targetCell = getCellToDirectFire(
 					preferredChip, initialEnemy
 				);
 				moveTowardCell(targetCell);

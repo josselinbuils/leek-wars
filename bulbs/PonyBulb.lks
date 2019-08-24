@@ -12,28 +12,28 @@ function PonyBulb() {
 		var shouldTry = optimizer();
 		var target = enemy;
 
-		if (shouldTry() && canFireWithChip(CHIP_HELMET, me)) {
+		if (shouldTry() && canFire(CHIP_HELMET, me)) {
 			arm = CHIP_HELMET;
 			target = me;
-		} else if (shouldTry() && canFireWithChip(CHIP_PEBBLE, enemy)) {
+		} else if (shouldTry() && canFire(CHIP_PEBBLE, enemy)) {
 			arm = CHIP_PEBBLE;
 		} else if (shouldTry() && getNearestEnemy() !== enemy) {
 			enemy = getNearestEnemy();
 			optimizer = Optimizer();
 			continue;
 		} else if (
-			shouldTry() && getLife() > 150 && canFireWithChip(CHIP_PROTEIN, me)
+			shouldTry() && getLife() > 150 && canFire(CHIP_PROTEIN, me)
 		) {
 			arm = CHIP_PROTEIN;
 			target = me;
 		} else if (
-			shouldTry() && canFireWithChip(CHIP_BANDAGE, me)
+			shouldTry() && canFire(CHIP_BANDAGE, me)
 		) {
 			arm = CHIP_BANDAGE;
 			target = me;
 		} else {
 			if (getMP() > 0) {
-				var targetCell = getCellToDirectFireWithChip(
+				var targetCell = getCellToDirectFire(
 					CHIP_PEBBLE, initialEnemy
 				);
 				moveTowardCell(targetCell);

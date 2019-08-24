@@ -1,726 +1,652 @@
+include('fight');
+include('logger');
 include('map');
 include('store');
 include('utils');
 
-global FIGHT_EFFECTS = @[EFFECT_DAMAGE, EFFECT_POISON];
+// TODO prioritize ref arms by dammages
+// Move anyway if I can kill him
+// TODO take into accout distance from healer bulb in cell safety computing
+// TODO priorize most efficient cells when area fire
 
-function ensureWearingWeapon(@weapon) {
-	if (getWeapon() !== weapon) {
-		setWeapon(@weapon);
-	}
-}
+global LOG_MONITOR_DATA = false;
+global MARK_SAFE_CELLS_TO_MOVE_ON = true;
+global MAX_OPS_PERCENT = 30;
+global MIN_ACCEPTABLE_SAFE_LEVEL = 80;
+global MIN_DIRECT_CELLS_AROUND = 2;
+global SAFE_LEVEL = 80;
 
-function getAliveAlliesCells() {
-	var cacheKey = 'tmp-alv-ally-cells';
+global turnsWithoutFire = 0;
 
-	if (hasInStore(cacheKey)) {
-		return @(getInStore(cacheKey));
-	}
+function canFire(@arm, @target) {
+	var doLog = !isSummon();
+	var debugOperations;
 
-	var alliesCells = @(arrayMap(@(getAliveAllies()), function(@ally) {
-		return getCell(ally);
-	}));
-	putInStore(cacheKey, @alliesCells);
-	return @alliesCells;
-}
-
-function getAliveEnemiesCells() {
-	var cacheKey = 'tmp-alv-enmy-cells';
-
-	if (hasInStore(cacheKey)) {
-		return @(getInStore(cacheKey));
+	if (doLog) {
+		logInfo('canFire(' + getArmName(@arm) + ')');
+		increaseLogIndent();
+		debugOperations = monitorOperations('canFire', true);
 	}
 
-	var enemyCells = @(arrayMap(@(getAliveEnemies()), function(@enemy) {
-		return getCell(enemy);
-	}));
-	putInStore(cacheKey, @enemyCells);
-	return @enemyCells;
-}
+	var isArmChip = @(isChip(@arm));
+	var cost = isArmChip ?
+		@(getChipCost(@arm)) :
+		@(getWeaponCost(@arm));
 
-function getAreaImpactedCells(@targetCell, @area) {
-	var x = @(getCellX(@targetCell));
-	var y = @(getCellY(@targetCell));
-	var deltas = area === AREA_CIRCLE_1 ?
-		@[
-			@[0, 1],
-			@[1, 0],
-			@[0, -1],
-			@[-1, 0]
-		] :
-		area === AREA_CIRCLE_2 ? [
-			@[0, -2],
-			@[0, -1],
-			@[0, 1],
-			@[0, 2],
-			@[-2, 0],
-			@[-1, 0],
-			@[1, 0],
-			@[2, 0],
-			@[-1, -1],
-			@[-1, 1],
-			@[1, -1],
-			@[1, 1],
-		] :
-		area === AREA_CIRCLE_3 ?
-		@[
-			@[0, -3],
-			@[0, -2],
-			@[0, -1],
-			@[0, 1],
-			@[0, 2],
-			@[0, 3],
-			@[-3, 0],
-			@[-2, 0],
-			@[-1, 0],
-			@[1, 0],
-			@[2, 0],
-			@[3, 0],
-			@[-2, -1],
-			@[-2, 1],
-			@[-1, -2],
-			@[-1, -1],
-			@[-1, 1],
-			@[-1, 2],
-			@[1, -2],
-			@[1, -1],
-			@[1, 1],
-			@[1, 2],
-			@[2, -1],
-			@[2, 1],
-		] :
-		null;
-
-	if (deltas === null) {
-		debugE('Invalid area: ' + @area);
-		return @[];
+	if (!isArmChip && getWeapon() !== @arm) {
+		cost = cost + 1;
 	}
 
-	var deltaCells = @(arrayMap(@deltas, function(@delta) {
-		return @(getCellFromXY(x + delta[0], y + delta[1]));
-	}));
+	var can = getTP() >= cost;
 
-	return @(ensureArray(
-		@(arrayFilter(@deltaCells, function(@cell) {
-			return cell !== null;
-		}))
-	));
-}
+	if (can && isArmChip) {
+		can = getCooldown(@arm) === 0;
+	}
 
-function getArmName(@arm) {
-	return isChip(arm) ?
-		getChipName(@arm) :
-		getWeaponName(@arm);
-}
+	if (
+		can &&
+		target !== getLeek() &&
+		getCellToFire(@arm, @target) === null
+	) {
+		var cellToDirectFire = @(getCellToDirectFire(@arm, @target));
 
-function getCellsToAreaFireWithChipOnCell(@chip, @thrower, @targetCell) {
-	var cellsToFire = @[];
-	var targetableDeltaCells = @(getTargetableDeltaCells(@targetCell, @chip));
+		if (canFireFromCell(@arm, @target, @cellToDirectFire)) {
+			setCellToFire(@arm, @target, @cellToDirectFire);
+		} else if (isAreaArm(@arm)) {
+			var cellToAreaFire = @(getCellToAreaFire(@arm, @target));
 
-	for (var cell in @targetableDeltaCells) {
-		// Do not ignore allies as an ally could be on fire line otherwise
-		var newCellsToFire = @(getCellsToUseChipOnCell(
-			@chip, @cell,
-		));
-
-		for (var newCellToFire in @newCellsToFire) {
-			if (!inArray(@cellsToFire, @newCellToFire)) {
-				push(cellsToFire, @newCellToFire);
+			if (
+				cellToAreaFire !== cellToDirectFire &&
+				canFireFromCell(@arm, @target, @cellToAreaFire)
+			) {
+				setCellToFire(@arm, @target, @cellToAreaFire);
+			} else {
+				can = false;
 			}
+		} else {
+			can = false;
 		}
 	}
 
-	return @cellsToFire;
+	if (doLog) {
+		decreaseLogIndent();
+		logDetail(can);
+		debugOperations();
+	}
+	return @can;
 }
 
-function getCellsToAreaFireWithWeaponOnCell(@weapon, @shooter, @targetCell) {
-	var cellsToFire = @[];
-	var targetableDeltaCells = @(getTargetableDeltaCells(@targetCell, @weapon));
+function canFireFromCell(@arm, @target, @cellToFire) {
+	if (cellToFire === null) {
+		return false;
+	}
 
-	for (var cell in @targetableDeltaCells) {
-		// Do not ignore allies as an ally could be on fire line otherwise
-		var newCellsToFire = @(getCellsToUseWeaponOnCell(
-			@weapon, @cell, @shooter
-		));
+	var pathlength = @(getPathLength(@(getCell()), @cellToFire));
+	var can = pathlength !== null && getMP() >= pathlength;
 
-		for (var newCellToFire in @newCellsToFire) {
-			if (!inArray(@cellsToFire, @newCellToFire)) {
-				push(cellsToFire, @newCellToFire);
+	if (can && !isSummon()) {
+		can = shouldFire(@target, @arm, @cellToFire, @pathlength) === true;
+	}
+	return @can;
+}
+
+function fire(@arm, @target) {
+	logInfo('fire(' + getArmName(@arm) + ', ' + getLeekName(@target) + ')');
+
+	var hasFired = false;
+	var hasError = false;
+	var result = null;
+
+	if (isWeapon(@arm)) {
+		// Has to be done before calling getTargetEnemy
+		moveTowardCell(@(getCellToFire(@arm, @target)));
+		increaseLogIndent();
+		var newTarget = @(getTargetEnemy(@arm, @target));
+		decreaseLogIndent();
+
+		if (newTarget !== null) {
+			ensureWearingWeapon(@arm);
+			result = @(useWeapon(@newTarget));
+			hasFired = true;
+		} else if (isAreaArm(@arm)) {
+			var targetCell = getCellToAreaFireOn(@arm, @target);
+
+			if (targetCell !== null) {
+				logDetail('fire on delta cell: ' + targetCell);
+				ensureWearingWeapon(@arm);
+				result = @(useWeaponOnCell(@targetCell));
+				hasFired = true;
+			} else {
+				logError('fire', 'Cannot use weapon ' + getWeaponName(@arm) + ' on cell ' + targetCell);
 			}
+		} else {
+			logWarning('fire', 'unable to find a target enemy');
+		}
+	} else {
+		if (target !== getLeek()) {
+			moveTowardCell(@(getCellToFire(@arm, @target)));
+
+			if (!isAlly(target)) {
+				hasFired = true;
+			}
+		}
+
+		if (canUseChip(arm, target)) {
+			result = useChip(arm, target);
+		} else if (isAreaArm(arm)) {
+			var targetCell = getCellToAreaFireOn(@arm, @target);
+
+			if (targetCell !== null) {
+				logDetail('fire on delta cell: ' + targetCell);
+				result = @(useChipOnCell(@arm, @targetCell));
+				hasFired = true;
+			} else {
+				logError('fire', 'Cannot use chip ' + getChipName(arm) + ' on cell ' + targetCell);
+			}
+		} else {
+			logError('fire', 'Cannot use chip ' + getChipName(arm) + ' on target ' + getLeekName(@target));
 		}
 	}
 
-	return @cellsToFire;
-}
+	showResult(result);
 
-function getCellsToDirectFireWithChipOnCell(@chip, @thrower, @targetCell) {
-	// Do not ignore allies as an ally could be on fire line otherwise
-	return @(getCellsToUseChipOnCell(@chip, @targetCell));
-}
-
-function getCellsToDirectFireWithWeaponOnCell(@weapon, @shooter, @targetCell) {
-	var shooterCell = @(getCell(@shooter));
-	var ignoredCells = @[];
-
-	// The getCellsToUseWeapon function does not take into acount that
-	// the laser weapons can cross enemies
-	if (getWeaponArea(@weapon) === AREA_LASER_LINE) {
-		pushAll(
-			ignoredCells,
-			isAlly(@shooter) ?
-			@(getAliveEnemiesCells()) :
-			@(getAliveAlliesCells())
-		);
+	if (
+		result !== USE_SUCCESS &&
+		result !== USE_FAILED &&
+		result !== USE_CRITICAL
+	) {
+		hasError = true;
 	}
 
-	return @(ensureArray(
-		@(arrayFilter(
-			// Do not ignore allies as an ally could be on fire line otherwise
-			@(getCellsToUseWeaponOnCell(
-				@weapon, @targetCell, @ignoredCells
-			)),
-			function(@cell) {
-				return cell === shooterCell || !inArray(@ignoredCells, @cell);
-			}
-		))
-	));
+	return @[hasFired, hasError];
 }
 
-function getCellToAreaFireOn(@arm, @target) {
-	var cacheKey = 'tmp-fire-on-cell-' + arm + '-' + target;
+function getCellSafetyLevel(@cell) {
+	if (cell === null) {
+		logError('getCellSafetyLevel', 'called with null cell');
+		return 0;
+	}
+
+	var cacheKey = 'tmp-sfy-' + @cell;
 
 	if (hasInStore(@cacheKey)) {
 		return @(getInStore(@cacheKey));
 	}
 
-	var targetCell = @(getCell(@target));
-	var targetableDeltaCells = @(getTargetableDeltaCells(
-		@targetCell, @arm
-	));
-	var canUseArmOnCell = isChip(@arm) ?
-		@canUseChipOnCell :
-		@canUseWeaponOnCell;
+	var debugOperations = @(monitorOperations('getCellSafetyLevel', false));
+	var level = 0;
+	var highlyProtectedAgainstLeeks = true;
+	var protectedAgainstBulbs = true;
+	var protectedAgainstLeeks = true;
+	var middlyProtectedAgainstBulbs = true;
+	var middlyProtectedAgainstLeeks = true;
+	var littleProtectedAgainstLeeks = true;
 
-	if (safeCount(@targetableDeltaCells) > 0) {
-		for (var cell in @targetableDeltaCells) {
-			if (canUseArmOnCell(@arm, @cell)) {
-				putInStore(@cacheKey, @cell);
-				return @cell;
-			}
+	var nearestLeekEnemy = getNearestLeekEnemy();
+	var nearestLeekEnemyPathLength = @(getEnemyPathLengthToFireOnCell(
+		@cell, @nearestLeekEnemy, false
+	));
+
+	if (nearestLeekEnemyPathLength !== null) {
+		var nearestLeekEnemyMP = @(getTotalMP(@nearestLeekEnemy));
+
+		highlyProtectedAgainstLeeks = false;
+
+		if (nearestLeekEnemyPathLength <= (nearestLeekEnemyMP * 1 / 3)) {
+			protectedAgainstLeeks = false;
+			middlyProtectedAgainstLeeks = false;
+			littleProtectedAgainstLeeks = false;
+		} else if (nearestLeekEnemyPathLength <= (nearestLeekEnemyMP * 2 / 3)) {
+			protectedAgainstLeeks = false;
+			middlyProtectedAgainstLeeks = false;
+		} else if (nearestLeekEnemyPathLength <= nearestLeekEnemyMP) {
+			protectedAgainstLeeks = false;
 		}
 	}
 
-	return null;
-}
+	var nearestBulbEnemy = getNearestDangerousSummonEnemy();
 
-function getCellToAreaFireWithChip(@chip, @target) {
-	var doLog = !isSummon();
-
-	if (doLog) {
-		logInfo('getCellToAreaFireWithChip(' + getChipName(@chip) + ', ' + getLeekName(@target) + ')');
-	}
-
-	var cellToFire = null;
-	var targetCell = @(getCell(target));
-	var cellsToFire = @(getCellsToAreaFireWithChipOnCell(
-		@chip, @(getLeek()), @targetCell
-	));
-
-	if (safeCount(@cellsToFire) > 0) {
-		cellsToFire = @(getMinPathCells(@cellsToFire));
-
-		if (safeCount(@cellsToFire) > 0) {
-			cellToFire = getFarthestCellFrom(@cellsToFire, targetCell);
-		}
-	}
-
-	if (doLog) {
-		var startCell = @(getCell());
-
-		logDetail('startCell: ' + startCell);
-		logDetail('cellToFire: ' + cellToFire);
-		logDetail('pathLength: ' + getPathLength(@startCell, @cellToFire));
-	}
-
-	return @cellToFire;
-}
-
-function getCellToAreaFireWithWeapon(@weapon, @target) {
-	var doLog = !isSummon();
-
-	if (doLog) {
-		logInfo('getCellToAreaFireWithWeapon(' + getWeaponName(@weapon) + ', ' + getLeekName(@target) + ')');
-	}
-
-	var cellToFire = null;
-	var targetCell = @(getCell(@target));
-	var cellsToFire = @(getCellsToAreaFireWithWeaponOnCell(
-		@weapon, @(getLeek()), @targetCell
-	));
-
-	if (safeCount(@cellsToFire) > 0) {
-		cellsToFire = @(getMinPathCells(@cellsToFire));
-
-		if (safeCount(@cellsToFire) > 0) {
-			cellToFire = getFarthestCellFrom(@cellsToFire, targetCell);
-		}
-	}
-
-	if (doLog) {
-		var startCell = getCell();
-
-		logDetail('startCell: ' + startCell);
-		logDetail('cellToFire: ' + cellToFire);
-		logDetail('pathLength: ' + getPathLength(@startCell, @cellToFire));
-	}
-
-	return @cellToFire;
-}
-
-function getCellToDirectFireWithChip(@chip, @target) {
-	var doLog = !isSummon();
-
-	if (doLog) {
-		logInfo('getCellToDirectFireWithChip(' + getChipName(chip) + ', ' + getLeekName(target) + ')');
-	}
-
-	var startCell = getCell();
-	var cellToFire = null;
-	var targetCell = getCell(target);
-
-	if (canUseChip(chip, target)) {
-		cellToFire = startCell;
-	} else {
-		var cellsToFire = @(getCellsToDirectFireWithChipOnCell(
-			@chip, @(getLeek()), @targetCell,
+	if (nearestBulbEnemy !== null) {
+		var nearestBulbEnemyPathLength = @(getEnemyPathLengthToFireOnCell(
+			@cell, @nearestBulbEnemy, false
 		));
 
-		if (safeCount(@cellsToFire) > 0) {
-			cellsToFire = @(getMinPathCells(@cellsToFire));
+		if (nearestBulbEnemyPathLength !== null) {
+			var nearestBulbEnemyMP = @(getTotalMP(@nearestBulbEnemy));
 
-			if (safeCount(@cellsToFire) > 0) {
-				cellToFire = getFarthestCellFrom(@cellsToFire, targetCell);
+			if (nearestBulbEnemyPathLength <= (nearestBulbEnemyMP * 2 / 3)) {
+				protectedAgainstBulbs = false;
+				middlyProtectedAgainstBulbs = false;
+			} else if (nearestBulbEnemyPathLength <= nearestBulbEnemyMP) {
+				protectedAgainstBulbs = false;
 			}
 		}
 	}
 
-	if (doLog) {
-		logDetail('startCell: ' + startCell);
-		logDetail('cellToFire: ' + cellToFire);
-		logDetail('pathLength: ' + getPathLength(startCell, cellToFire));
+	if (
+		protectedAgainstBulbs &&
+		highlyProtectedAgainstLeeks
+	) {
+		level = 120;
+	} else if (
+		middlyProtectedAgainstBulbs &&
+		highlyProtectedAgainstLeeks
+	) {
+		level = 110;
+	} else if (
+		protectedAgainstBulbs &&
+		protectedAgainstLeeks
+	) {
+		level = 100;
+	} else if (
+		middlyProtectedAgainstBulbs &&
+		protectedAgainstLeeks
+	) {
+		level = 80;
+	} else if (protectedAgainstLeeks) {
+		level = 70;
+	} else if (middlyProtectedAgainstLeeks) {
+		level = 60;
+	} else if (littleProtectedAgainstLeeks) {
+		level = 40;
 	}
 
-	return cellToFire;
-}
-
-function getCellToDirectFireWithWeapon(@weapon, @enemy) {
-	logInfo('getCellToDirectFireWithWeapon(' + getWeaponName(weapon) + ')');
-
-	var startCell = getCell();
-	var cellToFire = null;
-	var cacheKey = 'tmp-fireCellWeapon-' + weapon + '-' + enemy + '-' + startCell;
-
-	if (hasInStore(cacheKey)) {
-		cellToFire = getInStore(cacheKey);
-	} else {
-		if (canUseWeapon(weapon, enemy)) {
-			cellToFire = startCell;
-		} else {
-			var cellsToFire = getCellsToDirectFireWithWeaponOnCell(
-				@weapon, @(getLeek()), @(getCell(@enemy))
-			);
-
-			if (safeCount(@cellsToFire) > 0) {
-				cellsToFire = @(getMinPathCells(@cellsToFire));
-
-				if (safeCount(@cellsToFire) > 0) {
-					cellToFire = getFarthestCellFrom(@cellsToFire, getCell(enemy));
-				}
-			}
-		}
-		putInStore(cacheKey, cellToFire);
+	if (!lineOfSight(
+			@(getCell(@nearestLeekEnemy)),
+			@cell
+		)) {
+		level += 10;
 	}
 
-	logDetail('startCell: ' + startCell);
-	logDetail('cellToFire: ' + cellToFire);
-	logDetail('pathLength: ' + getPathLength(startCell, cellToFire));
-
-	return cellToFire;
-}
-
-function getDangerousEnemies() {
-	return @(ensureArray(
-		@(arrayFilter(@(getAliveEnemies()), function(@enemy) {
-			var refArms = @(getEnemyRefArms(enemy));
-			return refArms['chip'] !== null ||
-				refArms['weapon'] !== null;
-		}))
-	));
-}
-
-function getEnemyFightChips(@enemy) {
-	return @(ensureArray(
-		@(arrayFilter(@(getChips(enemy)), function(@chip) {
-			for (var effect in @(getChipEffects(chip))) {
-				if (inArray(@FIGHT_EFFECTS, effect[0])) {
-					return getCooldown(chip, enemy) <= 1;
-				}
-			}
-			return false;
-		}))
-	));
-}
-
-function getEnemyPathLengthToFireOnCell(@cell, @enemy, @debug) {
-	var cacheKey = @('tmp-enmyPth-' + @cell + '-' + @enemy);
-
-	if (!debug && hasInStore(@cacheKey)) {
-		return @(getInStore(@cacheKey));
+	if (isBorderCell(@cell)) {
+		level -= 10;
 	}
 
-	var debugOperations = @(monitorOperations('getEnemyPathLengthToFireOnCell', false));
-	var enemyCell = @(getCell(@enemy));
+	putInStore(@cacheKey, @level);
+	debugOperations();
+	return @level;
+}
+
+function getCellToFire(@arm, @target) {
+	return @(getInStore('tmp-fire-cell-' + arm + '-' + target));
+}
+
+function computeSafetyMap(@enemy) {
+	var debugOperations = @(monitorOperations('computeSafetyMap', true));
+	var map = @[];
+	var groups = @[];
 	var refArms = @(getEnemyRefArms(@enemy));
 	var refChip = @(refArms['chip']);
 	var refWeapon = @(refArms['weapon']);
+	var maxRange = @(max(
+		refChip !== null ? @(getArmMaxRange(@refChip)) : 0,
+		refWeapon !== null ? @(getArmMaxRange(@refWeapon)) : 0,
+	));
+	var totalEnemyMP = getTotalMP(enemy);
+	var maxEnemyRange = maxRange + totalEnemyMP;
+	var enemyCell = @(getCell(@enemy));
+	var reachableCells = @(getReachableCells(@(getCell()), @(getMP())));
 
-	if (refChip === null && refWeapon === null) {
-		debugOperations();
-		return null;
+	for (var cell in reachableCells) {
+		if (getDistance(enemyCell, cell) > maxEnemyRange) {
+			map[@cell] = 120;
+		} else {
+			map[@cell] = @(getCellSafetyLevel(@cell));
+		}
+
+		var level = @(map[@cell]);
+
+		if (groups[@level] === null) {
+			groups[@level] = @[@cell];
+		} else {
+			push(groups[@level], @cell);
+		}
 	}
-
-	var cellsToFire = @[];
-
-	if (refChip !== null) {
-		var chipCellsToFire = isAreaArm(@refChip) ?
-			@(getCellsToAreaFireWithChipOnCell(@refChip, @enemy, @cell)) :
-			@(getCellsToDirectFireWithChipOnCell(@refChip, @enemy, @cell));
-
-		pushAll(@cellsToFire, @chipCellsToFire);
-	}
-
-	if (refWeapon !== null) {
-		var weaponCellsToFire = isAreaArm(@refWeapon) ?
-			@(getCellsToAreaFireWithWeaponOnCell(@refWeapon, @enemy, @cell)) :
-			@(getCellsToDirectFireWithWeaponOnCell(@refWeapon, @enemy, @cell));
-
-		pushAll(@cellsToFire, @weaponCellsToFire);
-	}
-
-	if (safeCount(@cellsToFire) === 0) {
-		debugOperations();
-		return null;
-	}
-
-	var cellToFire = @(getClosestCellTo(@cellsToFire, @enemyCell));
-
-	if (debug) {
-		mark(@cellsToFire, getColor(255, 100, 100));
-		mark(@[cellToFire], COLOR_RED);
-	}
-
-	var pathLength = @(getPathLength(@enemyCell, @cellToFire));
-	putInStore(@cacheKey, @pathLength);
 	debugOperations();
-	return @pathLength;
+
+	arrayIter(@groups, function(@level, @group) {
+		var rgb = hslToRgb(level * 1.2 / 360, 1, 0.5);
+		debug(level + ': ' + rgb);
+		var color = getColor(@(rgb[0]), @(rgb[1]), @(rgb[2]));
+		mark(@group, @color);
+	});
 }
 
-function getEnemyRefArms(@enemy) {
-	// Same name for all bulbs that have the same type
-	var cacheKey = 'refArms-' + @(getName(@enemy));
+function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
+	var nextCell = @startCell;
+	var enemyCell = @(getCell(@enemy));
+	var cacheKey = 'tmp-nxtCl-' + @enemy + '-' +
+		@startCell + '-' + @availableMP;
+
+	logInfo('getNextCell()');
+	logDetail('enemy: ' + @(getLeekName(@enemy)));
+	logDetail('startCell: ' + @startCell);
+	logDetail('availableMP: ' + @availableMP);
 
 	if (hasInStore(@cacheKey)) {
-		return @(getInStore(@cacheKey));
-	}
-
-	var refChip = @(getMaxRangeChip(@(getEnemyFightChips(@enemy))));
-	var refWeapon = !isSummon(@enemy) ?
-		@(getMaxRangeWeapon(@(getWeapons(@enemy)))) :
-		null;
-	var refArms = @['chip': @refChip, 'weapon': @refWeapon];
-
-	if (refChip !== null || refWeapon !== null) {
-		var chipName = refChip !== null ?
-			@(getChipName(@refChip)) :
-			null;
-		var weaponName = refWeapon !== null ?
-			@(getWeaponName(@refWeapon)) :
-			null;
-
-		logDetail('refArms of ' + @(getLeekName(enemy)) + ': ' + @chipName + ', ' + @weaponName);
-	} else if (!isSummon(enemy)) {
-		logError('getEnemyRefArms', 'unable to retrieve ' + @(getLeekName(enemy)) + ' ref arms');
-	}
-
-	putInStore(@cacheKey, @refArms);
-	return @refArms;
-}
-
-function getLeekName(@leek) {
-	if (leek === null) {
-		return null;
-	}
-	return getName(@leek) +
-		(isSummon(@leek) ? ('_' + leek) : '');
-}
-
-function getMaxRangeChip(@chips) {
-	if (safeCount(@chips) === 0) {
-		return null;
-	}
-
-	var maxRangeChip = null;
-	var maxRange = 0;
-
-	for (var chip in @chips) {
-		var chipMaxRange = getChipMaxRange(chip);
-		var chipArea = getChipArea(chip);
-		var isAreaChip = false;
-
-		if (chipArea === AREA_CIRCLE_1) {
-			chipMaxRange += 2;
-			isAreaChip = true;
-		} else if (chipArea === AREA_CIRCLE_2) {
-			chipMaxRange += 3;
-			isAreaChip = true;
-		} else if (chipArea === AREA_CIRCLE_3) {
-			chipMaxRange += 4;
-			isAreaChip = true;
-		}
+		logDetail('use cache');
+		nextCell = @(getInStore(@cacheKey));
 
 		if (
-			chipMaxRange > maxRange ||
-			(chipMaxRange === maxRange && isAreaChip)
+			MARK_SAFE_CELLS_TO_MOVE_ON &&
+			shouldMark &&
+			getCellSafetyLevel(@nextCell) >= SAFE_LEVEL
 		) {
-			maxRangeChip = chip;
-			maxRange = chipMaxRange;
+			mark(@[@nextCell], getColor(255, 128, 210));
 		}
+	} else if (availableMP > 0) {
+		var debugOperations = @(monitorOperations('getNextCell', true));
+
+		var reachableCells = @(sortByDistanceAsc(
+			@(getReachableCells(@startCell, @availableMP)),
+			@enemyCell
+		));
+		logDetail(safeCount(reachableCells) + ' reachable cells found');
+
+		var significantEnemyMP = getTotalMP(@enemy) * 1 / 3;
+		var nonEasilyReachableCells = @(arrayFilter(@reachableCells, function(cell) {
+			var pathLength = getPathLength(@enemyCell, @cell);
+			return pathLength === null ||
+				pathLength > significantEnemyMP;
+		}));
+
+		var debugOperationsInt = @(monitorIntermediateOperations(
+			'iterates cells safety (' + @(safeCount(@nonEasilyReachableCells)) +
+			' entries)'
+		));
+		var maxSafetyLevel = 0;
+		var maxSafetyCells = @[];
+		var shouldContinue = perfLimiter(MAX_OPS_PERCENT);
+		var i = 0;
+
+		for (var cell in @nonEasilyReachableCells) {
+			if (!shouldContinue()) {
+				logDetail('stopped by limiter after ' + @i + ' iterations');
+				break;
+			}
+
+			i++;
+			var safetyLevel = @(getCellSafetyLevel(@cell));
+
+			if (safetyLevel > maxSafetyLevel) {
+				maxSafetyLevel = safetyLevel;
+				maxSafetyCells = @[@cell];
+			} else if (safetyLevel === maxSafetyLevel) {
+				push(maxSafetyCells, @cell);
+			}
+		}
+		debugOperationsInt();
+
+		logDetail(@safeCount(@maxSafetyCells) + ' cells found with safety ' + @maxSafetyLevel);
+
+		if (maxSafetyLevel >= SAFE_LEVEL) {
+			nextCell = @(getClosestCellTo(
+				@maxSafetyCells, @enemyCell
+			));
+
+			if (nextCell === null) {
+				logError(
+					'getNextCell',
+					'nextCell null (safe), maxSafetyCells: ' +
+					@maxSafetyCells + ', enemyCell: ' + @enemyCell
+				);
+				nextCell = @startCell;
+			}
+
+			if (MARK_SAFE_CELLS_TO_MOVE_ON && shouldMark) {
+				mark(@maxSafetyCells, getColor(255, 128, 210));
+			}
+		} else {
+			var refCells = maxSafetyLevel >= MIN_ACCEPTABLE_SAFE_LEVEL ?
+				@maxSafetyCells :
+				@reachableCells;
+
+			nextCell = @(getFarthestCellFrom(
+				@refCells, @enemyCell
+			));
+
+			if (nextCell === null) {
+				logError(
+					'getNextCell',
+					'nextCell null (not safe), maxSafetyCells: ' +
+					@maxSafetyCells + ', enemyCell: ' + @enemyCell
+				);
+				nextCell = @startCell;
+			}
+		}
+
+		var summoner = getSummoner();
+
+		if (isSummon()) {
+			var summonerCell = @(getCell(@(getSummoner())));
+
+			if (summonerCell !== null) {
+				var distance = @(getDistance(@summonerCell, @startCell));
+				var nextDistance = @(getDistance(@summonerCell, @nextCell));
+
+				if (distance >= 2 && nextDistance <= 2) {
+					logDetail('do not move not to block summoner');
+					nextCell = @startCell;
+				} else if (distance < 2 && safeCount(@reachableCells) > 0) {
+					logDetail('move not to block summoner');
+					nextCell = @(getFarthestCellFrom(
+						@reachableCells, @summonerCell
+					));
+
+					if (nextCell === null) {
+						logError(
+							'getNextCell',
+							'nextCell null (summon), reachableCells: ' +
+							@reachableCells + ', summonerCell: ' + @summonerCell
+						);
+						nextCell = @startCell;
+					}
+				}
+			} else {
+				logWarning('getNextCell', 'summuner cell null');
+			}
+		}
+
+		putInStore(@cacheKey, @nextCell);
+		debugOperations();
 	}
-	return maxRangeChip;
+
+	logDetail('nextCell: ' + @nextCell);
+	return @nextCell;
 }
 
-function getMaxRangeWeapon(@weapons) {
-	if (safeCount(@weapons) === 0) {
-		return null;
-	}
+function getTargetEnemy(@weapon, @enemy) {
+	var currentCell = getCell();
+	var targetEnemy = null;
 
-	var maxRangeWeapon = null;
-	var maxRange = 0;
+	if (canUseWeapon(weapon, enemy)) {
+		targetEnemy = enemy;
+	} else {
+		// There may be another enemy between me and my target
 
-	for (var weapon in @weapons) {
-		var weaponMaxRange = getWeaponMaxRange(weapon);
-		var weaponArea = getWeaponArea(weapon);
-
-		if (weaponArea === AREA_CIRCLE_1) {
-			weaponMaxRange += 1;
-		} else if (weaponArea === AREA_CIRCLE_2) {
-			weaponMaxRange += 2;
-		} else if (weaponArea === AREA_CIRCLE_3) {
-			weaponMaxRange += 3;
-		}
-
-		if (weaponMaxRange > maxRange) {
-			maxRangeWeapon = weapon;
-			maxRange = weaponMaxRange;
-		}
-	}
-	return maxRangeWeapon;
-}
-
-function getNearestLeekEnemy() {
-	var startCell = @(getCell());
-	var enemies = @(arrayFilter(
-		@(getAliveEnemies()),
-		function(@enemy) {
-			return !isSummon(@enemy);
-		}
-	));
-	var nearestEnemy = shift(enemies);
-	var nearestEnemyPathLength = @(getPathLength(@startCell, @(getCell(@nearestEnemy))));
-
-	for (var enemy in enemies) {
-		var enemyPathLength = @(getPathLength(@startCell, @(getCell(@enemy))));
-
-		if (
-			enemyPathLength !== null &&
-			enemyPathLength < nearestEnemyPathLength
-		) {
-			nearestEnemy = @enemy;
-			nearestEnemyPathLength = @enemyPathLength;
-		}
-	}
-	return @nearestEnemy;
-}
-
-function getNearestDangerousSummonEnemy() {
-	var startCell = @(getCell());
-	var enemies = @(arrayFilter(
-		@(getDangerousEnemies()),
-		function(@enemy) {
-			return isSummon(@enemy);
-		}
-	));
-	var nearestEnemy = null;
-	var nearestEnemyPathLength = 999;
-
-	for (var enemy in enemies) {
-		var enemyPathLength = @(getPathLength(@startCell, @(getCell(@enemy))));
-
-		if (
-			enemyPathLength !== null &&
-			enemyPathLength < nearestEnemyPathLength
-		) {
-			nearestEnemy = @enemy;
-			nearestEnemyPathLength = @enemyPathLength;
-		}
-	}
-	return @nearestEnemy;
-}
-
-function getTargetableDeltaCells(@targetCell, @arm) {
-	var targetableCells = @[];
-	var x = @(getCellX(@targetCell));
-	var y = @(getCellY(@targetCell));
-	var isChip = isChip(@arm);
-
-	var area = isChip ?
-		@(getChipArea(@arm)) :
-		@(getWeaponArea(@arm));
-
-	var range = area === AREA_CIRCLE_1 ? 1 : (
-		area === AREA_CIRCLE_2 ? 2 : (
-			area === AREA_CIRCLE_3 ? 3 : 0
-		)
-	);
-
-	if (range === 0) {
-		logError(
-			'getTargetableDeltaCells',
-			'invalid arm area: ' + @(getArmName(@arm)) +
-			' ' + @area
-		);
-		return @[];
-	}
-
-	for (var i = (x - range); i <= (x + range); i++) {
-		for (var j = (y - range); j <= (y + range); j++) {
-			var cell = @(getCellFromXY(@i, @j));
+		for (var aliveEnemy in @(getAliveEnemies())) {
+			var aliveEnemyCell = getCell(aliveEnemy);
+			var enemyCell = getCell(enemy);
 
 			if (
-				cell !== null &&
-				!isObstacle(@cell) &&
-				inArray(
-					@(getAreaImpactedCells(@cell, @area)), @targetCell
-				)
+				aliveEnemy !== enemy &&
+				canUseWeapon(weapon, aliveEnemy) &&
+				isOnSameLine(currentCell, aliveEnemyCell) &&
+				isOnSameLine(currentCell, enemyCell) &&
+				isOnSameLine(enemyCell, aliveEnemyCell) &&
+				getDistance(enemyCell, aliveEnemyCell) < getDistance(enemyCell, currentCell)
 			) {
-				push(targetableCells, @cell);
+				targetEnemy = aliveEnemy;
+				break;
 			}
 		}
 	}
 
-	return arraySort(@targetableCells, function(a, b) {
-		var distA = getDistance(@a, @targetCell);
-		var distB = getDistance(@b, @targetCell);
-		return distA < distB ? -1 : (distA === distB ? 0 : 1);
-	});
+	logInfo(
+		'getTargetEnemy(): ' + getLeekName(targetEnemy) +
+		(targetEnemy !== null ? (' on cell ' + getCell(targetEnemy)) : '')
+	);
+
+	return targetEnemy;
 }
 
-function isAreaArm(@arm) {
-	var area = isChip(@arm) ?
-		@(getChipArea(@arm)) :
-		@(getWeaponArea(@arm));
+function initTurn() {
+	clearStore();
 
-	return area === AREA_CIRCLE_1 ||
-		area === AREA_CIRCLE_2 ||
-		area === AREA_CIRCLE_3;
+	if (getTurn() === 1) {
+		logInfo('Computes enemies ref arms');
+
+		arrayIter(@(getAliveEnemies()), function(@enemy) {
+			getEnemyRefArms(@enemy);
+		});
+	}
+
+	if (LOG_MONITOR_DATA) {
+		logMonitorData();
+	}
 }
 
-function isBadlyPoisoned() {
-	var poisonDammages = 0;
+function move(@enemy) {
+	logInfo('move(' + getLeekName(enemy) + ')');
+	increaseLogIndent();
 
-	for (var effect in getEffects()) {
-		if (effect[0] === EFFECT_POISON) {
-			poisonDammages += effect[1];
+	if (getMP() === 0) {
+		return;
+	}
+
+	var debugOperations = monitorOperations('move', true);
+	var nextCell = getNextCell(enemy, getCell(), getMP(), true);
+
+	if (nextCell === null) {
+		logError('move', 'unable to find the next cell, do not move');
+		decreaseLogIndent();
+		return;
+	}
+
+	var enemyPathLength = getEnemyPathLengthToFireOnCell(
+		nextCell, enemy, !isSummon()
+	);
+
+	decreaseLogIndent();
+	logDetail(
+		'to ' + nextCell +
+		' (safety: ' + getCellSafetyLevel(nextCell) +
+		', path length: ' + enemyPathLength + ')'
+	);
+
+	if (nextCell !== getCell()) {
+		moveTowardCell(nextCell);
+	}
+	debugOperations();
+}
+
+function setCellToFire(@arm, @target, @cellToFire) {
+	putInStore('tmp-fire-cell-' + arm + '-' + target, @cellToFire);
+}
+
+function shouldFire(@target, @arm, @cellToFire, @pathlength) {
+	logInfo('shouldFire()');
+
+	var debugOperations = monitorOperations('shouldFire', true);
+	var should = false;
+	var willBadlyImpactAlly = false;
+
+	if (!isAlly(target) && isAreaArm(@arm)) {
+		var cellToFireOn = getCellToAreaFireOn(@arm, @target);
+
+		if (cellToFireOn !== null) {
+			var impactedLeeks = isChip(@arm) ?
+				@(getChipTargets(@arm, @cellToFireOn)) :
+				@(getWeaponTargets(@arm, @cellToFireOn));
+
+			// getAliveAllies returns also me
+			for (var ally in getAliveAllies()) {
+				if (inArray(impactedLeeks, ally)) {
+					logDetail('will badly impact ' + getLeekName(ally));
+					willBadlyImpactAlly = true;
+					break;
+				}
+			}
+		} else {
+			logError(
+				'shouldFire',
+				'unable to find cell to area fire with ' +
+				getArmName(@arm) + ' on ' + getLeekName(@target)
+			);
 		}
 	}
-	return poisonDammages >= 300;
-}
 
-function isPoisoned(@leek) {
-	for (var effect in @(getEffects(leek))) {
-		if (effect[0] === EFFECT_POISON) {
-			return true;
+	if (!willBadlyImpactAlly) {
+		if (pathlength === 0) {
+			should = true;
+			logDetail('can fire without moving');
+		} else if (
+			!isSummon(target) &&
+			getLife() > (getTotalLife() * 2 / 3) &&
+			getLife(target) < (getTotalLife(target) * 1 / 3)
+		) {
+			should = true;
+			logDetail('finish him');
+		} else {
+			increaseLogIndent();
+
+			// We do not want to take summons into account
+			var initialEnemy = getNearestLeekEnemy();
+			var safetyLevel = 'unknown';
+			var nextCellAfterFire = getNextCell(
+				initialEnemy, cellToFire, getMP() - pathlength, false
+			);
+			var safetyLevelAfter = 'unknown';
+			var pathLengthAfter = 'unknown';
+			var isSafe = false;
+			var isSafeForPoison = false;
+			var isSafeAfterInactivity = false;
+			var isNotWorst = false;
+
+			if (nextCellAfterFire !== null) {
+				safetyLevelAfter = getCellSafetyLevel(nextCellAfterFire);
+				pathLengthAfter = getEnemyPathLengthToFireOnCell(
+					nextCellAfterFire, initialEnemy, false
+				);
+				isSafe = safetyLevelAfter >= SAFE_LEVEL;
+				isSafeForPoison = target === initialEnemy &&
+					(arm === CHIP_TOXIN || arm === CHIP_VENOM) &&
+					!isPoisoned(initialEnemy) &&
+					safetyLevelAfter >= 60;
+				isSafeAfterInactivity = turnsWithoutFire >= 1 &&
+					safetyLevelAfter >= 70;
+
+				if (!isSafe && !isSafeForPoison && !isSafeAfterInactivity) {
+					var nextCell = getNextCell(
+						initialEnemy, getCell(), getMP(), false
+					);
+
+					if (nextCell !== null) {
+						isNotWorst = safetyLevelAfter >= getCellSafetyLevel(nextCell);
+					} else {
+						logError('shouldFire', 'nextCell null');
+					}
+				}
+			} else {
+				logError('shouldFire', 'nextCellAfterFire null');
+			}
+
+			decreaseLogIndent();
+			logDetail(
+				(isSafe ? '' : 'not ') + 'safe (' + safetyLevelAfter + ', ' + pathLengthAfter + '), ' +
+				(isSafeForPoison ? '' : 'not ') + 'safe for poison, ' +
+				(isSafeAfterInactivity ? '' : 'not ') + 'safe after inactivity, ' +
+				(isNotWorst ? 'not ' : '') + 'worst'
+			);
+
+			should = isSafe || isSafeForPoison || isSafeAfterInactivity || isNotWorst;
 		}
 	}
-	return false;
+
+	debugOperations();
+	return should;
 }
 
-function isPoisoner(@leek) {
-	var cacheKey = 'psnr-' + leek;
-
-	if (hasInStore(@cacheKey)) {
-		return @(getInStore(@cacheKey));
-	}
-
-	var isLeekPoisoner = getMagic(@leek) > getStrength(@leek);
-	putInStore(@cacheKey, @isLeekPoisoner);
-	return @isLeekPoisoner;
-}
-
-function summonBulb(@bulb, @ai, @enemy) {
-	var enemyCell = getCell(enemy);
-	var summonerCell = getCell();
-	var x = getCellX(summonerCell);
-	var y = getCellY(summonerCell);
-	var deltas;
-
-	if (bulb === CHIP_HEALER_BULB || bulb === CHIP_ICED_BULB) {
-		deltas = @[
-			[0, -2],
-			[0, 2],
-			[-2, 0],
-			[2, 0],
-		];
-	} else if (
-		bulb === CHIP_FIRE_BULB ||
-		bulb === CHIP_PUNY_BULB ||
-		bulb === CHIP_ROCKY_BULB
-	) {
-		deltas = @[
-			[0, -3],
-			[0, -2],
-			[0, 2],
-			[0, 3],
-			[-3, 0],
-			[-2, 0],
-			[2, 0],
-			[3, 0],
-			[-2, -1],
-			[-2, 1],
-			[-1, -2],
-			[-1, 2],
-			[1, -2],
-			[1, 2],
-			[2, -1],
-			[2, 1],
-		];
-	}
-
-	var deltaCells = @(arrayMap(@deltas, function(@delta) {
-		return getCellFromXY(x + delta[0], y + delta[1]);
-	}));
-
-	var possibleCells = @(arrayFilter(@deltaCells, function(@cell) {
-		return cell !== null && canUseChipOnCell(bulb, cell);
-	}));
-
-	if (safeCount(@possibleCells) > 0) {
-		var targetCell = bulb === CHIP_HEALER_BULB ?
-			getFarthestCellFrom(@possibleCells, enemyCell) :
-			getClosestCellTo(@possibleCells, enemyCell);
-
-		showResult(summon(bulb, targetCell, ai));
-	} else {
-		logWarning('summonBulb', 'no cell available for bulb');
-	}
+function updateTurnsWithoutFire(@hasFired) {
+	turnsWithoutFire = hasFired ? 0 : turnsWithoutFire + 1;
 }

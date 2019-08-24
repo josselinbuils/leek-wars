@@ -58,88 +58,88 @@ function Skynet() {
 		if (
 			shouldTry() &&
 			getLife() < minSafeLife &&
-			canFireWithChip(CHIP_REGENERATION, me)
+			canFire(CHIP_REGENERATION, me)
 		) {
 			arm = CHIP_REGENERATION;
 			target = me;
 		} else if (
 			shouldTry() &&
 			getLife() < minSafeLife &&
-			canFireWithChip(CHIP_REMISSION, me)
+			canFire(CHIP_REMISSION, me)
 		) {
 			arm = CHIP_REMISSION;
 			target = me;
 		} else if (
 			shouldTry() &&
 			poisoned &&
-			canFireWithChip(CHIP_ANTIDOTE, me)
+			canFire(CHIP_ANTIDOTE, me)
 		) {
 			arm = CHIP_ANTIDOTE;
 			target = me;
 		} else if (
 			shouldTry() &&
 			shouldProtect &&
-			canFireWithChip(CHIP_FORTRESS, me)
+			canFire(CHIP_FORTRESS, me)
 		) {
 			arm = CHIP_FORTRESS;
 			target = me;
 		} else if (
 			shouldTry() &&
 			shouldProtect &&
-			canFireWithChip(CHIP_ARMOR, me)
+			canFire(CHIP_ARMOR, me)
 		) {
 			arm = CHIP_ARMOR;
 			target = me;
 		} else if (
 			shouldTry() &&
-			canFireWithWeapon(WEAPON_FLAME_THROWER, enemy)
+			canFire(WEAPON_FLAME_THROWER, enemy)
 		) {
 			arm = WEAPON_FLAME_THROWER;
 		} else if (
 			shouldTry() &&
 			isInitialEnemy &&
-			canFireWithChip(CHIP_TOXIN, enemy)
+			canFire(CHIP_TOXIN, enemy)
 		) {
 			arm = CHIP_TOXIN;
 		} else if (
-			shouldTry() && canFireWithChip(CHIP_VENOM, enemy)
+			shouldTry() && canFire(CHIP_VENOM, enemy)
 		) {
 			arm = CHIP_VENOM;
 		} else if (
 			shouldTry() &&
-			canFireWithWeapon(WEAPON_GAZOR, enemy)
+			canFire(WEAPON_GAZOR, enemy)
 		) {
 			arm = WEAPON_GAZOR;
 		} else if (
 			shouldTry() &&
 			isInitialEnemy &&
-			canFireWithWeapon(WEAPON_AXE, enemy)
+			canFire(WEAPON_AXE, enemy)
 		) {
 			arm = WEAPON_AXE;
 		} else if (
 			shouldTry() &&
 			isInitialEnemy &&
-			canFireWithChip(CHIP_BALL_AND_CHAIN, enemy)
+			canFire(CHIP_BALL_AND_CHAIN, enemy)
 		) {
 			arm = CHIP_BALL_AND_CHAIN;
 		} else if (
 			shouldTry() &&
 			isInitialEnemy &&
-			canFireWithChip(CHIP_FRACTURE, enemy)
+			canFire(CHIP_FRACTURE, enemy)
 		) {
 			arm = CHIP_FRACTURE;
 		} else if (
 			doOnce(
 				shouldTry() &&
 				getLife() > minSafeLife &&
-				canFireWithChip(CHIP_FIRE_BULB, me)
+				canFire(CHIP_FIRE_BULB, me)
 			)
 		) {
 			summonBulb(CHIP_FIRE_BULB, FireBulb, initialEnemy);
 		} else if (
 			doOnce(
 				shouldTry() &&
-				canFireWithChip(CHIP_HEALER_BULB, me)
+				canFire(CHIP_HEALER_BULB, me)
 			)
 		) {
 			summonBulb(CHIP_HEALER_BULB, HealerBulb, initialEnemy);
@@ -149,44 +149,44 @@ function Skynet() {
 			optimizer = Optimizer();
 			continue;
 		} else if (
-			shouldTry() && canFireWithChip(CHIP_ARMORING, me)
+			shouldTry() && canFire(CHIP_ARMORING, me)
 		) {
 			arm = CHIP_ARMORING;
 			target = me;
 		} else if (
 			shouldTry() &&
 			getLife() < (totalLife * 3 / 4) &&
-			canFireWithChip(CHIP_REMISSION, me)
+			canFire(CHIP_REMISSION, me)
 		) {
 			arm = CHIP_REMISSION;
 			target = me;
 		} else if (
-			doOnce(shouldTry() && canFireWithChip(CHIP_FIRE_BULB, me))
+			doOnce(shouldTry() && canFire(CHIP_FIRE_BULB, me))
 		) {
 			summonBulb(CHIP_FIRE_BULB, FireBulb, initialEnemy);
 		} else if (
 			shouldTry() &&
 			!isInitialEnemy &&
-			canFireWithChip(CHIP_SLOW_DOWN, initialEnemy)
+			canFire(CHIP_SLOW_DOWN, initialEnemy)
 		) {
 			arm = CHIP_SLOW_DOWN;
 			target = initialEnemy;
 		} else if (
 			shouldTry() &&
-			canFireWithChip(CHIP_SLOW_DOWN, enemy)
+			canFire(CHIP_SLOW_DOWN, enemy)
 		) {
 			arm = CHIP_SLOW_DOWN;
 		} else if (
 			shouldTry() &&
 			getLife() < totalLife &&
-			canFireWithChip(CHIP_REMISSION, me)
+			canFire(CHIP_REMISSION, me)
 		) {
 			arm = CHIP_REMISSION;
 			target = me;
 		} else if (
 			shouldTry() &&
 			getLife(getNearestAlly()) < getTotalLife(getNearestAlly()) &&
-			canFireWithChip(CHIP_REMISSION, getNearestAlly())
+			canFire(CHIP_REMISSION, getNearestAlly())
 		) {
 			arm = CHIP_REMISSION;
 			target = getNearestAlly();
