@@ -501,7 +501,7 @@ function shouldFire(@target, @arm, @cellToFire, @cellToFireOn, @pathlength) {
 				safetyLevelAfter = getCellSafetyLevel(nextCellAfterFire);
 				isSafe = safetyLevelAfter >= SAFE_LEVEL;
 				isSafeForPoison = target === initialEnemy &&
-					(arm === CHIP_TOXIN || arm === CHIP_VENOM) &&
+					isPoisonArm(@arm) &&
 					!isPoisoned(initialEnemy) &&
 					safetyLevelAfter >= SAFE_LEVEL_POISON;
 				isSafeAfterInactivity = turnsWithoutFire >= 2 &&

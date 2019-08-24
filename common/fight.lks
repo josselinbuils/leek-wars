@@ -609,6 +609,19 @@ function isBadlyPoisoned() {
 	return poisonDammages >= 300;
 }
 
+function isPoisonArm(@arm) {
+	var effects = isChip(@arm) ?
+		@(getChipEffects(@arm)) :
+		@(getWeaponEffects(@arm));
+
+	for (var effect in @effects) {
+		if (effect[0] === EFFECT_POISON) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function isPoisoned(@leek) {
 	for (var effect in @(getEffects(leek))) {
 		if (effect[0] === EFFECT_POISON) {
