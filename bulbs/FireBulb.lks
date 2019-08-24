@@ -46,9 +46,9 @@ function FireBulb() {
 				}
 
 				var targetCell = preferredChip === CHIP_DEVIL_STRIKE ?
-					getCellToAreaFireOnCell(
+					getCellCouplesToAreaFireOnCell(
 						preferredChip, me, getCell(initialEnemy)
-					) :
+					)[0][0] :
 					getCellToDirectFireOnCell(
 						preferredChip, me, getCell(initialEnemy)
 					);

@@ -31,7 +31,11 @@ function canFireOnCellFrom(@casterCell, @targetCell, @arm) {
 		return false;
 	}
 
-	return @(lineOfSight(@casterCell, @targetCell));
+	var needLos = isArmChip ?
+		@(chipNeedLos(@arm)) :
+		@(weaponNeedLos(@arm));
+
+	return !needLos || @(lineOfSight(@casterCell, @targetCell));
 }
 
 function ensureWearingWeapon(@weapon) {
@@ -143,29 +147,58 @@ function getArmName(@arm) {
 		getWeaponName(@arm);
 }
 
-function getCellsToAreaFireOnCell(@arm, @caster, @targetCell) {
+function getCellCouplesToAreaFireOnCell(@arm, @caster, @targetCell) {
+	var casterCell = @(getCell(@caster));
 	var cellsToFire = @[];
+	var cellCouplesToFire = @[];
 	var targetableDeltaCells = @(getTargetableDeltaCells(@targetCell, @arm));
 	var isArmChip = @(isChip(@arm));
 
-	for (var cell in @targetableDeltaCells) {
+	for (var targetDeltaCell in @targetableDeltaCells) {
 		// Do not ignore allies as an ally could be on fire line otherwise
 		var newCellsToFire = isArmChip ?
 			@(getCellsToUseChipOnCell(
-				@arm, @cell,
+				@arm, @targetDeltaCell,
 			)) :
 			@(getCellsToUseWeaponOnCell(
-				@arm, @cell,
+				@arm, @targetDeltaCell,
 			));
 
 		for (var newCellToFire in @newCellsToFire) {
 			if (!inArray(@cellsToFire, @newCellToFire)) {
 				push(cellsToFire, @newCellToFire);
+				push(
+					cellCouplesToFire,
+					[
+						@newCellToFire,
+						@targetDeltaCell
+					]
+				);
 			}
 		}
 	}
 
-	return @cellsToFire;
+	return @(arraySort(
+		@cellCouplesToFire,
+		function(@a, @b) {
+			var distToTargetA = getCellDistance(@targetCell, @(a[1]));
+			var distToTargetB = getCellDistance(@targetCell, @(b[1]));
+			var distToCasterA = getCellDistance(@casterCell, @(a[0]));
+			var distToCasterB = getCellDistance(@casterCell, @(b[0]));
+
+			return (
+					distToTargetA < distToTargetB ||
+					(distToTargetA === distToTargetB && distToCasterA < distToCasterB)
+				) ?
+				-1 :
+				(
+					distToTargetA > distToTargetB ||
+					(distToTargetA === distToTargetB && distToCasterA > distToCasterB)
+				) ?
+				1 :
+				0;
+		}
+	));
 }
 
 function getCellsToDirectFireOnCell(@arm, @caster, @targetCell) {
@@ -206,54 +239,6 @@ function getCellsToDirectFireOnCell(@arm, @caster, @targetCell) {
 	));
 }
 
-function getCellToAreaFireOnCell(@arm, @caster, @targetCell) {
-	var casterCell = @(getCell(@caster));
-	var cellToFire = null;
-	var cacheKey = 'tmp-areaFireCell-' + arm + '-' + targetCell + '-' + casterCell;
-
-	if (hasInStore(cacheKey)) {
-		cellToFire = @(getInStore(@cacheKey));
-	} else {
-		var cellsToFire = @(getCellsToAreaFireOnCell(
-			@arm, @caster, @targetCell
-		));
-
-		if (safeCount(@cellsToFire) > 0) {
-			cellsToFire = @(getMinPathCells(@cellsToFire, @casterCell));
-
-			if (safeCount(@cellsToFire) > 0) {
-				cellToFire = getFarthestCellFrom(@cellsToFire, @targetCell);
-			}
-		}
-		putInStore(@cacheKey, @cellToFire);
-	}
-
-	return @cellToFire;
-}
-
-function getCellToAreaFireOn(@arm, @fireCell, @targetCell) {
-	var cacheKey = 'tmp-cellAreaFireOn-' + arm + '-' + targetCell;
-
-	if (hasInStore(@cacheKey)) {
-		return @(getInStore(@cacheKey));
-	}
-
-	var targetableDeltaCells = @(getTargetableDeltaCells(
-		@targetCell, @arm
-	));
-
-	if (safeCount(@targetableDeltaCells) > 0) {
-		for (var cell in @targetableDeltaCells) {
-			if (canFireOnCellFrom(@fireCell, @cell, @arm)) {
-				putInStore(@cacheKey, @cell);
-				return @cell;
-			}
-		}
-	}
-
-	return null;
-}
-
 function getCellToDirectFireOnCell(@arm, @caster, @targetCell) {
 	var casterCell = @(getCell(@caster));
 	var cellToFire = null;
@@ -270,15 +255,7 @@ function getCellToDirectFireOnCell(@arm, @caster, @targetCell) {
 			);
 
 			if (safeCount(@cellsToFire) > 0) {
-				//if (@caster !== getLeek()) {
-				//logDetail('getCellsToDirectFireOnCell: ' + cellsToFire);
-				//}
-
 				cellsToFire = @(getMinPathCells(@cellsToFire, @casterCell));
-
-				//if (@caster !== getLeek()) {
-				//logDetail('getMinPathCells: ' + cellsToFire);
-				//}
 
 				if (safeCount(@cellsToFire) > 0) {
 					cellToFire = @(getFarthestCellFrom(@cellsToFire, @targetCell));
@@ -287,10 +264,6 @@ function getCellToDirectFireOnCell(@arm, @caster, @targetCell) {
 		}
 		putInStore(@cacheKey, @cellToFire);
 	}
-
-	//if (@caster !== getLeek()) {
-	//logDetail('cellToFire: ' + cellToFire);
-	//}
 
 	return @cellToFire;
 }
@@ -343,6 +316,28 @@ function getEnemySortedArms(@enemy) {
 	return @sortedArms;
 }
 
+function getTargetDeltaCellEfficiency(@arm, @targetCell, @targetDeltaCell) {
+	var area = isChip(@arm) ?
+		@(getChipArea(@arm)) :
+		@(getWeaponArea(@arm));
+
+	if (area === AREA_CIRCLE_1) {
+		return 0.5;
+	}
+	if (area === AREA_CIRCLE_2) {
+		var distance = getCellDistance(@targetCell, @targetDeltaCell);
+		return distance === 1 ? 0.75 : 0.5;
+	}
+	if (area === AREA_CIRCLE_3) {
+		var distance = getCellDistance(@targetCell, @targetDeltaCell);
+		return distance === 1 ?
+			0.83 :
+			distance === 2 ?
+			0.67 :
+			0.5;
+	}
+}
+
 function getEnemyPotentialDammagesOnCell(@cell, @enemy) {
 	var arms = @(getEnemySortedArms(@enemy));
 	var enemyMP = @(getTotalMP(@enemy));
@@ -352,19 +347,29 @@ function getEnemyPotentialDammagesOnCell(@cell, @enemy) {
 
 	for (var arm in @arms) {
 		var isArmChip = @(isChip(@arm));
-		var cellToFire = @(getCellToDirectFireOnCell(@arm, @enemy, @cell));
-		var pathLength = @(getPathLength(@enemyCell, @cellToFire));
 		var armCost = isArmChip ?
 			@(getChipCost(@arm)) :
 			@(getWeaponCost(@arm));
 		var initialArmCost = armCost + (
 			!isArmChip && getWeapon(@enemy) !== @arm ? 1 : 0
 		);
+		var armDammages = @(getArmDammages(@arm, @enemy));
+		var cellToFire = @(getCellToDirectFireOnCell(@arm, @enemy, @cell));
 
-		//logDetail(getArmName(@arm) + ': ' + pathLength + ' / ' + enemyMP);
+		if (cellToFire === null && isAreaArm(@arm)) {
+			var couple = getReachableCellCoupleToAreaFireOnCell(@arm, @enemy, @cell);
 
-		if (cellToFire !== null && enemyTP > initialArmCost && enemyMP >= pathLength) {
-			var armDammages = @(getArmDammages(@arm, @enemy));
+			if (couple !== null) {
+				cellToFire = couple[0];
+				armDammages *= getTargetDeltaCellEfficiency(
+					@arm, @cell, @(couple[1])
+				);
+			}
+		}
+
+		var pathLength = @(getPathLength(@enemyCell, @cellToFire));
+
+		if (cellToFire !== null && enemyMP >= pathLength && enemyTP > initialArmCost) {
 			var cooldown = isArmChip ? @(getChipCooldown(@arm)) : 0;
 
 			enemyMP -= pathLength;
@@ -382,6 +387,8 @@ function getEnemyPotentialDammagesOnCell(@cell, @enemy) {
 				break;
 			}
 		}
+
+		//logDetail(getArmName(@arm) + ': ' + cellToFire + ' (' + pathLength + '/' + enemyMP + ')');
 	}
 
 	logDetail(@cell + ': ' + potentialDammages);
@@ -508,6 +515,29 @@ function getNearestDangerousSummonEnemy() {
 		}
 	}
 	return @nearestEnemy;
+}
+
+// /!\ Takes mp into account
+function getReachableCellCoupleToAreaFireOnCell(@arm, @caster, @targetCell) {
+	var casterCell = @(getCell(@caster));
+	var casterMP = @(getMP(@caster));
+	var cellCoupleToFire = null;
+	var cacheKey = 'tmp-areaFireCell-' + arm + '-' + targetCell + '-' + casterCell;
+
+	if (!hasInStore(cacheKey)) {
+		var cellCouplesToFire = @(getCellCouplesToAreaFireOnCell(
+			@arm, @caster, @targetCell
+		));
+
+		for (var couple in @cellCouplesToFire) {
+			if (isReachableWith(@(couple[0]), @casterCell, @casterMP)) {
+				putInStore(@cacheKey, @couple);
+				break;
+			}
+		}
+	}
+
+	return @(getInStore(@cacheKey));
 }
 
 function getTargetableDeltaCells(@targetCell, @arm) {

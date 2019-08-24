@@ -6,12 +6,12 @@ function Slammer() {
 	var hasFired = false;
 	var enemy = getNearestLeekEnemy();
 	var me = getLeek();
+	var minSafeLife = getTotalLife() / 2;
 	var optimizer = Optimizer();
 	var summoner = getSummoner();
 
 	if (getTurn() === 1) {
 		say('Yop ' + getName(enemy) + ' :)');
-		setWeapon(WEAPON_DOUBLE_GUN);
 	}
 
 	while (getAliveEnemiesCount() > 0) {
@@ -29,6 +29,13 @@ function Slammer() {
 		logRemainingOperations();
 
 		if (
+			shouldTry() &&
+			getLife() < minSafeLife &&
+			canFire(CHIP_BANDAGE, me)
+		) {
+			arm = CHIP_BANDAGE;
+			target = me;
+		} else if (
 			shouldTry() &&
 			canFire(CHIP_HELMET, me)
 		) {
@@ -66,6 +73,12 @@ function Slammer() {
 		) {
 			arm = CHIP_BANDAGE;
 			target = me;
+		} else if (
+			shouldTry() &&
+			getTP() > 0 &&
+			getWeapon() !== WEAPON_SHOTGUN
+		) {
+			ensureWearingWeapon(WEAPON_SHOTGUN);
 		} else {
 			if (getMP() > 0) {
 				move(enemy);

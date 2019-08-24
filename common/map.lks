@@ -55,10 +55,6 @@ function getCellsAround(@centerCell) {
 	return @(removeUnreachableCells(@emptyCells, @(getCell())));
 }
 
-function getClosestCell(@cells) {
-	return @(getClosestCellTo(@cells, @(getCell())));
-}
-
 function getClosestCellTo(@cells, @refCell) {
 	if (safeCount(@cells) === 0) {
 		logWarning('getClosestCellTo', 'no cell provided');
@@ -167,21 +163,21 @@ function getFarthestCellFrom(@cells, @refCell) {
 	return farestCell;
 }
 
-function getMinPathCells(@cells, @refCell) {
+function getMinPathCells(@cells, @startCell) {
 	if (safeCount(@cells) === 0) {
 		logWarning('getMinPathCells', 'no cell provided');
 		return null;
 	}
 
-	var reachableCells = @(removeUnreachableCells(@cells, @refCell));
+	var reachableCells = @(removeUnreachableCells(@cells, @startCell));
 
 	if (safeCount(@reachableCells) > 0) {
-		var closestReachableCell = @(getClosestCell(@reachableCells));
-		var minPathLength = @(getPathLength(@refCell, @closestReachableCell));
+		var closestReachableCell = @(getClosestCellTo(@reachableCells, @startCell));
+		var minPathLength = @(getPathLength(@startCell, @closestReachableCell));
 
 		return @(ensureArray(
 			@(arrayFilter(@reachableCells, function(@cell) {
-				return getPathLength(@refCell, @cell) <= minPathLength;
+				return getPathLength(@startCell, @cell) <= minPathLength;
 			}))
 		));
 	}
@@ -239,9 +235,21 @@ function isNearObstacle(cell) {
 	return false;
 }
 
-function removeUnreachableCells(@cells, @startCell) {
-	var currentCell = @(getCell());
+function isReachableWith(@cell, @startCell, @availableMP) {
+	if (cell === startCell) {
+		return true;
+	}
+	if (cell === null || !isEmptyCell(@cell)) {
+		return false;
+	}
 
+	var pathLength = @(getPathLength(@startCell, @cell));
+
+	return pathLength !== null &&
+		pathLength <= availableMP;
+}
+
+function removeUnreachableCells(@cells, @startCell) {
 	return @(ensureArray(
 		@(arrayFilter(@cells, function(@cell) {
 			if (cell === startCell) {
@@ -249,7 +257,7 @@ function removeUnreachableCells(@cells, @startCell) {
 			}
 			return cell !== null &&
 				isEmptyCell(@cell) &&
-				getPathLength(@currentCell, @cell) !== null;
+				getPathLength(@startCell, @cell) !== null;
 		}))
 	));
 }
@@ -257,15 +265,7 @@ function removeUnreachableCells(@cells, @startCell) {
 function removeUnreachableCellsWith(@cells, @startCell, @availableMP) {
 	return @(ensureArray(
 		@(arrayFilter(@cells, function(@cell) {
-			if (cell === startCell) {
-				return true;
-			}
-			if (cell === null || !isEmptyCell(@cell)) {
-				return false;
-			}
-			var pathLength = @(getPathLength(@startCell, @cell));
-			return pathLength !== null &&
-				pathLength <= availableMP;
+			return isReachableWith(@cell, @startCell, @availableMP);
 		}))
 	));
 }

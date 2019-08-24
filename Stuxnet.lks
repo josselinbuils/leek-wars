@@ -15,6 +15,7 @@ function Stuxnet() {
 	var isEnemyPoisoner = isPoisoner(initialEnemy);
 	var shouldProtect = !isEnemyPoisoner || safeCount(getDangerousEnemies()) > 1;
 	var me = getLeek();
+	var minSafeLife = getTotalLife() / 2;
 	var once = Once();
 	var optimizer = Optimizer();
 	var poisoned = isBadlyPoisoned();
@@ -43,7 +44,7 @@ function Stuxnet() {
 
 		if (
 			shouldTry() &&
-			getLife() < 300 &&
+			getLife() < minSafeLife &&
 			canFire(CHIP_CURE, me)
 		) {
 			arm = CHIP_CURE;
