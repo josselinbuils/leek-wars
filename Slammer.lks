@@ -1,38 +1,24 @@
-include('bulbs/RockyBulb');
-include('common/logger');
-include('common/strategy');
-include('common/utils');
+include('../common/strategy');
 
-global hasFiredOnce = false;
-
-function Stuxnet() {
+function Slammer() {
 	initTurn();
 
-	var enemy = getNearestLeekEnemy();
 	var hasFired = false;
-	var initialEnemy = enemy;
-	var isInitialEnemy = enemy === initialEnemy;
-	var isEnemyPoisoner = isPoisoner(initialEnemy);
-	var shouldProtect = !isEnemyPoisoner || safeCount(getDangerousEnemies()) > 1;
+	var enemy = getNearestLeekEnemy();
 	var me = getLeek();
-	var once = Once();
 	var optimizer = Optimizer();
-	var poisoned = isBadlyPoisoned();
-	var totalLife = getTotalLife();
+	var summoner = getSummoner();
 
 	if (getTurn() === 1) {
-		say('Hello ' + getName(enemy) + ' :)');
+		say('Yop ' + getName(enemy) + ' :)');
+		setWeapon(WEAPON_DOUBLE_GUN);
 	}
 
-	debug('initialEnemy: ' + getName(initialEnemy));
-	debug('turnsWithoutFire: ' + turnsWithoutFire);
-
-	while (isAlive(initialEnemy)) {
+	while (getAliveEnemiesCount() > 0) {
 		resetLogIndent();
 		logInfo('');
 
 		var arm = null;
-		var doOnce = once();
 		var shouldTry = optimizer();
 		var target = enemy;
 
@@ -40,106 +26,49 @@ function Stuxnet() {
 		debug('life: ' + getLife());
 		debug('MP: ' + getMP());
 		debug('TP: ' + getTP());
+		logRemainingOperations();
 
 		if (
 			shouldTry() &&
-			getLife() < 300 &&
-			canFire(CHIP_CURE, me)
+			canFire(CHIP_HELMET, me)
 		) {
-			arm = CHIP_CURE;
+			arm = CHIP_HELMET;
 			target = me;
 		} else if (
 			shouldTry() &&
-			poisoned &&
-			canFire(CHIP_ANTIDOTE, me)
+			canFire(WEAPON_SHOTGUN, enemy)
 		) {
-			arm = CHIP_ANTIDOTE;
+			arm = WEAPON_SHOTGUN;
+		} else if (
+			shouldTry() &&
+			canFire(CHIP_ROCK, enemy)
+		) {
+			arm = CHIP_ROCK;
+		} else if (
+			shouldTry() &&
+			canFire(WEAPON_DOUBLE_GUN, enemy)
+		) {
+			arm = WEAPON_DOUBLE_GUN;
+		} else if (
+			shouldTry() &&
+			canFire(CHIP_ICE, enemy)
+		) {
+			arm = CHIP_ICE;
+		} else if (
+			shouldTry() &&
+			canFire(CHIP_SPARK, enemy)
+		) {
+			arm = CHIP_SPARK;
+		} else if (
+			shouldTry() &&
+			getLife() < getTotalLife() &&
+			canFire(CHIP_BANDAGE, me)
+		) {
+			arm = CHIP_BANDAGE;
 			target = me;
-		} else if (
-			shouldTry() &&
-			shouldProtect &&
-			canFire(CHIP_ARMOR, me)
-		) {
-			arm = CHIP_ARMOR;
-			target = me;
-		} else if (
-			shouldTry() &&
-			shouldProtect &&
-			canFire(CHIP_SHIELD, me)
-		) {
-			arm = CHIP_SHIELD;
-			target = me;
-		} else if (
-			shouldTry() &&
-			isInitialEnemy &&
-			canFire(CHIP_TOXIN, enemy)
-		) {
-			arm = CHIP_TOXIN;
-		} else if (
-			shouldTry() &&
-			canFire(WEAPON_FLAME_THROWER, enemy)
-		) {
-			arm = WEAPON_FLAME_THROWER;
-		} else if (
-			shouldTry() && canFire(CHIP_VENOM, enemy)
-		) {
-			arm = CHIP_VENOM;
-		} else if (
-			doOnce(
-				shouldTry() &&
-				canFire(CHIP_ROCKY_BULB, me)
-			)
-		) {
-			summonBulb(CHIP_ROCKY_BULB, RockyBulb, initialEnemy);
-		} else if (shouldTry() && getNearestEnemy() !== enemy) {
-			debug('change target');
-			enemy = getNearestEnemy();
-			optimizer = Optimizer();
-			continue;
-		} else if (
-			shouldTry() &&
-			!isInitialEnemy &&
-			canFire(CHIP_SLOW_DOWN, initialEnemy)
-		) {
-			arm = CHIP_SLOW_DOWN;
-			target = initialEnemy;
-		} else if (
-			shouldTry() &&
-			canFire(CHIP_SLOW_DOWN, enemy)
-		) {
-			arm = CHIP_SLOW_DOWN;
-		} else if (
-			shouldTry() &&
-			(hasFiredOnce || getLife() < totalLife) &&
-			canFire(CHIP_VACCINE, me)
-		) {
-			arm = CHIP_VACCINE;
-			target = me;
-		} else if (
-			shouldTry() && canFire(CHIP_ARMORING, me)
-		) {
-			arm = CHIP_ARMORING;
-			target = me;
-		} else if (
-			shouldTry() &&
-			getLife() < totalLife &&
-			canFire(CHIP_CURE, me)
-		) {
-			arm = CHIP_CURE;
-			target = me;
-		} else if (
-			shouldTry() && canFire(WEAPON_BROADSWORD, enemy)
-		) {
-			arm = WEAPON_BROADSWORD;
-		} else if (
-			shouldTry() &&
-			getTP() > 0 &&
-			getWeapon() !== WEAPON_FLAME_THROWER
-		) {
-			ensureWearingWeapon(WEAPON_FLAME_THROWER);
 		} else {
 			if (getMP() > 0) {
-				move(initialEnemy);
+				move(enemy);
 			}
 			updateTurnsWithoutFire(hasFired);
 			break;
@@ -152,23 +81,9 @@ function Stuxnet() {
 
 			if (hasError) {
 				shouldTry();
-			} else if (hasFired && !hasFiredOnce) {
-				hasFiredOnce = true;
 			}
-		}
-
-		if (getAliveEnemiesCount() === 0) {
-			say('Oups ^^');
-		} else if (!isAlive(initialEnemy)) {
-			debug('change target');
-			enemy = getNearestLeekEnemy();
-			initialEnemy = enemy;
-		} else if (!isAlive(enemy)) {
-			debug('change target');
-			enemy = getNearestEnemy();
-			optimizer = Optimizer();
 		}
 	}
 }
 
-Stuxnet();
+Slammer();

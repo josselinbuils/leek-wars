@@ -54,6 +54,7 @@ function Skynet() {
 		debug('life: ' + getLife());
 		debug('MP: ' + getMP());
 		debug('TP: ' + getTP());
+		logRemainingOperations();
 
 		if (
 			shouldTry() &&

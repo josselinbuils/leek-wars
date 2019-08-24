@@ -48,9 +48,10 @@ function RockyBulb() {
 			continue;
 		} else {
 			if (getMP() > 0) {
-				var targetCell = getCellToDirectFire(
+				var targetCell = getCellToDirectFireOnCell(
 					totalTP >= 5 ? CHIP_ROCKFALL : CHIP_PEBBLE,
-					initialEnemy
+					me,
+					getCell(initialEnemy)
 				);
 				moveTowardCell(targetCell);
 			}

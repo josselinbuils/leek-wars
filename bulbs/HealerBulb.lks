@@ -58,8 +58,8 @@ function HealerBulb() {
 			continue;
 		} else {
 			if (getMP() > 0) {
-				var targetCell = getCellToDirectFire(
-					CHIP_CURE, summoner
+				var targetCell = getCellToDirectFireOnCell(
+					CHIP_CURE, me, getCell(summoner)
 				);
 				moveTowardCell(targetCell);
 			}

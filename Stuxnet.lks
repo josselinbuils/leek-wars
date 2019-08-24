@@ -32,7 +32,6 @@ function Stuxnet() {
 		logInfo('');
 
 		var arm = null;
-		var doOnce = once();
 		var shouldTry = optimizer();
 		var target = enemy;
 
@@ -40,55 +39,54 @@ function Stuxnet() {
 		debug('life: ' + getLife());
 		debug('MP: ' + getMP());
 		debug('TP: ' + getTP());
+		logRemainingOperations();
 
 		if (
 			shouldTry() &&
 			getLife() < 300 &&
-			canFireWithChip(CHIP_CURE, me)
+			canFire(CHIP_CURE, me)
 		) {
 			arm = CHIP_CURE;
 			target = me;
 		} else if (
 			shouldTry() &&
 			poisoned &&
-			canFireWithChip(CHIP_ANTIDOTE, me)
+			canFire(CHIP_ANTIDOTE, me)
 		) {
 			arm = CHIP_ANTIDOTE;
 			target = me;
 		} else if (
 			shouldTry() &&
 			shouldProtect &&
-			canFireWithChip(CHIP_ARMOR, me)
+			canFire(CHIP_ARMOR, me)
 		) {
 			arm = CHIP_ARMOR;
 			target = me;
 		} else if (
 			shouldTry() &&
 			shouldProtect &&
-			canFireWithChip(CHIP_SHIELD, me)
+			canFire(CHIP_SHIELD, me)
 		) {
 			arm = CHIP_SHIELD;
 			target = me;
 		} else if (
 			shouldTry() &&
 			isInitialEnemy &&
-			canFireWithChip(CHIP_TOXIN, enemy)
+			canFire(CHIP_TOXIN, enemy)
 		) {
 			arm = CHIP_TOXIN;
 		} else if (
 			shouldTry() &&
-			canFireWithWeapon(WEAPON_FLAME_THROWER, enemy)
+			canFire(WEAPON_FLAME_THROWER, enemy)
 		) {
 			arm = WEAPON_FLAME_THROWER;
 		} else if (
-			shouldTry() && canFireWithChip(CHIP_VENOM, enemy)
+			shouldTry() && canFire(CHIP_VENOM, enemy)
 		) {
 			arm = CHIP_VENOM;
 		} else if (
-			doOnce(
-				shouldTry() &&
-				canFireWithChip(CHIP_ROCKY_BULB, me)
-			)
+			shouldTry() &&
+			canFire(CHIP_ROCKY_BULB, me)
 		) {
 			summonBulb(CHIP_ROCKY_BULB, RockyBulb, initialEnemy);
 		} else if (shouldTry() && getNearestEnemy() !== enemy) {
@@ -99,36 +97,36 @@ function Stuxnet() {
 		} else if (
 			shouldTry() &&
 			!isInitialEnemy &&
-			canFireWithChip(CHIP_SLOW_DOWN, initialEnemy)
+			canFire(CHIP_SLOW_DOWN, initialEnemy)
 		) {
 			arm = CHIP_SLOW_DOWN;
 			target = initialEnemy;
 		} else if (
 			shouldTry() &&
-			canFireWithChip(CHIP_SLOW_DOWN, enemy)
+			canFire(CHIP_SLOW_DOWN, enemy)
 		) {
 			arm = CHIP_SLOW_DOWN;
 		} else if (
 			shouldTry() &&
 			(hasFiredOnce || getLife() < totalLife) &&
-			canFireWithChip(CHIP_VACCINE, me)
+			canFire(CHIP_VACCINE, me)
 		) {
 			arm = CHIP_VACCINE;
 			target = me;
 		} else if (
-			shouldTry() && canFireWithChip(CHIP_ARMORING, me)
+			shouldTry() && canFire(CHIP_ARMORING, me)
 		) {
 			arm = CHIP_ARMORING;
 			target = me;
 		} else if (
 			shouldTry() &&
 			getLife() < totalLife &&
-			canFireWithChip(CHIP_CURE, me)
+			canFire(CHIP_CURE, me)
 		) {
 			arm = CHIP_CURE;
 			target = me;
 		} else if (
-			shouldTry() && canFireWithWeapon(WEAPON_BROADSWORD, enemy)
+			shouldTry() && canFire(WEAPON_BROADSWORD, enemy)
 		) {
 			arm = WEAPON_BROADSWORD;
 		} else if (
