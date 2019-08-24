@@ -10,8 +10,9 @@ include('utils');
 // TODO priorize most efficient cells when area fire
 
 global LOG_MONITOR_DATA = false;
-global MARK_SAFE_CELLS_TO_MOVE_ON = true;
-global MAX_OPS_PERCENT = 30;
+global MARK_SAFE_CELLS_TO_MOVE_ON = false;
+global MARK_SAFETY_MAP = true;
+global MAX_OPS_PERCENT = 50;
 global MIN_ACCEPTABLE_SAFE_LEVEL = 80;
 global MIN_DIRECT_CELLS_AROUND = 2;
 global SAFE_LEVEL = 80;
@@ -31,7 +32,7 @@ function canFire(@arm, @target) {
 	var isArmChip = @(isChip(@arm));
 	var cost = isArmChip ?
 		@(getChipCost(@arm)) :
-		@(getChipCost(@arm));
+		@(getWeaponCost(@arm));
 
 	if (!isArmChip && getWeapon() !== @arm) {
 		cost = cost + 1;
@@ -88,6 +89,66 @@ function canFireFromCell(@arm, @target, @cellToFire) {
 		can = shouldFire(@target, @arm, @cellToFire, @pathlength) === true;
 	}
 	return @can;
+}
+
+function computeSafetyMap(@enemy) {
+	logInfo('computeSafetyMap(' + getLeekName(@enemy) + ')');
+
+	var debugOperations = @(monitorOperations('computeSafetyMap', true));
+	var map = @[];
+	var groups = @[];
+	var refArms = @(getEnemyRefArms(@enemy));
+	var refChip = @(refArms['chip']);
+	var refWeapon = @(refArms['weapon']);
+	var maxRange = @(max(
+		refChip !== null ? @(getArmMaxRange(@refChip)) : 0,
+		refWeapon !== null ? @(getArmMaxRange(@refWeapon)) : 0,
+	));
+	var totalEnemyMP = getTotalMP(enemy);
+	var maxEnemyRange = maxRange + totalEnemyMP;
+	var enemyCell = @(getCell(@enemy));
+	var reachableCells = @(sortByDistanceAsc(
+		@(getReachableCells(@(getCell()), @(getMP()))),
+		@enemyCell
+	));
+	var significantEnemyMP = getTotalMP(@enemy) * 1 / 3;
+	var nonEasilyReachableCells = @(arrayFilter(@reachableCells, function(cell) {
+		var pathLength = getPathLength(@enemyCell, @cell);
+		return pathLength === null ||
+			pathLength > significantEnemyMP;
+	}));
+	var shouldContinue = perfLimiter(MAX_OPS_PERCENT);
+
+	for (var cell in @reachableCells) {
+		if (getDistance(enemyCell, cell) > maxEnemyRange) {
+			map[@cell] = 100;
+		} else if (!inArray(@nonEasilyReachableCells, cell) || !shouldContinue()) {
+			map[@cell] = 0;
+		} else {
+			map[@cell] = @(getCellSafetyLevel(@cell));
+		}
+
+		var level = @(map[@cell]);
+
+		if (MARK_SAFETY_MAP) {
+			if (groups[@level] === null) {
+				groups[@level] = @[@cell];
+			} else {
+				push(groups[@level], @cell);
+			}
+		}
+	}
+	debugOperations();
+
+	if (MARK_SAFETY_MAP) {
+		arrayIter(@groups, function(@level, @group) {
+			var rgb = hslToRgb(level * 1.2 / 360, 1, 0.5);
+			var color = getColor(@(rgb[0]), @(rgb[1]), @(rgb[2]));
+			mark(@group, @color);
+		});
+	}
+
+	putInStore('tmp-safetyMap', @map);
 }
 
 function fire(@arm, @target) {
@@ -175,7 +236,6 @@ function getCellSafetyLevel(@cell) {
 
 	var debugOperations = @(monitorOperations('getCellSafetyLevel', false));
 	var level = 0;
-	var highlyProtectedAgainstLeeks = true;
 	var protectedAgainstBulbs = true;
 	var protectedAgainstLeeks = true;
 	var middlyProtectedAgainstBulbs = true;
@@ -189,8 +249,6 @@ function getCellSafetyLevel(@cell) {
 
 	if (nearestLeekEnemyPathLength !== null) {
 		var nearestLeekEnemyMP = @(getTotalMP(@nearestLeekEnemy));
-
-		highlyProtectedAgainstLeeks = false;
 
 		if (nearestLeekEnemyPathLength <= (nearestLeekEnemyMP * 1 / 3)) {
 			protectedAgainstLeeks = false;
@@ -224,16 +282,6 @@ function getCellSafetyLevel(@cell) {
 	}
 
 	if (
-		protectedAgainstBulbs &&
-		highlyProtectedAgainstLeeks
-	) {
-		level = 120;
-	} else if (
-		middlyProtectedAgainstBulbs &&
-		highlyProtectedAgainstLeeks
-	) {
-		level = 110;
-	} else if (
 		protectedAgainstBulbs &&
 		protectedAgainstLeeks
 	) {
@@ -271,47 +319,6 @@ function getCellToFire(@arm, @target) {
 	return @(getInStore('tmp-fire-cell-' + arm + '-' + target));
 }
 
-function computeSafetyMap(@enemy) {
-	var debugOperations = @(monitorOperations('computeSafetyMap', true));
-	var map = @[];
-	var groups = @[];
-	var refArms = @(getEnemyRefArms(@enemy));
-	var refChip = @(refArms['chip']);
-	var refWeapon = @(refArms['weapon']);
-	var maxRange = @(max(
-		refChip !== null ? @(getArmMaxRange(@refChip)) : 0,
-		refWeapon !== null ? @(getArmMaxRange(@refWeapon)) : 0,
-	));
-	var totalEnemyMP = getTotalMP(enemy);
-	var maxEnemyRange = maxRange + totalEnemyMP;
-	var enemyCell = @(getCell(@enemy));
-	var reachableCells = @(getReachableCells(@(getCell()), @(getMP())));
-
-	for (var cell in reachableCells) {
-		if (getDistance(enemyCell, cell) > maxEnemyRange) {
-			map[@cell] = 120;
-		} else {
-			map[@cell] = @(getCellSafetyLevel(@cell));
-		}
-
-		var level = @(map[@cell]);
-
-		if (groups[@level] === null) {
-			groups[@level] = @[@cell];
-		} else {
-			push(groups[@level], @cell);
-		}
-	}
-	debugOperations();
-
-	arrayIter(@groups, function(@level, @group) {
-		var rgb = hslToRgb(level * 1.2 / 360, 1, 0.5);
-		debug(level + ': ' + rgb);
-		var color = getColor(@(rgb[0]), @(rgb[1]), @(rgb[2]));
-		mark(@group, @color);
-	});
-}
-
 function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
 	var nextCell = @startCell;
 	var enemyCell = @(getCell(@enemy));
@@ -337,36 +344,18 @@ function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
 	} else if (availableMP > 0) {
 		var debugOperations = @(monitorOperations('getNextCell', true));
 
-		var reachableCells = @(sortByDistanceAsc(
-			@(getReachableCells(@startCell, @availableMP)),
-			@enemyCell
+		var reachableCells = @(getReachableCells(
+			@startCell, @availableMP
 		));
 		logDetail(safeCount(reachableCells) + ' reachable cells found');
 
-		var significantEnemyMP = getTotalMP(@enemy) * 1 / 3;
-		var nonEasilyReachableCells = @(arrayFilter(@reachableCells, function(cell) {
-			var pathLength = getPathLength(@enemyCell, @cell);
-			return pathLength === null ||
-				pathLength > significantEnemyMP;
-		}));
-
-		var debugOperationsInt = @(monitorIntermediateOperations(
-			'iterates cells safety (' + @(safeCount(@nonEasilyReachableCells)) +
-			' entries)'
-		));
+		var safetyMap = @(getSafetyMap());
 		var maxSafetyLevel = 0;
 		var maxSafetyCells = @[];
-		var shouldContinue = perfLimiter(MAX_OPS_PERCENT);
 		var i = 0;
 
-		for (var cell in @nonEasilyReachableCells) {
-			if (!shouldContinue()) {
-				logDetail('stopped by limiter after ' + @i + ' iterations');
-				break;
-			}
-
-			i++;
-			var safetyLevel = @(getCellSafetyLevel(@cell));
+		for (var cell in @reachableCells) {
+			var safetyLevel = @(safetyMap[@cell]);
 
 			if (safetyLevel > maxSafetyLevel) {
 				maxSafetyLevel = safetyLevel;
@@ -375,7 +364,6 @@ function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
 				push(maxSafetyCells, @cell);
 			}
 		}
-		debugOperationsInt();
 
 		logDetail(@safeCount(@maxSafetyCells) + ' cells found with safety ' + @maxSafetyLevel);
 
@@ -455,6 +443,10 @@ function getNextCell(@enemy, @startCell, @availableMP, @shouldMark) {
 	return @nextCell;
 }
 
+function getSafetyMap() {
+	return @(getInStore('tmp-safetyMap'));
+}
+
 function getTargetEnemy(@weapon, @enemy) {
 	var currentCell = getCell();
 	var targetEnemy = null;
@@ -493,12 +485,14 @@ function getTargetEnemy(@weapon, @enemy) {
 function initTurn() {
 	clearStore();
 
-	if (getTurn() === 1) {
-		logInfo('Computes enemies ref arms');
+	// Do it every turns as it depends on cooldowns
+	logInfo('Computes enemies ref arms');
+	arrayIter(@(getAliveEnemies()), function(@enemy) {
+		getEnemyRefArms(@enemy);
+	});
 
-		arrayIter(@(getAliveEnemies()), function(@enemy) {
-			getEnemyRefArms(@enemy);
-		});
+	if (!isSummon()) {
+		computeSafetyMap(@(getNearestLeekEnemy()));
 	}
 
 	if (LOG_MONITOR_DATA) {
