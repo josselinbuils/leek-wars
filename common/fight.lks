@@ -635,6 +635,17 @@ function isAreaArm(@arm) {
 		area === AREA_CIRCLE_3;
 }
 
+function isBadlyPoisoned() {
+	var poisonDammages = 0;
+
+	for (var effect in getEffects()) {
+		if (effect[0] === EFFECT_POISON) {
+			poisonDammages += effect[1];
+		}
+	}
+	return poisonDammages >= 300;
+}
+
 function isPoisoned(@leek) {
 	for (var effect in @(getEffects(leek))) {
 		if (effect[0] === EFFECT_POISON) {

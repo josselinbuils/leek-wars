@@ -4,17 +4,6 @@ include('common/logger');
 include('common/strategy');
 include('common/utils');
 
-function isBadlyPoisoned() {
-	var poisonDammages = 0;
-
-	for (var effect in getEffects()) {
-		if (effect[0] === EFFECT_POISON) {
-			poisonDammages += effect[1];
-		}
-	}
-	return poisonDammages >= 300;
-}
-
 function Skynet() {
 	initTurn();
 
